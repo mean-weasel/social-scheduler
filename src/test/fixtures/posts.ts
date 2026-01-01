@@ -1,5 +1,5 @@
 // Post fixtures for testing
-import { Post, Platform } from '@/lib/posts'
+import { Post } from '@/lib/posts'
 
 // Base fixture factory
 function createBasePost(overrides: Partial<Post> = {}): Post {

@@ -2,8 +2,6 @@
 import { Post } from './posts'
 
 const now = new Date()
-const oneHour = 60 * 60 * 1000
-const oneDay = 24 * oneHour
 
 // Helper to get a date at a specific day offset with a given hour
 function getDate(dayOffset: number, hour: number = 10): Date {
