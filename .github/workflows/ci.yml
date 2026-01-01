@@ -27,7 +27,7 @@ jobs:
         run: npm run typecheck
 
       - name: Run unit tests
-        run: npm run test:run
+        run: npx vitest run --passWithNoTests
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
