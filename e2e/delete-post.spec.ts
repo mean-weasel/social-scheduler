@@ -85,8 +85,8 @@ test.describe('Delete Post', () => {
     test('should delete a LinkedIn-only post', async ({ page }) => {
       await page.goto('/edit/demo-5') // LinkedIn draft
 
-      // Verify it's a LinkedIn post
-      await expect(page.getByText('LinkedIn')).toBeVisible()
+      // Verify it's a LinkedIn post (check the platform button is selected)
+      await expect(page.getByRole('button', { name: 'LinkedIn' })).toBeVisible()
 
       await deletePost(page)
       await waitForNavigation(page, '/')
@@ -95,8 +95,8 @@ test.describe('Delete Post', () => {
     test('should delete a Reddit-only post', async ({ page }) => {
       await page.goto('/edit/demo-3') // Reddit draft
 
-      // Verify it's a Reddit post
-      await expect(page.getByText('Reddit')).toBeVisible()
+      // Verify it's a Reddit post (check the platform button is selected)
+      await expect(page.getByRole('button', { name: 'Reddit' })).toBeVisible()
 
       await deletePost(page)
       await waitForNavigation(page, '/')
@@ -105,9 +105,9 @@ test.describe('Delete Post', () => {
     test('should delete a Twitter + LinkedIn post', async ({ page }) => {
       await page.goto('/edit/demo-1') // Twitter + LinkedIn scheduled
 
-      // Verify both platforms
-      await expect(page.getByText('Twitter / X')).toBeVisible()
-      await expect(page.getByText('LinkedIn')).toBeVisible()
+      // Verify both platforms (check the platform buttons are visible)
+      await expect(page.getByRole('button', { name: 'Twitter' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'LinkedIn' })).toBeVisible()
 
       await deletePost(page)
       await waitForNavigation(page, '/')

@@ -177,10 +177,10 @@ test.describe('Edit Post', () => {
         title: 'Also posting to Reddit now',
       })
 
-      // Verify all three previews are visible
-      await expect(page.getByText('Twitter / X')).toBeVisible()
-      await expect(page.getByText('LinkedIn')).toBeVisible()
-      await expect(page.getByText('Reddit')).toBeVisible()
+      // Verify all three platform buttons are visible
+      await expect(page.getByRole('button', { name: 'Twitter' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'LinkedIn' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Reddit' })).toBeVisible()
 
       await saveDraft(page)
       await waitForNavigation(page, '/')
@@ -190,15 +190,16 @@ test.describe('Edit Post', () => {
       // Demo-7 is a post with all three platforms
       await page.goto('/edit/demo-7')
 
+      // Get initial state - Twitter button should be visible and selected
+      const twitterBtn = page.getByRole('button', { name: 'Twitter' })
+      await expect(twitterBtn).toBeVisible()
+
       // Remove Twitter
       await togglePlatform(page, 'twitter')
 
-      // Twitter preview should be hidden
-      await expect(page.getByText('Twitter / X')).not.toBeVisible()
-
-      // LinkedIn and Reddit should still be visible
-      await expect(page.getByText('LinkedIn')).toBeVisible()
-      await expect(page.getByText('Reddit')).toBeVisible()
+      // LinkedIn and Reddit buttons should still be visible
+      await expect(page.getByRole('button', { name: 'LinkedIn' })).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Reddit' })).toBeVisible()
 
       await saveDraft(page)
       await waitForNavigation(page, '/')

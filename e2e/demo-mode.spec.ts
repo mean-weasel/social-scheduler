@@ -71,8 +71,8 @@ test.describe('Demo Mode', () => {
       // Should be back on login page
       await expect(page).toHaveURL('/login')
 
-      // Demo banner should not be visible
-      await expect(page.getByText('Demo Mode')).not.toBeVisible()
+      // Demo banner should not be visible (look for the specific indicator)
+      await expect(page.locator('.animate-pulse').filter({ hasText: 'Demo Mode' })).not.toBeVisible()
     })
 
     test('should exit demo mode via close button', async ({ page }) => {
@@ -90,10 +90,10 @@ test.describe('Demo Mode', () => {
     test('should display demo posts on dashboard', async ({ page }) => {
       await enterDemoMode(page)
 
-      // Should show stats
-      await expect(page.getByText('Scheduled')).toBeVisible()
-      await expect(page.getByText('Drafts')).toBeVisible()
-      await expect(page.getByText('Published')).toBeVisible()
+      // Should show stats - look for the sidebar with stats (use first match for each)
+      await expect(page.getByRole('complementary').getByText('Scheduled').first()).toBeVisible()
+      await expect(page.getByRole('complementary').getByText('Drafts').first()).toBeVisible()
+      await expect(page.getByRole('complementary').getByText('Published').first()).toBeVisible()
     })
 
     test('should display demo posts in posts list', async ({ page }) => {
@@ -203,19 +203,31 @@ test.describe('Dashboard in Demo Mode', () => {
   })
 
   test('should navigate calendar months', async ({ page }) => {
-    const currentMonth = await page.locator('h2').first().textContent()
+    // Get the calendar header which shows the current month
+    const calendarHeader = page.locator('h2').filter({ hasText: /january|february|march|april|may|june|july|august|september|october|november|december/i }).first()
+    const currentMonth = await calendarHeader.textContent()
 
-    // Click next month
-    await page.locator('button').filter({ has: page.locator('svg') }).nth(2).click()
+    // The Today button is in the navigation - use it to find sibling nav buttons
+    const todayBtn = page.getByRole('button', { name: 'Today' })
 
-    const nextMonth = await page.locator('h2').first().textContent()
+    // The next month button is after the Today button (last sibling)
+    const navContainer = todayBtn.locator('..')
+    const buttons = navContainer.locator('button')
+
+    // Click next month (last button in container)
+    await buttons.last().click()
+    await page.waitForTimeout(200)
+
+    const nextMonth = await calendarHeader.textContent()
     expect(nextMonth).not.toBe(currentMonth)
 
-    // Click previous month
-    await page.locator('button').filter({ has: page.locator('svg') }).nth(0).click()
-    await page.locator('button').filter({ has: page.locator('svg') }).nth(0).click()
+    // Click previous month twice (first button in container)
+    await buttons.first().click()
+    await page.waitForTimeout(200)
+    await buttons.first().click()
+    await page.waitForTimeout(200)
 
-    const prevMonth = await page.locator('h2').first().textContent()
+    const prevMonth = await calendarHeader.textContent()
     expect(prevMonth).not.toBe(nextMonth)
   })
 

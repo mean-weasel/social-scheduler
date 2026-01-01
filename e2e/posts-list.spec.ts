@@ -164,7 +164,8 @@ test.describe('Posts List', () => {
       await goToPosts(page)
 
       // Even if filtered to a status with no posts, should have create button
-      const createBtn = page.getByRole('link', { name: /create post|new post/i })
+      // Use the header button which has exact text "New Post"
+      const createBtn = page.getByRole('link', { name: 'New Post', exact: true })
       await expect(createBtn).toBeVisible()
     })
   })
@@ -173,14 +174,16 @@ test.describe('Posts List', () => {
     test('should have new post button in header', async ({ page }) => {
       await goToPosts(page)
 
-      const newPostBtn = page.getByRole('link', { name: /new post/i })
+      // The header has a "New Post" link with exact text
+      const newPostBtn = page.getByRole('link', { name: 'New Post', exact: true })
       await expect(newPostBtn).toBeVisible()
     })
 
     test('should navigate to new post page', async ({ page }) => {
       await goToPosts(page)
 
-      await page.getByRole('link', { name: /new post/i }).click()
+      // Click the header "New Post" button (not the floating one)
+      await page.getByRole('link', { name: 'New Post', exact: true }).click()
 
       await expect(page).toHaveURL('/new')
       await expect(page.getByRole('heading', { name: /create post/i })).toBeVisible()
