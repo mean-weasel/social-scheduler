@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Scheduler - Create Post</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    /* Editor-specific styles */
+    .editor-layout {
+      display: grid;
+      grid-template-columns: 1fr 400px;
+      gap: 0;
+      min-height: calc(100vh - 65px);
+    }
+
+    @media (max-width: 1024px) {
+      .editor-layout {
+        grid-template-columns: 1fr;
+      }
+      .preview-panel {
+        display: none;
+      }
+    }
+
+    .editor-panel {
+      padding: var(--space-8);
+      max-width: 720px;
+    }
+
+    .editor-header {
+      margin-bottom: var(--space-6);
+    }
+
+    .editor-header h1 {
+      font-size: 1.5rem;
+      margin-bottom: var(--space-2);
+    }
+
+    .editor-header p {
+      font-size: 0.875rem;
+    }
+
+    .platform-selector {
+      display: flex;
+      gap: var(--space-2);
+      margin-bottom: var(--space-6);
+    }
+
+    .platform-btn {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-3) var(--space-4);
+      background: var(--bg-surface);
+      border: 2px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      font-family: var(--font-body);
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+    }
+
+    .platform-btn:hover {
+      border-color: var(--border-default);
+      background: var(--bg-elevated);
+    }
+
+    .platform-btn.active {
+      border-width: 2px;
+    }
+
+    .platform-btn.active.twitter {
+      border-color: var(--twitter);
+      background: var(--twitter-soft);
+      color: var(--twitter);
+    }
+
+    .platform-btn.active.linkedin {
+      border-color: var(--linkedin);
+      background: var(--linkedin-soft);
+      color: var(--linkedin);
+    }
+
+    .platform-btn.active.reddit {
+      border-color: var(--reddit);
+      background: var(--reddit-soft);
+      color: var(--reddit);
+    }
+
+    .platform-btn svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .platform-btn .check {
+      width: 16px;
+      height: 16px;
+      margin-left: auto;
+      opacity: 0;
+      transition: opacity var(--transition-fast);
+    }
+
+    .platform-btn.active .check {
+      opacity: 1;
+    }
+
+    .form-group {
+      margin-bottom: var(--space-6);
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-tertiary);
+      margin-bottom: var(--space-2);
+    }
+
+    .textarea-wrapper {
+      position: relative;
+    }
+
+    .textarea-main {
+      width: 100%;
+      min-height: 200px;
+      padding: var(--space-4);
+      font-family: var(--font-body);
+      font-size: 1rem;
+      line-height: 1.6;
+      color: var(--text-primary);
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      resize: vertical;
+      transition: all var(--transition-fast);
+    }
+
+    .textarea-main::placeholder {
+      color: var(--text-muted);
+    }
+
+    .textarea-main:hover {
+      border-color: var(--border-default);
+    }
+
+    .textarea-main:focus {
+      outline: none;
+      border-color: var(--twitter);
+      box-shadow: 0 0 0 3px var(--twitter-glow);
+    }
+
+    .textarea-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: var(--space-3);
+    }
+
+    .char-indicators {
+      display: flex;
+      gap: var(--space-4);
+    }
+
+    .char-indicator {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-size: 0.75rem;
+    }
+
+    .char-indicator .platform-dot {
+      width: 6px;
+      height: 6px;
+    }
+
+    .char-indicator .count {
+      font-family: var(--font-mono);
+      font-weight: 500;
+    }
+
+    .char-indicator .count.warning {
+      color: var(--warning);
+    }
+
+    .char-indicator .count.danger {
+      color: var(--error);
+    }
+
+    .char-indicator .count.ok {
+      color: var(--text-tertiary);
+    }
+
+    .media-upload {
+      display: flex;
+      gap: var(--space-3);
+      padding: var(--space-4);
+      background: var(--bg-surface);
+      border: 2px dashed var(--border-subtle);
+      border-radius: var(--radius-lg);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .media-upload:hover {
+      border-color: var(--border-default);
+      background: var(--bg-elevated);
+    }
+
+    .media-upload-icon {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-hover);
+      border-radius: var(--radius-md);
+      color: var(--text-tertiary);
+    }
+
+    .media-upload-text h4 {
+      font-size: 0.875rem;
+      color: var(--text-primary);
+      margin-bottom: 2px;
+    }
+
+    .media-upload-text p {
+      font-size: 0.75rem;
+      color: var(--text-tertiary);
+    }
+
+    .schedule-row {
+      display: flex;
+      gap: var(--space-4);
+    }
+
+    .schedule-row .form-group {
+      flex: 1;
+    }
+
+    .datetime-input {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-3) var(--space-4);
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .datetime-input:hover {
+      border-color: var(--border-default);
+    }
+
+    .datetime-input svg {
+      width: 18px;
+      height: 18px;
+      color: var(--text-tertiary);
+    }
+
+    .datetime-input span {
+      font-size: 0.875rem;
+      color: var(--text-primary);
+    }
+
+    .editor-actions {
+      display: flex;
+      gap: var(--space-3);
+      padding-top: var(--space-6);
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    /* Preview Panel */
+    .preview-panel {
+      background: var(--bg-surface);
+      border-left: 1px solid var(--border-subtle);
+      padding: var(--space-6);
+      overflow-y: auto;
+    }
+
+    .preview-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-4);
+    }
+
+    .preview-header h3 {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-tertiary);
+    }
+
+    .preview-tabs {
+      display: flex;
+      gap: var(--space-1);
+    }
+
+    .preview-tab {
+      padding: var(--space-1) var(--space-2);
+      font-size: 0.6875rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      background: transparent;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .preview-tab:hover {
+      color: var(--text-tertiary);
+    }
+
+    .preview-tab.active {
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+    }
+
+    .preview-card {
+      margin-bottom: var(--space-4);
+    }
+
+    .preview-label {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-size: 0.6875rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: var(--space-2);
+    }
+
+    /* Twitter Preview */
+    .twitter-preview {
+      background: #15202B;
+      border-radius: 16px;
+      padding: var(--space-4);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    .twitter-preview-header {
+      display: flex;
+      gap: var(--space-3);
+      margin-bottom: var(--space-3);
+    }
+
+    .twitter-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .twitter-user {
+      flex: 1;
+    }
+
+    .twitter-name {
+      font-weight: 700;
+      font-size: 15px;
+      color: #E7E9EA;
+    }
+
+    .twitter-handle {
+      font-size: 15px;
+      color: #71767B;
+    }
+
+    .twitter-content {
+      font-size: 15px;
+      line-height: 1.4;
+      color: #E7E9EA;
+      white-space: pre-wrap;
+    }
+
+    .twitter-actions {
+      display: flex;
+      gap: var(--space-8);
+      margin-top: var(--space-4);
+      color: #71767B;
+    }
+
+    .twitter-action {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      font-size: 13px;
+    }
+
+    /* LinkedIn Preview */
+    .linkedin-preview {
+      background: white;
+      border-radius: 8px;
+      padding: var(--space-4);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    .linkedin-preview-header {
+      display: flex;
+      gap: var(--space-3);
+      margin-bottom: var(--space-3);
+    }
+
+    .linkedin-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .linkedin-user {
+      flex: 1;
+    }
+
+    .linkedin-name {
+      font-weight: 600;
+      font-size: 14px;
+      color: rgba(0, 0, 0, 0.9);
+    }
+
+    .linkedin-headline {
+      font-size: 12px;
+      color: rgba(0, 0, 0, 0.6);
+    }
+
+    .linkedin-time {
+      font-size: 12px;
+      color: rgba(0, 0, 0, 0.6);
+      margin-top: 2px;
+    }
+
+    .linkedin-content {
+      font-size: 14px;
+      line-height: 1.5;
+      color: rgba(0, 0, 0, 0.9);
+      white-space: pre-wrap;
+    }
+
+    .linkedin-actions {
+      display: flex;
+      gap: var(--space-6);
+      margin-top: var(--space-4);
+      padding-top: var(--space-3);
+      border-top: 1px solid rgba(0, 0, 0, 0.08);
+      color: rgba(0, 0, 0, 0.6);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    /* Reddit Preview */
+    .reddit-preview {
+      background: #1A1A1B;
+      border: 1px solid #343536;
+      border-radius: 4px;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    .reddit-preview-header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-2) var(--space-3);
+      font-size: 12px;
+      color: #818384;
+    }
+
+    .reddit-subreddit {
+      font-weight: 700;
+      color: #D7DADC;
+    }
+
+    .reddit-title {
+      padding: 0 var(--space-3);
+      font-size: 18px;
+      font-weight: 500;
+      color: #D7DADC;
+      line-height: 1.3;
+    }
+
+    .reddit-content {
+      padding: var(--space-3);
+      font-size: 14px;
+      line-height: 1.5;
+      color: #D7DADC;
+    }
+
+    .reddit-actions {
+      display: flex;
+      gap: var(--space-4);
+      padding: var(--space-2) var(--space-3);
+      font-size: 12px;
+      font-weight: 700;
+      color: #818384;
+    }
+
+    /* Reddit-specific form fields */
+    .reddit-fields {
+      display: none;
+      padding: var(--space-4);
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      margin-top: var(--space-4);
+    }
+
+    .reddit-fields.visible {
+      display: block;
+    }
+
+    .reddit-field-row {
+      display: flex;
+      gap: var(--space-3);
+    }
+
+    .reddit-field-row .form-group {
+      flex: 1;
+      margin-bottom: var(--space-3);
+    }
+
+    .reddit-field-row .form-group:last-child {
+      margin-bottom: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="flex items-center gap-4">
+        <a href="dashboard.html" class="btn btn-ghost btn-icon" title="Back to dashboard">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m15 18-6-6 6-6"/>
+          </svg>
+        </a>
+        <div class="app-logo">
+          <div class="app-logo-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+          </div>
+          <span class="app-logo-text">Social Scheduler</span>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-4">
+        <span class="badge badge-draft">Draft</span>
+        <button class="btn btn-ghost btn-icon" title="Settings">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="1"></circle>
+            <circle cx="19" cy="12" r="1"></circle>
+            <circle cx="5" cy="12" r="1"></circle>
+          </svg>
+        </button>
+        <div class="avatar">JW</div>
+      </div>
+    </header>
+
+    <!-- Editor Layout -->
+    <div class="editor-layout">
+      <!-- Editor Panel -->
+      <div class="editor-panel animate-slide-up">
+        <div class="editor-header">
+          <h1>Create Post</h1>
+          <p>Compose your message and schedule it across multiple platforms.</p>
+        </div>
+
+        <!-- Platform Selector -->
+        <div class="platform-selector">
+          <button class="platform-btn active twitter">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+            </svg>
+            Twitter
+            <svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          </button>
+
+          <button class="platform-btn active linkedin">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
+            </svg>
+            LinkedIn
+            <svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          </button>
+
+          <button class="platform-btn reddit">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 0 0-.231.094.33.33 0 0 0 0 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 0 0 .029-.463.33.33 0 0 0-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.196-2.512-.73a.326.326 0 0 0-.232-.095z"/>
+            </svg>
+            Reddit
+            <svg class="check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Content -->
+        <div class="form-group">
+          <label class="form-label">Content</label>
+          <div class="textarea-wrapper">
+            <textarea class="textarea-main" placeholder="What's on your mind? Share your thoughts, announce something exciting, or start a conversation...">Launching Social Scheduler today! 🚀
+
+After months of building, we're finally ready to help you manage your social presence across Twitter, LinkedIn, and Reddit—all from one place.
+
+Key features:
+• Schedule posts with a beautiful calendar view
+• Cross-post to multiple platforms
+• Preview exactly how your posts will look
+• GitHub-powered backend (free hosting!)
+
+Try it now and let us know what you think!</textarea>
+          </div>
+          <div class="textarea-footer">
+            <div class="char-indicators">
+              <div class="char-indicator">
+                <span class="platform-dot twitter"></span>
+                <span class="count warning">247</span>
+                <span class="text-muted">/ 280</span>
+              </div>
+              <div class="char-indicator">
+                <span class="platform-dot linkedin"></span>
+                <span class="count ok">247</span>
+                <span class="text-muted">/ 3000</span>
+              </div>
+            </div>
+            <div class="flex gap-2">
+              <button class="btn btn-ghost btn-sm">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path>
+                  <circle cx="12" cy="13" r="3"></circle>
+                </svg>
+              </button>
+              <button class="btn btn-ghost btn-sm">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+                  <line x1="9" y1="9" x2="9.01" y2="9"></line>
+                  <line x1="15" y1="9" x2="15.01" y2="9"></line>
+                </svg>
+              </button>
+              <button class="btn btn-ghost btn-sm">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="4" y1="9" x2="20" y2="9"></line>
+                  <line x1="4" y1="15" x2="20" y2="15"></line>
+                  <line x1="10" y1="3" x2="8" y2="21"></line>
+                  <line x1="16" y1="3" x2="14" y2="21"></line>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reddit-specific fields -->
+        <div class="reddit-fields">
+          <div class="reddit-field-row">
+            <div class="form-group">
+              <label class="form-label">Subreddit</label>
+              <input type="text" class="input" placeholder="e.g., SideProject" value="SideProject">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Post Flair</label>
+              <select class="input">
+                <option>Show and Tell</option>
+                <option>Question</option>
+                <option>Resource</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Post Title (Reddit)</label>
+            <input type="text" class="input" placeholder="Title for your Reddit post" value="Social Scheduler - Schedule posts to Twitter, LinkedIn, Reddit from one place">
+          </div>
+        </div>
+
+        <!-- Media Upload -->
+        <div class="form-group">
+          <label class="form-label">Media (optional)</label>
+          <div class="media-upload">
+            <div class="media-upload-icon">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                <polyline points="21 15 16 10 5 21"></polyline>
+              </svg>
+            </div>
+            <div class="media-upload-text">
+              <h4>Add images or video</h4>
+              <p>Drag and drop or click to browse</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Schedule -->
+        <div class="schedule-row">
+          <div class="form-group">
+            <label class="form-label">Schedule Date</label>
+            <div class="datetime-input">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
+              <span>January 15, 2025</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Time</label>
+            <div class="datetime-input">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+              <span>2:00 PM</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="editor-actions">
+          <button class="btn btn-secondary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+            </svg>
+            Save Draft
+          </button>
+          <button class="btn btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+            Schedule Post
+          </button>
+          <button class="btn btn-ghost ml-auto">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 2L11 13"></path>
+              <path d="M22 2l-7 20-4-9-9-4 20-7z"></path>
+            </svg>
+            Publish Now
+          </button>
+        </div>
+      </div>
+
+      <!-- Preview Panel -->
+      <div class="preview-panel">
+        <div class="preview-header">
+          <h3>Live Preview</h3>
+          <div class="preview-tabs">
+            <button class="preview-tab active">All</button>
+            <button class="preview-tab">Desktop</button>
+            <button class="preview-tab">Mobile</button>
+          </div>
+        </div>
+
+        <!-- Twitter Preview -->
+        <div class="preview-card animate-slide-up" style="animation-delay: 100ms">
+          <div class="preview-label text-twitter">
+            <span class="platform-dot twitter"></span>
+            Twitter / X
+          </div>
+          <div class="twitter-preview">
+            <div class="twitter-preview-header">
+              <div class="twitter-avatar"></div>
+              <div class="twitter-user">
+                <div class="twitter-name">Your Name</div>
+                <div class="twitter-handle">@yourhandle</div>
+              </div>
+            </div>
+            <div class="twitter-content">Launching Social Scheduler today! 🚀
+
+After months of building, we're finally ready to help you manage your social presence across Twitter, LinkedIn, and Reddit—all from one place.
+
+Key features:
+• Schedule posts with a beautiful calendar view
+• Cross-post to multiple platforms
+• Preview exactly how your posts will look
+• GitHub-powered backend (free hosting!)
+
+Try it now and let us know what you think!</div>
+            <div class="twitter-actions">
+              <div class="twitter-action">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+                Reply
+              </div>
+              <div class="twitter-action">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 1l4 4-4 4"></path><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><path d="M7 23l-4-4 4-4"></path><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>
+                Repost
+              </div>
+              <div class="twitter-action">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg>
+                Like
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- LinkedIn Preview -->
+        <div class="preview-card animate-slide-up" style="animation-delay: 200ms">
+          <div class="preview-label text-linkedin">
+            <span class="platform-dot linkedin"></span>
+            LinkedIn
+          </div>
+          <div class="linkedin-preview">
+            <div class="linkedin-preview-header">
+              <div class="linkedin-avatar"></div>
+              <div class="linkedin-user">
+                <div class="linkedin-name">Your Name</div>
+                <div class="linkedin-headline">Software Engineer at Company</div>
+                <div class="linkedin-time">Just now • 🌐</div>
+              </div>
+            </div>
+            <div class="linkedin-content">Launching Social Scheduler today! 🚀
+
+After months of building, we're finally ready to help you manage your social presence across Twitter, LinkedIn, and Reddit—all from one place.
+
+Key features:
+• Schedule posts with a beautiful calendar view
+• Cross-post to multiple platforms
+• Preview exactly how your posts will look
+• GitHub-powered backend (free hosting!)
+
+Try it now and let us know what you think!</div>
+            <div class="linkedin-actions">
+              <span>👍 Like</span>
+              <span>💬 Comment</span>
+              <span>🔄 Repost</span>
+              <span>📤 Send</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Toggle platform buttons
+    document.querySelectorAll('.platform-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        btn.classList.toggle('active');
+
+        // Show/hide Reddit fields
+        const redditFields = document.querySelector('.reddit-fields');
+        const redditBtn = document.querySelector('.platform-btn.reddit');
+        if (redditBtn.classList.contains('active')) {
+          redditFields.classList.add('visible');
+        } else {
+          redditFields.classList.remove('visible');
+        }
+      });
+    });
+
+    // Update character count
+    const textarea = document.querySelector('.textarea-main');
+    const twitterCount = document.querySelector('.char-indicator:first-child .count');
+    const linkedinCount = document.querySelector('.char-indicator:last-child .count');
+
+    function updateCharCount() {
+      const len = textarea.value.length;
+
+      twitterCount.textContent = len;
+      twitterCount.className = 'count ' + (len > 280 ? 'danger' : len > 250 ? 'warning' : 'ok');
+
+      linkedinCount.textContent = len;
+      linkedinCount.className = 'count ' + (len > 3000 ? 'danger' : len > 2700 ? 'warning' : 'ok');
+
+      // Update Twitter preview
+      document.querySelector('.twitter-content').textContent = textarea.value;
+      document.querySelector('.linkedin-content').textContent = textarea.value;
+    }
+
+    textarea.addEventListener('input', updateCharCount);
+  </script>
+</body>
+</html>

@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Scheduler - Dashboard</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    /* Page-specific overrides */
+    .dashboard-layout {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 0;
+      min-height: calc(100vh - 65px);
+    }
+
+    @media (max-width: 1200px) {
+      .dashboard-layout {
+        grid-template-columns: 1fr;
+      }
+      .app-sidebar {
+        display: none;
+      }
+    }
+
+    .section-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: var(--space-4);
+    }
+
+    .section-title h2 {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-tertiary);
+    }
+
+    .upcoming-list {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-3);
+    }
+
+    .upcoming-item {
+      display: flex;
+      gap: var(--space-3);
+      padding: var(--space-3);
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .upcoming-item:hover {
+      border-color: var(--border-default);
+      background: var(--bg-hover);
+      transform: translateX(4px);
+    }
+
+    .upcoming-item-platforms {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding-top: 2px;
+    }
+
+    .upcoming-item-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .upcoming-item-text {
+      font-size: 0.875rem;
+      color: var(--text-primary);
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .upcoming-item-meta {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      margin-top: var(--space-2);
+      font-size: 0.75rem;
+      color: var(--text-tertiary);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-3);
+      margin-bottom: var(--space-6);
+    }
+
+    .stat-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: var(--space-4);
+      text-align: center;
+    }
+
+    .stat-value {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .stat-label {
+      font-size: 0.6875rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-tertiary);
+      margin-top: var(--space-1);
+    }
+
+    .calendar-more {
+      font-size: 0.625rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* Quick filter tabs */
+    .filter-tabs {
+      display: flex;
+      gap: var(--space-1);
+      margin-bottom: var(--space-4);
+    }
+
+    .filter-tab {
+      padding: var(--space-2) var(--space-3);
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--text-tertiary);
+      background: transparent;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+    }
+
+    .filter-tab:hover {
+      color: var(--text-secondary);
+      background: var(--bg-hover);
+    }
+
+    .filter-tab.active {
+      color: var(--text-primary);
+      background: var(--bg-elevated);
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="app-logo">
+        <div class="app-logo-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+          </svg>
+        </div>
+        <span class="app-logo-text">Social Scheduler</span>
+      </div>
+
+      <div class="flex items-center gap-4">
+        <button class="btn btn-ghost btn-icon" title="Search">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.3-4.3"></path>
+          </svg>
+        </button>
+        <button class="btn btn-ghost btn-icon" title="Notifications">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"></path>
+            <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"></path>
+          </svg>
+        </button>
+        <button class="btn btn-ghost btn-icon" title="Settings">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
+        </button>
+        <div class="avatar">JW</div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="dashboard-layout">
+      <main class="app-content">
+        <!-- Calendar -->
+        <div class="calendar animate-fade-in">
+          <div class="calendar-header">
+            <div class="flex items-center gap-4">
+              <h2 class="text-lg font-medium">January 2025</h2>
+              <div class="calendar-nav">
+                <button class="btn btn-ghost btn-icon btn-sm">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m15 18-6-6 6-6"/>
+                  </svg>
+                </button>
+                <button class="btn btn-secondary btn-sm">Today</button>
+                <button class="btn btn-ghost btn-icon btn-sm">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m9 18 6-6-6-6"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div class="toggle-group">
+              <button class="toggle-item active">Month</button>
+              <button class="toggle-item">Week</button>
+              <button class="toggle-item">List</button>
+            </div>
+          </div>
+
+          <div class="calendar-weekdays">
+            <div class="calendar-weekday">Sun</div>
+            <div class="calendar-weekday">Mon</div>
+            <div class="calendar-weekday">Tue</div>
+            <div class="calendar-weekday">Wed</div>
+            <div class="calendar-weekday">Thu</div>
+            <div class="calendar-weekday">Fri</div>
+            <div class="calendar-weekday">Sat</div>
+          </div>
+
+          <div class="calendar-grid">
+            <!-- Week 1 -->
+            <div class="calendar-day other-month">
+              <span class="calendar-day-number">29</span>
+            </div>
+            <div class="calendar-day other-month">
+              <span class="calendar-day-number">30</span>
+            </div>
+            <div class="calendar-day other-month">
+              <span class="calendar-day-number">31</span>
+            </div>
+            <div class="calendar-day">
+              <span class="calendar-day-number">1</span>
+            </div>
+            <div class="calendar-day">
+              <span class="calendar-day-number">2</span>
+              <div class="calendar-day-posts">
+                <div class="calendar-post-pill twitter">
+                  <span class="platform-dot twitter"></span>
+                  New Year post
+                </div>
+              </div>
+            </div>
+            <div class="calendar-day">
+              <span class="calendar-day-number">3</span>
+            </div>
+            <div class="calendar-day">
+              <span class="calendar-day-number">4</span>
+            </div>
+
+            <!-- Week 2 -->
+            <div class="calendar-day">
+              <span class="calendar-day-number">5</span>
+            </div>
+            <div class="calendar-day">
+              <span class="calendar-day-number">6</span>
+              <div class="calendar-day-posts">
+                <div class="calendar-post-pill linkedin">
+                  <span class="platform-dot linkedin"></span>
+                  Product update
+                </div>
+              </div>
+            </div>
+            <div class="calendar-day">
+              <span class="calendar-day-number">7</span>
+            </div>
+            <div class="calendar-day">
+              <span class="calendar-day-number">8</span>
+              <div class="calendar-day-posts">
+                <div class="calendar-post-pill twitter">
+                  <span class="platform-dot twitter"></span>
+                  Thread: AI tips
+                </div>
+                <div class="calendar-post-pill reddit">
+                  <span class="platform-dot reddit"></span>
+                  AMA announce
+                </div>
+              </div>
+            </div>
+            <div class="calendar-day">
+              <span class="calendar-day-number">9</span>
+            </div>
+            <div class="calendar-day">
+              <span class="calendar-day-number">10</span>
+            </div>
+            <div class="calendar-day">
+              <span class="calendar-day-number">11</span>
+            </div>
+
+            <!-- Week 3 -->
+            <div class="calendar-day">
+              <span class="calendar-day-number">12</span>
+            </div>
+            <div class="calendar-day">
+              <span class="calendar-day-number">13</span>
+              <div class="calendar-day-posts">
+                <div class="calendar-post-pill linkedin">
+                  <span class="platform-dot linkedin"></span>
+                  Case study
+                </div>
+              </div>
+            </div>
+            <div class="calendar-day">
+              <span class="calendar-day-number">14</span>
+            </div>
+            <div class="calendar-day today">
+              <span class="calendar-day-number">15</span>
+              <div class="calendar-day-posts">
+                <div class="calendar-post-pill twitter">
+                  <span class="platform-dot twitter"></span>
+                  Launch day!
+                </div>
+                <div class="calendar-post-pill linkedin">
+                  <span class="platform-dot linkedin"></span>
+                  Launch day!
+                </div>
+                <div class="calendar-post-pill reddit">
+                  <span class="platform-dot reddit"></span>
+                  Show HN
+                </div>
+              </div>
+            </div>
+            <div class="calendar-day">
+              <span class="calendar-day-number">16</span>
+            </div>
+            <div class="calendar-day">
+              <span class="calendar-day-number">17</span>
+            </div>
+            <div class="calendar-day">
+              <span class="calendar-day-number">18</span>
+            </div>
+
+            <!-- Week 4 -->
+            <div class="calendar-day">
+              <span class="calendar-day-number">19</span>
+            </div>
+            <div class="calendar-day">
+              <span class="calendar-day-number">20</span>
+              <div class="calendar-day-posts">
+                <div class="calendar-post-pill twitter">
+                  <span class="platform-dot twitter"></span>
+                  Weekly recap
+                </div>
+              </div>
+            </div>
+            <div class="calendar-day">
+              <span class="calendar-day-number">21</span>
+            </div>
+            <div class="calendar-day">
+              <span class="calendar-day-number">22</span>
+              <div class="calendar-day-posts">
+                <div class="calendar-post-pill linkedin">
+                  <span class="platform-dot linkedin"></span>
+                  Hiring post
+                </div>
+              </div>
+            </div>
+            <div class="calendar-day">
+              <span class="calendar-day-number">23</span>
+            </div>
+            <div class="calendar-day">
+              <span class="calendar-day-number">24</span>
+            </div>
+            <div class="calendar-day">
+              <span class="calendar-day-number">25</span>
+            </div>
+
+            <!-- Week 5 -->
+            <div class="calendar-day">
+              <span class="calendar-day-number">26</span>
+            </div>
+            <div class="calendar-day">
+              <span class="calendar-day-number">27</span>
+              <div class="calendar-day-posts">
+                <div class="calendar-post-pill twitter">
+                  <span class="platform-dot twitter"></span>
+                  Tutorial video
+                </div>
+                <div class="calendar-more">+2 more</div>
+              </div>
+            </div>
+            <div class="calendar-day">
+              <span class="calendar-day-number">28</span>
+            </div>
+            <div class="calendar-day">
+              <span class="calendar-day-number">29</span>
+            </div>
+            <div class="calendar-day">
+              <span class="calendar-day-number">30</span>
+            </div>
+            <div class="calendar-day">
+              <span class="calendar-day-number">31</span>
+            </div>
+            <div class="calendar-day other-month">
+              <span class="calendar-day-number">1</span>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <!-- Sidebar -->
+      <aside class="app-sidebar">
+        <!-- Stats -->
+        <div class="stats-grid stagger-children">
+          <div class="stat-card">
+            <div class="stat-value">12</div>
+            <div class="stat-label">Scheduled</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">5</div>
+            <div class="stat-label">Drafts</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value">48</div>
+            <div class="stat-label">Published</div>
+          </div>
+        </div>
+
+        <!-- Upcoming Posts -->
+        <div class="section-title">
+          <h2>Upcoming Posts</h2>
+          <button class="btn btn-ghost btn-sm text-tertiary">View all</button>
+        </div>
+
+        <div class="filter-tabs">
+          <button class="filter-tab active">All</button>
+          <button class="filter-tab">
+            <span class="platform-dot twitter" style="display: inline-block; margin-right: 4px;"></span>
+            Twitter
+          </button>
+          <button class="filter-tab">
+            <span class="platform-dot linkedin" style="display: inline-block; margin-right: 4px;"></span>
+            LinkedIn
+          </button>
+          <button class="filter-tab">
+            <span class="platform-dot reddit" style="display: inline-block; margin-right: 4px;"></span>
+            Reddit
+          </button>
+        </div>
+
+        <div class="upcoming-list stagger-children">
+          <div class="upcoming-item">
+            <div class="upcoming-item-platforms">
+              <span class="platform-dot twitter"></span>
+              <span class="platform-dot linkedin"></span>
+              <span class="platform-dot reddit"></span>
+            </div>
+            <div class="upcoming-item-content">
+              <div class="upcoming-item-text">
+                Launching Social Scheduler today! After months of building, we're finally ready to help you manage your social presence...
+              </div>
+              <div class="upcoming-item-meta">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                Today, 2:00 PM
+                <span class="badge badge-scheduled">Scheduled</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="upcoming-item">
+            <div class="upcoming-item-platforms">
+              <span class="platform-dot twitter"></span>
+            </div>
+            <div class="upcoming-item-content">
+              <div class="upcoming-item-text">
+                Thread: 5 tips for growing your audience on Twitter in 2025
+              </div>
+              <div class="upcoming-item-meta">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                Tomorrow, 9:00 AM
+                <span class="badge badge-scheduled">Scheduled</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="upcoming-item">
+            <div class="upcoming-item-platforms">
+              <span class="platform-dot linkedin"></span>
+            </div>
+            <div class="upcoming-item-content">
+              <div class="upcoming-item-text">
+                We're hiring! Looking for a senior frontend engineer to join our team...
+              </div>
+              <div class="upcoming-item-meta">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                Jan 22, 10:00 AM
+                <span class="badge badge-scheduled">Scheduled</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="upcoming-item">
+            <div class="upcoming-item-platforms">
+              <span class="platform-dot reddit"></span>
+            </div>
+            <div class="upcoming-item-content">
+              <div class="upcoming-item-text">
+                [Show HN] Social Scheduler - Schedule posts to Twitter, LinkedIn, Reddit
+              </div>
+              <div class="upcoming-item-meta">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                </svg>
+                Draft
+                <span class="badge badge-draft">Draft</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="upcoming-item">
+            <div class="upcoming-item-platforms">
+              <span class="platform-dot twitter"></span>
+              <span class="platform-dot linkedin"></span>
+            </div>
+            <div class="upcoming-item-content">
+              <div class="upcoming-item-text">
+                Weekly product update: New calendar view, drag-and-drop scheduling, and more!
+              </div>
+              <div class="upcoming-item-meta">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                Jan 27, 3:00 PM
+                <span class="badge badge-scheduled">Scheduled</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- FAB -->
+    <button class="fab" title="Create new post">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="5" x2="12" y2="19"></line>
+        <line x1="5" y1="12" x2="19" y2="12"></line>
+      </svg>
+    </button>
+  </div>
+</body>
+</html>
