@@ -301,39 +301,101 @@ export function Editor() {
           </div>
         </div>
 
+        {/* LinkedIn-specific fields */}
+        {post.platforms.includes('linkedin') && (
+          <div className="mb-6 p-4 rounded-xl border border-linkedin/30 bg-linkedin-soft/30 animate-slide-up">
+            <div className="flex items-center gap-2 text-linkedin text-xs font-medium mb-3">
+              <span className="w-2 h-2 rounded-full bg-linkedin" />
+              LinkedIn Settings
+            </div>
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                Visibility
+              </label>
+              <div className="flex gap-2">
+                {(['public', 'connections'] as const).map((vis) => (
+                  <button
+                    key={vis}
+                    type="button"
+                    onClick={() =>
+                      setPost((prev) => ({
+                        ...prev,
+                        content: {
+                          ...prev.content,
+                          linkedin: {
+                            ...prev.content.linkedin!,
+                            visibility: vis,
+                          },
+                        },
+                      }))
+                    }
+                    className={cn(
+                      'flex-1 px-4 py-2.5 rounded-lg border text-sm font-medium transition-all',
+                      post.content.linkedin?.visibility === vis
+                        ? 'border-linkedin bg-linkedin/10 text-linkedin'
+                        : 'border-border bg-background text-muted-foreground hover:border-linkedin/50'
+                    )}
+                  >
+                    {vis === 'public' ? 'Public' : 'Connections Only'}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Reddit-specific fields */}
         {post.platforms.includes('reddit') && (
-          <div className="mb-6 p-4 rounded-xl border border-border bg-card space-y-4 animate-slide-up">
+          <div className="mb-6 p-4 rounded-xl border border-reddit/30 bg-reddit-soft/30 space-y-4 animate-slide-up">
+            <div className="flex items-center gap-2 text-reddit text-xs font-medium mb-1">
+              <span className="w-2 h-2 rounded-full bg-reddit" />
+              Reddit Settings
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
                   Subreddit
                 </label>
+                <div className="flex items-center">
+                  <span className="px-3 py-2.5 rounded-l-lg bg-muted border border-r-0 border-border text-muted-foreground text-sm">
+                    r/
+                  </span>
+                  <input
+                    type="text"
+                    value={post.content.reddit?.subreddit || ''}
+                    onChange={(e) =>
+                      setPost((prev) => ({
+                        ...prev,
+                        content: {
+                          ...prev.content,
+                          reddit: { ...prev.content.reddit!, subreddit: e.target.value.replace(/^r\//, '') },
+                        },
+                      }))
+                    }
+                    placeholder="SideProject"
+                    className="flex-1 px-4 py-2.5 rounded-r-lg bg-background border border-border focus:outline-none focus:border-reddit"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                  Flair (optional)
+                </label>
                 <input
                   type="text"
-                  value={post.content.reddit?.subreddit || ''}
+                  value={post.content.reddit?.flairText || ''}
                   onChange={(e) =>
                     setPost((prev) => ({
                       ...prev,
                       content: {
                         ...prev.content,
-                        reddit: { ...prev.content.reddit!, subreddit: e.target.value },
+                        reddit: { ...prev.content.reddit!, flairText: e.target.value },
                       },
                     }))
                   }
-                  placeholder="e.g., SideProject"
-                  className="w-full px-4 py-2.5 rounded-lg bg-background border border-border focus:outline-none focus:border-primary"
+                  placeholder="e.g., Show and Tell"
+                  className="w-full px-4 py-2.5 rounded-lg bg-background border border-border focus:outline-none focus:border-reddit"
                 />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                  Flair
-                </label>
-                <select className="w-full px-4 py-2.5 rounded-lg bg-background border border-border focus:outline-none focus:border-primary">
-                  <option>Show and Tell</option>
-                  <option>Question</option>
-                  <option>Resource</option>
-                </select>
               </div>
             </div>
             <div>
@@ -353,8 +415,11 @@ export function Editor() {
                   }))
                 }
                 placeholder="Title for your Reddit post"
-                className="w-full px-4 py-2.5 rounded-lg bg-background border border-border focus:outline-none focus:border-primary"
+                className="w-full px-4 py-2.5 rounded-lg bg-background border border-border focus:outline-none focus:border-reddit"
               />
+              <p className="text-xs text-muted-foreground mt-1.5">
+                {(post.content.reddit?.title || '').length} / 300 characters
+              </p>
             </div>
           </div>
         )}

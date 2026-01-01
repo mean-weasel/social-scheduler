@@ -3,6 +3,7 @@ import { useAuth } from '@/lib/auth'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { Dashboard } from '@/pages/Dashboard'
 import { Editor } from '@/pages/Editor'
+import { Posts } from '@/pages/Posts'
 import { Settings } from '@/pages/Settings'
 import { Login } from '@/pages/Login'
 
@@ -37,6 +38,7 @@ export default function App() {
         }
       >
         <Route index element={<Dashboard />} />
+        <Route path="posts" element={<Posts />} />
         <Route path="new" element={<Editor />} />
         <Route path="edit/:id" element={<Editor />} />
         <Route path="settings" element={<Settings />} />
