@@ -9,9 +9,10 @@ import {
   Send,
   Save,
   Check,
+  Trash2,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
-import { getPost, savePost, movePost } from '@/lib/github'
+import { getPost, savePost, movePost, deletePost } from '@/lib/github'
 import {
   Post,
   Platform,
@@ -66,7 +67,7 @@ export function Editor() {
   const [content, setContent] = useState('')
 
   // Fetch existing post
-  const { isLoading } = useQuery({
+  const { data: existingPost, isLoading } = useQuery({
     queryKey: ['post', id],
     queryFn: async () => {
       if (!token || !config || !id) return null
@@ -74,6 +75,20 @@ export function Editor() {
     },
     enabled: !!token && !!config && !!id,
   })
+
+  // Load existing post data into form
+  useEffect(() => {
+    if (existingPost) {
+      setPost(existingPost)
+      // Set content from the first available platform
+      const text =
+        existingPost.content.twitter?.text ||
+        existingPost.content.linkedin?.text ||
+        existingPost.content.reddit?.body ||
+        ''
+      setContent(text)
+    }
+  }, [existingPost])
 
   // Save mutation
   const saveMutation = useMutation({
@@ -94,6 +109,26 @@ export function Editor() {
       navigate('/')
     },
   })
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: async () => {
+      if (!token || !config || !id || !existingPost) throw new Error('Cannot delete')
+      const folder = getFolder(existingPost.status)
+      await deletePost(token, config, id, folder)
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['posts'] })
+      navigate('/')
+    },
+  })
+
+  // Handle delete
+  const handleDelete = () => {
+    if (confirm('Are you sure you want to delete this post? This cannot be undone.')) {
+      deleteMutation.mutate()
+    }
+  }
 
   // Toggle platform
   const togglePlatform = (platform: Platform) => {
@@ -140,6 +175,24 @@ export function Editor() {
       return
     }
     const toSave = { ...post, status: 'scheduled' as const }
+    saveMutation.mutate(toSave)
+  }
+
+  // Publish Now - schedules for immediate publishing
+  const handlePublishNow = () => {
+    if (post.platforms.length === 0) {
+      alert('Please select at least one platform')
+      return
+    }
+    if (!content.trim()) {
+      alert('Please add some content')
+      return
+    }
+    const toSave = {
+      ...post,
+      status: 'scheduled' as const,
+      scheduledAt: new Date().toISOString(), // Schedule for now
+    }
     saveMutation.mutate(toSave)
   }
 
@@ -354,6 +407,22 @@ export function Editor() {
 
         {/* Actions */}
         <div className="flex gap-3 pt-6 border-t border-border">
+          {!isNew && (
+            <button
+              onClick={handleDelete}
+              disabled={deleteMutation.isPending}
+              className={cn(
+                'flex items-center gap-2 px-4 py-2.5 rounded-lg',
+                'text-destructive hover:bg-destructive/10',
+                'font-medium text-sm',
+                'transition-colors',
+                'disabled:opacity-50'
+              )}
+            >
+              <Trash2 className="w-4 h-4" />
+              Delete
+            </button>
+          )}
           <button
             onClick={handleSaveDraft}
             disabled={saveMutation.isPending}
@@ -362,7 +431,8 @@ export function Editor() {
               'bg-secondary text-secondary-foreground border border-border',
               'font-medium text-sm',
               'hover:bg-accent transition-colors',
-              'disabled:opacity-50'
+              'disabled:opacity-50',
+              !isNew && 'ml-auto'
             )}
           >
             <Save className="w-4 h-4" />
@@ -383,11 +453,15 @@ export function Editor() {
             Schedule Post
           </button>
           <button
+            onClick={handlePublishNow}
+            disabled={saveMutation.isPending || post.platforms.length === 0}
             className={cn(
-              'flex items-center gap-2 px-4 py-2.5 rounded-lg ml-auto',
+              'flex items-center gap-2 px-4 py-2.5 rounded-lg',
               'text-muted-foreground',
               'font-medium text-sm',
-              'hover:bg-accent hover:text-foreground transition-colors'
+              'hover:bg-accent hover:text-foreground transition-colors',
+              'disabled:opacity-50',
+              isNew && 'ml-auto'
             )}
           >
             <Send className="w-4 h-4" />
