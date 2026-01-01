@@ -6,16 +6,19 @@ import { ChevronLeft, ChevronRight, Clock } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { listPosts } from '@/lib/github'
 import { Post, getPostPreviewText } from '@/lib/posts'
+import { DEMO_POSTS } from '@/lib/demo-data'
 import { cn } from '@/lib/utils'
 
 export function Dashboard() {
-  const { token, config } = useAuth()
+  const { token, config, isDemoMode } = useAuth()
   const [currentDate, setCurrentDate] = useState(new Date())
 
-  // Fetch all posts
+  // Fetch all posts (or use demo data)
   const { data: allPosts = [], isLoading } = useQuery({
-    queryKey: ['posts', config?.owner, config?.repo],
+    queryKey: ['posts', config?.owner, config?.repo, isDemoMode],
     queryFn: async () => {
+      // Return demo data in demo mode
+      if (isDemoMode) return DEMO_POSTS
       if (!token || !config) return []
       const [drafts, scheduled, published] = await Promise.all([
         listPosts(token, config, 'drafts'),
@@ -24,7 +27,7 @@ export function Dashboard() {
       ])
       return [...drafts, ...scheduled, ...published]
     },
-    enabled: !!token && !!config,
+    enabled: isDemoMode || (!!token && !!config),
   })
 
   // Filter posts for current month view

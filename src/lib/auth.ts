@@ -14,6 +14,7 @@ interface AuthState {
   config: GitHubConfig | null
   isLoading: boolean
   error: string | null
+  isDemoMode: boolean
 }
 
 interface AuthActions {
@@ -24,6 +25,21 @@ interface AuthActions {
   setError: (error: string | null) => void
   logout: () => void
   clearError: () => void
+  enterDemoMode: () => void
+  exitDemoMode: () => void
+}
+
+// Demo user for preview mode
+export const DEMO_USER: GitHubUser = {
+  login: 'demo-user',
+  name: 'Demo User',
+  avatar_url: 'https://avatars.githubusercontent.com/u/0?v=4',
+  email: 'demo@example.com',
+}
+
+export const DEMO_CONFIG: GitHubConfig = {
+  owner: 'demo',
+  repo: 'social-scheduler',
 }
 
 export interface GitHubUser {
@@ -57,14 +73,30 @@ export const useAuthStore = create<AuthState & AuthActions>()(
       config: null,
       isLoading: false,
       error: null,
+      isDemoMode: false,
 
       setToken: (token) => set({ token, error: null }),
       setUser: (user) => set({ user }),
       setConfig: (config) => set({ config }),
       setLoading: (isLoading) => set({ isLoading }),
       setError: (error) => set({ error }),
-      logout: () => set({ token: null, user: null, config: null }),
+      logout: () => set({ token: null, user: null, config: null, isDemoMode: false }),
       clearError: () => set({ error: null }),
+      enterDemoMode: () =>
+        set({
+          isDemoMode: true,
+          user: DEMO_USER,
+          config: DEMO_CONFIG,
+          token: 'demo-token',
+          error: null,
+        }),
+      exitDemoMode: () =>
+        set({
+          isDemoMode: false,
+          user: null,
+          config: null,
+          token: null,
+        }),
     }),
     {
       name: 'social-scheduler-auth',
@@ -72,6 +104,7 @@ export const useAuthStore = create<AuthState & AuthActions>()(
         token: state.token,
         user: state.user,
         config: state.config,
+        isDemoMode: state.isDemoMode,
       }),
     }
   )
@@ -79,7 +112,17 @@ export const useAuthStore = create<AuthState & AuthActions>()(
 
 // Hook for auth state
 export function useAuth() {
-  const { token, user, config, isLoading, error, logout } = useAuthStore()
+  const {
+    token,
+    user,
+    config,
+    isLoading,
+    error,
+    isDemoMode,
+    logout,
+    enterDemoMode,
+    exitDemoMode,
+  } = useAuthStore()
 
   return {
     token,
@@ -87,8 +130,11 @@ export function useAuth() {
     config,
     isLoading,
     error,
+    isDemoMode,
     isAuthenticated: !!token && !!user && !!config,
     logout,
+    enterDemoMode,
+    exitDemoMode,
   }
 }
 

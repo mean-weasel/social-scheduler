@@ -6,6 +6,7 @@ import { Clock, Edit2, Plus, FileText, Calendar, CheckCircle, AlertCircle } from
 import { useAuth } from '@/lib/auth'
 import { listPosts } from '@/lib/github'
 import { Post, PostStatus, getPostPreviewText, PLATFORM_INFO } from '@/lib/posts'
+import { DEMO_POSTS } from '@/lib/demo-data'
 import { cn } from '@/lib/utils'
 
 type FilterStatus = 'all' | PostStatus
@@ -18,12 +19,14 @@ const STATUS_CONFIG: Record<PostStatus, { label: string; icon: typeof FileText; 
 }
 
 export function Posts() {
-  const { token, config } = useAuth()
+  const { token, config, isDemoMode } = useAuth()
   const [filter, setFilter] = useState<FilterStatus>('all')
 
   const { data: allPosts = [], isLoading } = useQuery({
-    queryKey: ['posts', config?.owner, config?.repo],
+    queryKey: ['posts', config?.owner, config?.repo, isDemoMode],
     queryFn: async () => {
+      // Return demo data in demo mode
+      if (isDemoMode) return DEMO_POSTS
       if (!token || !config) return []
       const [drafts, scheduled, published] = await Promise.all([
         listPosts(token, config, 'drafts'),
@@ -32,7 +35,7 @@ export function Posts() {
       ])
       return [...drafts, ...scheduled, ...published]
     },
-    enabled: !!token && !!config,
+    enabled: isDemoMode || (!!token && !!config),
   })
 
   // Filter posts

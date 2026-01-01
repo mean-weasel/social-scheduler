@@ -21,6 +21,7 @@ import {
   PLATFORM_INFO,
   getFolder,
 } from '@/lib/posts'
+import { getDemoPost } from '@/lib/demo-data'
 import { cn } from '@/lib/utils'
 
 // Platform icons
@@ -51,7 +52,7 @@ export function Editor() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { token, config } = useAuth()
+  const { token, config, isDemoMode } = useAuth()
 
   const isNew = !id
 
@@ -68,12 +69,15 @@ export function Editor() {
 
   // Fetch existing post
   const { data: existingPost, isLoading } = useQuery({
-    queryKey: ['post', id],
+    queryKey: ['post', id, isDemoMode],
     queryFn: async () => {
-      if (!token || !config || !id) return null
+      if (!id) return null
+      // Return demo post in demo mode
+      if (isDemoMode) return getDemoPost(id) || null
+      if (!token || !config) return null
       return getPost(token, config, id)
     },
-    enabled: !!token && !!config && !!id,
+    enabled: isDemoMode ? !!id : (!!token && !!config && !!id),
   })
 
   // Load existing post data into form
@@ -93,6 +97,12 @@ export function Editor() {
   // Save mutation
   const saveMutation = useMutation({
     mutationFn: async (postToSave: Post) => {
+      // In demo mode, simulate save success
+      if (isDemoMode) {
+        await new Promise((resolve) => setTimeout(resolve, 500))
+        return
+      }
+
       if (!token || !config) throw new Error('Not authenticated')
 
       const oldFolder = id ? getFolder((await getPost(token, config, id))?.status || 'draft') : null
@@ -113,6 +123,12 @@ export function Editor() {
   // Delete mutation
   const deleteMutation = useMutation({
     mutationFn: async () => {
+      // In demo mode, simulate delete success
+      if (isDemoMode) {
+        await new Promise((resolve) => setTimeout(resolve, 500))
+        return
+      }
+
       if (!token || !config || !id || !existingPost) throw new Error('Cannot delete')
       const folder = getFolder(existingPost.status)
       await deletePost(token, config, id, folder)

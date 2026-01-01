@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Github, ArrowRight, Calendar, Copy, Check, ExternalLink, Loader2 } from 'lucide-react'
+import { Github, ArrowRight, Calendar, Copy, Check, ExternalLink, Loader2, Play } from 'lucide-react'
 import {
   useAuthStore,
   parseRepoConfig,
@@ -16,7 +16,7 @@ type Step = 'start' | 'device-code' | 'repo'
 
 export function Login() {
   const navigate = useNavigate()
-  const { setToken, setUser, setConfig } = useAuthStore()
+  const { setToken, setUser, setConfig, enterDemoMode } = useAuthStore()
   const token = useAuthStore((s) => s.token)
 
   const [step, setStep] = useState<Step>('start')
@@ -105,6 +105,12 @@ export function Login() {
     }
   }
 
+  // Enter demo mode
+  const handleTryDemo = () => {
+    enterDemoMode()
+    navigate('/')
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-md animate-fade-in">
@@ -153,6 +159,28 @@ export function Login() {
                   <Github className="w-5 h-5" />
                 )}
                 {isLoading ? 'Connecting...' : 'Continue with GitHub'}
+              </button>
+
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-border" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-3 text-muted-foreground">or</span>
+                </div>
+              </div>
+
+              <button
+                onClick={handleTryDemo}
+                className={cn(
+                  'w-full flex items-center justify-center gap-2 py-3 rounded-lg',
+                  'border border-border text-foreground',
+                  'font-medium',
+                  'hover:bg-accent transition-colors'
+                )}
+              >
+                <Play className="w-4 h-4" />
+                Try Demo Mode
               </button>
 
               <p className="text-xs text-muted-foreground text-center mt-6">
