@@ -10,6 +10,8 @@ import {
   Save,
   Check,
   Trash2,
+  X,
+  Plus,
 } from 'lucide-react'
 import { useAuth } from '@/lib/auth'
 import { getPost, savePost, movePost, deletePost } from '@/lib/github'
@@ -66,6 +68,9 @@ export function Editor() {
     return newPost
   })
   const [content, setContent] = useState('')
+  const [mediaUrls, setMediaUrls] = useState<string[]>([])
+  const [showMediaInput, setShowMediaInput] = useState(false)
+  const [newMediaUrl, setNewMediaUrl] = useState('')
 
   // Fetch existing post
   const { data: existingPost, isLoading } = useQuery({
@@ -91,6 +96,10 @@ export function Editor() {
         existingPost.content.reddit?.body ||
         ''
       setContent(text)
+      // Load mediaUrls from Twitter content
+      if (existingPost.content.twitter?.mediaUrls) {
+        setMediaUrls(existingPost.content.twitter.mediaUrls)
+      }
     }
   }, [existingPost])
 
@@ -162,7 +171,10 @@ export function Editor() {
       const updated = { ...prev, content: { ...prev.content } }
       for (const platform of prev.platforms) {
         if (platform === 'twitter') {
-          updated.content.twitter = { text: content }
+          updated.content.twitter = {
+            text: content,
+            ...(mediaUrls.length > 0 && { mediaUrls })
+          }
         } else if (platform === 'linkedin') {
           updated.content.linkedin = { text: content, visibility: 'public' }
         } else if (platform === 'reddit') {
@@ -176,7 +188,7 @@ export function Editor() {
       }
       return updated
     })
-  }, [content])
+  }, [content, mediaUrls])
 
   // Save as draft
   const handleSaveDraft = () => {
@@ -310,12 +322,98 @@ export function Editor() {
               })}
             </div>
             <div className="flex gap-1">
-              <button className="p-2 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors">
+              <button
+                onClick={() => setShowMediaInput(!showMediaInput)}
+                className={cn(
+                  'p-2 rounded-md transition-colors',
+                  showMediaInput || mediaUrls.length > 0
+                    ? 'bg-twitter/10 text-twitter'
+                    : 'hover:bg-accent text-muted-foreground hover:text-foreground'
+                )}
+                title="Add media (images/videos)"
+              >
                 <Image className="w-4 h-4" />
+                {mediaUrls.length > 0 && (
+                  <span className="ml-1 text-xs">{mediaUrls.length}</span>
+                )}
               </button>
             </div>
           </div>
         </div>
+
+        {/* Media URLs (for Twitter) */}
+        {showMediaInput && post.platforms.includes('twitter') && (
+          <div className="mb-6 p-4 rounded-xl border border-twitter/30 bg-twitter-soft/30 animate-slide-up">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2 text-twitter text-xs font-medium">
+                <span className="w-2 h-2 rounded-full bg-twitter" />
+                Media URLs (Cloudinary)
+              </div>
+              <button
+                onClick={() => setShowMediaInput(false)}
+                className="p-1 rounded hover:bg-twitter/20 text-twitter"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">
+              Add Cloudinary URLs for images or videos. Twitter supports up to 4 images or 1 video.
+            </p>
+
+            {/* Existing media */}
+            {mediaUrls.length > 0 && (
+              <div className="space-y-2 mb-3">
+                {mediaUrls.map((url, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={url}
+                      readOnly
+                      className="flex-1 px-3 py-2 rounded-lg bg-background border border-border text-sm text-muted-foreground"
+                    />
+                    <button
+                      onClick={() => setMediaUrls(mediaUrls.filter((_, i) => i !== idx))}
+                      className="p-2 rounded-lg hover:bg-destructive/10 text-destructive transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Add new media */}
+            {mediaUrls.length < 4 && (
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={newMediaUrl}
+                  onChange={(e) => setNewMediaUrl(e.target.value)}
+                  placeholder="https://res.cloudinary.com/..."
+                  className="flex-1 px-3 py-2 rounded-lg bg-background border border-border text-sm focus:outline-none focus:border-twitter"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && newMediaUrl.trim()) {
+                      setMediaUrls([...mediaUrls, newMediaUrl.trim()])
+                      setNewMediaUrl('')
+                    }
+                  }}
+                />
+                <button
+                  onClick={() => {
+                    if (newMediaUrl.trim()) {
+                      setMediaUrls([...mediaUrls, newMediaUrl.trim()])
+                      setNewMediaUrl('')
+                    }
+                  }}
+                  disabled={!newMediaUrl.trim()}
+                  className="p-2 rounded-lg bg-twitter text-white hover:bg-twitter/90 disabled:opacity-50 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* LinkedIn-specific fields */}
         {post.platforms.includes('linkedin') && (
@@ -582,6 +680,37 @@ export function Editor() {
                   <div className="text-[15px] leading-[1.4] text-[#E7E9EA] whitespace-pre-wrap">
                     {content || 'Your tweet will appear here...'}
                   </div>
+                  {mediaUrls.length > 0 && (
+                    <div className={cn(
+                      'mt-3 grid gap-1 rounded-xl overflow-hidden',
+                      mediaUrls.length === 1 && 'grid-cols-1',
+                      mediaUrls.length === 2 && 'grid-cols-2',
+                      mediaUrls.length >= 3 && 'grid-cols-2'
+                    )}>
+                      {mediaUrls.slice(0, 4).map((url, idx) => (
+                        <div
+                          key={idx}
+                          className={cn(
+                            'relative bg-[#1D2A35] flex items-center justify-center',
+                            mediaUrls.length === 1 ? 'h-48' : 'h-24',
+                            mediaUrls.length === 3 && idx === 0 && 'row-span-2 h-48'
+                          )}
+                        >
+                          <img
+                            src={url}
+                            alt={`Media ${idx + 1}`}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none'
+                            }}
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center text-[#71767B] text-xs">
+                            <Image className="w-6 h-6 opacity-50" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
