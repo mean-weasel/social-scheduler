@@ -1,34 +1,14 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday } from 'date-fns'
 import { ChevronLeft, ChevronRight, Clock } from 'lucide-react'
-import { useAuth } from '@/lib/auth'
-import { listPosts } from '@/lib/github'
+import { usePostsStore } from '@/lib/storage'
 import { Post, getPostPreviewText } from '@/lib/posts'
-import { DEMO_POSTS } from '@/lib/demo-data'
 import { cn } from '@/lib/utils'
 
 export function Dashboard() {
-  const { token, config, isDemoMode } = useAuth()
+  const allPosts = usePostsStore((state) => state.posts)
   const [currentDate, setCurrentDate] = useState(new Date())
-
-  // Fetch all posts (or use demo data)
-  const { data: allPosts = [], isLoading } = useQuery({
-    queryKey: ['posts', config?.owner, config?.repo, isDemoMode],
-    queryFn: async () => {
-      // Return demo data in demo mode
-      if (isDemoMode) return DEMO_POSTS
-      if (!token || !config) return []
-      const [drafts, scheduled, published] = await Promise.all([
-        listPosts(token, config, 'drafts'),
-        listPosts(token, config, 'scheduled'),
-        listPosts(token, config, 'published'),
-      ])
-      return [...drafts, ...scheduled, ...published]
-    },
-    enabled: isDemoMode || (!!token && !!config),
-  })
 
   // Filter posts for current month view
   const monthStart = startOfMonth(currentDate)
@@ -68,14 +48,6 @@ export function Dashboard() {
       next.setMonth(next.getMonth() + delta)
       return next
     })
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-pulse text-muted-foreground">Loading posts...</div>
-      </div>
-    )
   }
 
   return (

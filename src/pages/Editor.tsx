@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import {
   Calendar,
@@ -13,17 +12,14 @@ import {
   X,
   Plus,
 } from 'lucide-react'
-import { useAuth } from '@/lib/auth'
-import { getPost, savePost, movePost, deletePost } from '@/lib/github'
+import { usePostsStore } from '@/lib/storage'
 import {
   Post,
   Platform,
   createPost,
   CHAR_LIMITS,
   PLATFORM_INFO,
-  getFolder,
 } from '@/lib/posts'
-import { getDemoPost } from '@/lib/demo-data'
 import { cn } from '@/lib/utils'
 
 // Platform icons
@@ -53,13 +49,15 @@ export function Editor() {
   const { id } = useParams()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
-  const queryClient = useQueryClient()
-  const { token, config, isDemoMode } = useAuth()
+  const { addPost, updatePost, deletePost, getPost } = usePostsStore()
 
   const isNew = !id
+  const existingPost = id ? getPost(id) : undefined
+  const [isSaving, setIsSaving] = useState(false)
 
   // Form state
   const [post, setPost] = useState<Post>(() => {
+    if (existingPost) return existingPost
     const newPost = createPost()
     const dateParam = searchParams.get('date')
     if (dateParam) {
@@ -71,19 +69,6 @@ export function Editor() {
   const [mediaUrls, setMediaUrls] = useState<string[]>([])
   const [showMediaInput, setShowMediaInput] = useState(false)
   const [newMediaUrl, setNewMediaUrl] = useState('')
-
-  // Fetch existing post
-  const { data: existingPost, isLoading } = useQuery({
-    queryKey: ['post', id, isDemoMode],
-    queryFn: async () => {
-      if (!id) return null
-      // Return demo post in demo mode
-      if (isDemoMode) return getDemoPost(id) || null
-      if (!token || !config) return null
-      return getPost(token, config, id)
-    },
-    enabled: isDemoMode ? !!id : (!!token && !!config && !!id),
-  })
 
   // Load existing post data into form
   useEffect(() => {
@@ -103,55 +88,25 @@ export function Editor() {
     }
   }, [existingPost])
 
-  // Save mutation
-  const saveMutation = useMutation({
-    mutationFn: async (postToSave: Post) => {
-      // In demo mode, simulate save success
-      if (isDemoMode) {
-        await new Promise((resolve) => setTimeout(resolve, 500))
-        return
-      }
-
-      if (!token || !config) throw new Error('Not authenticated')
-
-      const oldFolder = id ? getFolder((await getPost(token, config, id))?.status || 'draft') : null
-      const newFolder = getFolder(postToSave.status)
-
-      if (oldFolder && oldFolder !== newFolder) {
-        await movePost(token, config, postToSave, oldFolder, newFolder)
-      } else {
-        await savePost(token, config, postToSave)
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['posts'] })
-      navigate('/')
-    },
-  })
-
-  // Delete mutation
-  const deleteMutation = useMutation({
-    mutationFn: async () => {
-      // In demo mode, simulate delete success
-      if (isDemoMode) {
-        await new Promise((resolve) => setTimeout(resolve, 500))
-        return
-      }
-
-      if (!token || !config || !id || !existingPost) throw new Error('Cannot delete')
-      const folder = getFolder(existingPost.status)
-      await deletePost(token, config, id, folder)
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['posts'] })
-      navigate('/')
-    },
-  })
+  // Handle save
+  const handleSave = (postToSave: Post) => {
+    setIsSaving(true)
+    if (isNew) {
+      addPost(postToSave)
+    } else {
+      updatePost(postToSave.id, postToSave)
+    }
+    setIsSaving(false)
+    navigate('/')
+  }
 
   // Handle delete
   const handleDelete = () => {
     if (confirm('Are you sure you want to delete this post? This cannot be undone.')) {
-      deleteMutation.mutate()
+      if (id) {
+        deletePost(id)
+        navigate('/')
+      }
     }
   }
 
@@ -193,7 +148,7 @@ export function Editor() {
   // Save as draft
   const handleSaveDraft = () => {
     const toSave = { ...post, status: 'draft' as const }
-    saveMutation.mutate(toSave)
+    handleSave(toSave)
   }
 
   // Schedule
@@ -203,10 +158,10 @@ export function Editor() {
       return
     }
     const toSave = { ...post, status: 'scheduled' as const }
-    saveMutation.mutate(toSave)
+    handleSave(toSave)
   }
 
-  // Publish Now - schedules for immediate publishing
+  // Publish Now - schedules for immediate publishing (reminder)
   const handlePublishNow = () => {
     if (post.platforms.length === 0) {
       alert('Please select at least one platform')
@@ -219,17 +174,9 @@ export function Editor() {
     const toSave = {
       ...post,
       status: 'scheduled' as const,
-      scheduledAt: new Date().toISOString(), // Schedule for now
+      scheduledAt: new Date().toISOString(), // Schedule for now (triggers immediate notification)
     }
-    saveMutation.mutate(toSave)
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-pulse text-muted-foreground">Loading...</div>
-      </div>
-    )
+    handleSave(toSave)
   }
 
   return (
@@ -589,7 +536,7 @@ export function Editor() {
           {!isNew && (
             <button
               onClick={handleDelete}
-              disabled={deleteMutation.isPending}
+              disabled={isSaving}
               className={cn(
                 'flex items-center gap-2 px-3 md:px-4 py-2.5 rounded-lg min-h-[44px]',
                 'text-destructive hover:bg-destructive/10',
@@ -604,7 +551,7 @@ export function Editor() {
           )}
           <button
             onClick={handleSaveDraft}
-            disabled={saveMutation.isPending}
+            disabled={isSaving}
             className={cn(
               'flex items-center gap-2 px-3 md:px-4 py-2.5 rounded-lg min-h-[44px]',
               'bg-secondary text-secondary-foreground border border-border',
@@ -620,7 +567,7 @@ export function Editor() {
           </button>
           <button
             onClick={handleSchedule}
-            disabled={saveMutation.isPending || post.platforms.length === 0}
+            disabled={isSaving || post.platforms.length === 0}
             className={cn(
               'flex items-center gap-2 px-3 md:px-4 py-2.5 rounded-lg min-h-[44px]',
               'bg-gradient-to-r from-twitter to-[#0d8bd9] text-white',
@@ -634,7 +581,7 @@ export function Editor() {
           </button>
           <button
             onClick={handlePublishNow}
-            disabled={saveMutation.isPending || post.platforms.length === 0}
+            disabled={isSaving || post.platforms.length === 0}
             className={cn(
               'flex items-center gap-2 px-3 md:px-4 py-2.5 rounded-lg min-h-[44px]',
               'text-muted-foreground',
