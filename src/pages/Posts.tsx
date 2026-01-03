@@ -64,61 +64,66 @@ export function Posts() {
   }
 
   return (
-    <div className="p-6 max-w-5xl mx-auto animate-fade-in">
+    <div className="p-4 md:p-6 max-w-5xl mx-auto animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-4 md:mb-8">
         <div>
-          <h1 className="text-2xl font-display font-semibold mb-1">All Posts</h1>
-          <p className="text-muted-foreground">Manage your drafts, scheduled, and published posts.</p>
+          <h1 className="text-xl md:text-2xl font-display font-semibold mb-1">All Posts</h1>
+          <p className="text-sm md:text-base text-muted-foreground hidden sm:block">
+            Manage your drafts, scheduled, and published posts.
+          </p>
         </div>
         <Link
           to="/new"
           className={cn(
-            'flex items-center gap-2 px-4 py-2.5 rounded-lg',
+            'flex items-center gap-2 px-3 md:px-4 py-2.5 rounded-lg min-h-[44px]',
             'bg-primary text-primary-foreground',
             'font-medium text-sm',
             'hover:opacity-90 transition-opacity'
           )}
         >
           <Plus className="w-4 h-4" />
-          New Post
+          <span className="hidden sm:inline">New Post</span>
+          <span className="sm:hidden">New</span>
         </Link>
       </div>
 
-      {/* Filter tabs */}
-      <div className="flex gap-1 p-1 bg-card border border-border rounded-xl mb-6">
-        <button
-          onClick={() => setFilter('all')}
-          className={cn(
-            'flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors',
-            filter === 'all'
-              ? 'bg-accent text-foreground'
-              : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
-          )}
-        >
-          All <span className="ml-1 text-xs opacity-60">({counts.all})</span>
-        </button>
-        {(['draft', 'scheduled', 'published', 'failed'] as PostStatus[]).map((status) => {
-          const config = STATUS_CONFIG[status]
-          const count = counts[status]
-          if (status === 'failed' && count === 0) return null
-          return (
-            <button
-              key={status}
-              onClick={() => setFilter(status)}
-              className={cn(
-                'flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors',
-                filter === status
-                  ? 'bg-accent text-foreground'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
-              )}
-            >
-              <config.icon className={cn('w-4 h-4', filter === status && config.color)} />
-              {config.label}
-              <span className="text-xs opacity-60">({count})</span>
-            </button>
-          )
-        })}
+      {/* Filter tabs - horizontally scrollable on mobile */}
+      <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0 mb-4 md:mb-6">
+        <div className="flex gap-1 p-1 bg-card border border-border rounded-xl min-w-max md:min-w-0">
+          <button
+            onClick={() => setFilter('all')}
+            className={cn(
+              'flex-1 px-3 md:px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap min-h-[40px]',
+              filter === 'all'
+                ? 'bg-accent text-foreground'
+                : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+            )}
+          >
+            All <span className="ml-1 text-xs opacity-60">({counts.all})</span>
+          </button>
+          {(['draft', 'scheduled', 'published', 'failed'] as PostStatus[]).map((status) => {
+            const config = STATUS_CONFIG[status]
+            const count = counts[status]
+            if (status === 'failed' && count === 0) return null
+            return (
+              <button
+                key={status}
+                onClick={() => setFilter(status)}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-1.5 md:gap-2 px-3 md:px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap min-h-[40px]',
+                  filter === status
+                    ? 'bg-accent text-foreground'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+                )}
+              >
+                <config.icon className={cn('w-4 h-4', filter === status && config.color)} />
+                <span className="hidden sm:inline">{config.label}</span>
+                <span className="text-xs opacity-60">({count})</span>
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {/* Posts list */}
@@ -163,13 +168,14 @@ function PostCard({ post, index }: { post: Post; index: number }) {
     <Link
       to={`/edit/${post.id}`}
       className={cn(
-        'block p-4 bg-card border border-border rounded-xl',
+        'block p-3 md:p-4 bg-card border border-border rounded-xl',
         'hover:border-primary/30 hover:bg-accent/30 transition-all',
+        'active:scale-[0.99]', // Touch feedback
         'animate-slide-up'
       )}
       style={{ animationDelay: `${index * 30}ms` }}
     >
-      <div className="flex items-start gap-4">
+      <div className="flex items-start gap-3 md:gap-4">
         {/* Platform indicators */}
         <div className="flex flex-col gap-1.5 pt-1">
           {post.platforms.map((platform) => (
@@ -191,7 +197,7 @@ function PostCard({ post, index }: { post: Post; index: number }) {
           <p className="text-sm leading-relaxed line-clamp-2 mb-2">
             {getPostPreviewText(post) || <span className="text-muted-foreground italic">No content</span>}
           </p>
-          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-2 md:gap-4 text-xs text-muted-foreground">
             {/* Status */}
             <span className={cn('flex items-center gap-1.5', statusConfig.color)}>
               <StatusIcon className="w-3.5 h-3.5" />
@@ -233,8 +239,8 @@ function PostCard({ post, index }: { post: Post; index: number }) {
           </div>
         </div>
 
-        {/* Edit button */}
-        <button className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors">
+        {/* Edit button - larger touch target */}
+        <button className="p-2 md:p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors min-w-[40px] min-h-[40px] flex items-center justify-center">
           <Edit2 className="w-4 h-4" />
         </button>
       </div>

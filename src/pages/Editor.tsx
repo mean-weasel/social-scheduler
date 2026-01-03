@@ -235,18 +235,18 @@ export function Editor() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] min-h-[calc(100vh-4rem)]">
       {/* Editor */}
-      <div className="p-8 max-w-2xl animate-slide-up">
-        <div className="mb-6">
-          <h1 className="text-2xl font-display font-semibold mb-2">
+      <div className="p-4 md:p-8 max-w-2xl animate-slide-up">
+        <div className="mb-4 md:mb-6">
+          <h1 className="text-xl md:text-2xl font-display font-semibold mb-1 md:mb-2">
             {isNew ? 'Create Post' : 'Edit Post'}
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm md:text-base text-muted-foreground">
             Compose your message and schedule it across multiple platforms.
           </p>
         </div>
 
         {/* Platform selector */}
-        <div className="flex gap-2 mb-6">
+        <div className="flex flex-wrap gap-2 mb-4 md:mb-6">
           {(['twitter', 'linkedin', 'reddit'] as Platform[]).map((platform) => {
             const isActive = post.platforms.includes(platform)
             const info = PLATFORM_INFO[platform]
@@ -255,8 +255,8 @@ export function Editor() {
                 key={platform}
                 onClick={() => togglePlatform(platform)}
                 className={cn(
-                  'flex items-center gap-2 px-4 py-3 rounded-xl border-2 transition-all',
-                  'font-medium text-sm',
+                  'flex items-center gap-2 px-3 md:px-4 py-2.5 md:py-3 rounded-xl border-2 transition-all',
+                  'font-medium text-sm min-h-[44px]', // 44px minimum touch target
                   isActive
                     ? platform === 'twitter'
                       ? 'border-twitter bg-twitter-soft text-twitter'
@@ -267,15 +267,15 @@ export function Editor() {
                 )}
               >
                 <PlatformIcon platform={platform} />
-                {info.name.split(' ')[0]}
-                {isActive && <Check className="w-4 h-4 ml-1" />}
+                <span className="hidden sm:inline">{info.name.split(' ')[0]}</span>
+                {isActive && <Check className="w-4 h-4 sm:ml-1" />}
               </button>
             )
           })}
         </div>
 
         {/* Content textarea */}
-        <div className="mb-6">
+        <div className="mb-4 md:mb-6">
           <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
             Content
           </label>
@@ -284,7 +284,7 @@ export function Editor() {
             onChange={(e) => setContent(e.target.value)}
             placeholder="What's on your mind? Share your thoughts, announce something exciting, or start a conversation..."
             className={cn(
-              'w-full min-h-[200px] p-4 rounded-xl',
+              'w-full min-h-[150px] md:min-h-[200px] p-3 md:p-4 rounded-xl',
               'bg-card border border-border',
               'text-base leading-relaxed',
               'placeholder:text-muted-foreground',
@@ -465,7 +465,7 @@ export function Editor() {
               <span className="w-2 h-2 rounded-full bg-reddit" />
               Reddit Settings
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
                   Subreddit
@@ -539,7 +539,7 @@ export function Editor() {
         )}
 
         {/* Schedule */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 mb-4 md:mb-6">
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
               Schedule Date
@@ -585,13 +585,13 @@ export function Editor() {
         </div>
 
         {/* Actions */}
-        <div className="flex gap-3 pt-6 border-t border-border">
+        <div className="flex flex-wrap gap-2 md:gap-3 pt-4 md:pt-6 border-t border-border">
           {!isNew && (
             <button
               onClick={handleDelete}
               disabled={deleteMutation.isPending}
               className={cn(
-                'flex items-center gap-2 px-4 py-2.5 rounded-lg',
+                'flex items-center gap-2 px-3 md:px-4 py-2.5 rounded-lg min-h-[44px]',
                 'text-destructive hover:bg-destructive/10',
                 'font-medium text-sm',
                 'transition-colors',
@@ -599,29 +599,30 @@ export function Editor() {
               )}
             >
               <Trash2 className="w-4 h-4" />
-              Delete
+              <span className="hidden sm:inline">Delete</span>
             </button>
           )}
           <button
             onClick={handleSaveDraft}
             disabled={saveMutation.isPending}
             className={cn(
-              'flex items-center gap-2 px-4 py-2.5 rounded-lg',
+              'flex items-center gap-2 px-3 md:px-4 py-2.5 rounded-lg min-h-[44px]',
               'bg-secondary text-secondary-foreground border border-border',
               'font-medium text-sm',
               'hover:bg-accent transition-colors',
               'disabled:opacity-50',
-              !isNew && 'ml-auto'
+              !isNew && 'sm:ml-auto'
             )}
           >
             <Save className="w-4 h-4" />
-            Save Draft
+            <span className="hidden sm:inline">Save Draft</span>
+            <span className="sm:hidden">Draft</span>
           </button>
           <button
             onClick={handleSchedule}
             disabled={saveMutation.isPending || post.platforms.length === 0}
             className={cn(
-              'flex items-center gap-2 px-4 py-2.5 rounded-lg',
+              'flex items-center gap-2 px-3 md:px-4 py-2.5 rounded-lg min-h-[44px]',
               'bg-gradient-to-r from-twitter to-[#0d8bd9] text-white',
               'font-medium text-sm',
               'hover:opacity-90 transition-opacity',
@@ -629,28 +630,29 @@ export function Editor() {
             )}
           >
             <Calendar className="w-4 h-4" />
-            Schedule Post
+            Schedule
           </button>
           <button
             onClick={handlePublishNow}
             disabled={saveMutation.isPending || post.platforms.length === 0}
             className={cn(
-              'flex items-center gap-2 px-4 py-2.5 rounded-lg',
+              'flex items-center gap-2 px-3 md:px-4 py-2.5 rounded-lg min-h-[44px]',
               'text-muted-foreground',
               'font-medium text-sm',
               'hover:bg-accent hover:text-foreground transition-colors',
               'disabled:opacity-50',
-              isNew && 'ml-auto'
+              isNew && 'sm:ml-auto'
             )}
           >
             <Send className="w-4 h-4" />
-            Publish Now
+            <span className="hidden sm:inline">Publish Now</span>
+            <span className="sm:hidden">Publish</span>
           </button>
         </div>
       </div>
 
-      {/* Preview panel */}
-      <div className="border-l border-border bg-card p-6 overflow-y-auto">
+      {/* Preview panel - hidden on mobile */}
+      <div className="hidden lg:block border-l border-border bg-card p-6 overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Live Preview

@@ -81,12 +81,12 @@ export function Dashboard() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] min-h-[calc(100vh-4rem)]">
       {/* Calendar */}
-      <div className="p-6">
+      <div className="p-4 md:p-6">
         <div className="bg-card border border-border rounded-xl overflow-hidden animate-fade-in">
           {/* Calendar header */}
-          <div className="flex items-center justify-between p-4 border-b border-border">
-            <div className="flex items-center gap-4">
-              <h2 className="text-lg font-medium font-display">
+          <div className="flex items-center justify-between p-3 md:p-4 border-b border-border">
+            <div className="flex items-center gap-2 md:gap-4">
+              <h2 className="text-base md:text-lg font-medium font-display">
                 {format(currentDate, 'MMMM yyyy')}
               </h2>
               <div className="flex items-center gap-1">
@@ -98,7 +98,7 @@ export function Dashboard() {
                 </button>
                 <button
                   onClick={() => setCurrentDate(new Date())}
-                  className="px-3 py-1.5 text-xs font-medium rounded hover:bg-accent transition-colors"
+                  className="px-2 md:px-3 py-1.5 text-xs font-medium rounded hover:bg-accent transition-colors"
                 >
                   Today
                 </button>
@@ -112,20 +112,39 @@ export function Dashboard() {
             </div>
           </div>
 
-          {/* Weekday headers */}
-          <div className="grid grid-cols-7 border-b border-border">
-            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-              <div
-                key={day}
-                className="py-3 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground"
-              >
-                {day}
-              </div>
-            ))}
+          {/* Mobile stats bar */}
+          <div className="flex lg:hidden border-b border-border">
+            <div className="flex-1 py-2 text-center border-r border-border">
+              <div className="text-lg font-semibold">{stats.scheduled}</div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Scheduled</div>
+            </div>
+            <div className="flex-1 py-2 text-center border-r border-border">
+              <div className="text-lg font-semibold">{stats.drafts}</div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Drafts</div>
+            </div>
+            <div className="flex-1 py-2 text-center">
+              <div className="text-lg font-semibold">{stats.published}</div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Published</div>
+            </div>
           </div>
 
-          {/* Calendar grid */}
-          <div className="grid grid-cols-7">
+          {/* Scrollable calendar container for mobile */}
+          <div className="overflow-x-auto scroll-snap-x">
+            <div className="min-w-[560px]">
+              {/* Weekday headers */}
+              <div className="grid grid-cols-7 border-b border-border">
+                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                  <div
+                    key={day}
+                    className="py-2 md:py-3 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground scroll-snap-start"
+                  >
+                    {day}
+                  </div>
+                ))}
+              </div>
+
+              {/* Calendar grid */}
+              <div className="grid grid-cols-7">
             {paddedDays.map((day, i) => {
               if (!day) {
                 return <div key={`pad-${i}`} className="aspect-square border-r border-b border-border opacity-30" />
@@ -141,7 +160,7 @@ export function Dashboard() {
                   key={dateKey}
                   to={`/new?date=${dateKey}`}
                   className={cn(
-                    'min-h-[100px] p-2 border-r border-b border-border',
+                    'min-h-[80px] md:min-h-[100px] p-1.5 md:p-2 border-r border-b border-border',
                     'flex flex-col gap-1 cursor-pointer transition-colors',
                     'hover:bg-accent/50',
                     !isCurrentMonth && 'opacity-30',
@@ -185,12 +204,14 @@ export function Dashboard() {
                 </Link>
               )
             })}
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Sidebar */}
-      <aside className="border-l border-border bg-card p-6">
+      {/* Sidebar - hidden on mobile */}
+      <aside className="hidden lg:block border-l border-border bg-card p-6">
         {/* Stats */}
         <div className="grid grid-cols-3 gap-3 mb-6">
           {[
