@@ -1,5 +1,4 @@
-import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom'
-import { useAuth } from '@/lib/auth'
+import { Outlet, Link, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import {
   Calendar,
@@ -7,61 +6,15 @@ import {
   Search,
   Bell,
   Plus,
-  Github,
-  X,
 } from 'lucide-react'
 import { BottomNav } from './BottomNav'
 
 export function AppLayout() {
-  const { user, isDemoMode, exitDemoMode } = useAuth()
-  const navigate = useNavigate()
   const location = useLocation()
   const isEditorPage = location.pathname.startsWith('/new') || location.pathname.startsWith('/edit')
 
-  const handleExitDemo = () => {
-    exitDemoMode()
-    navigate('/login')
-  }
-
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Demo Mode Banner */}
-      {isDemoMode && (
-        <div className="bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-amber-500/10 border-b border-amber-500/20">
-          <div className="flex items-center justify-between px-6 py-2">
-            <div className="flex items-center gap-3">
-              <span className="flex items-center gap-2 text-sm text-amber-500 font-medium">
-                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                Demo Mode
-              </span>
-              <span className="text-sm text-muted-foreground">
-                You're exploring with sample data. Sign in with GitHub to use your own posts.
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleExitDemo}
-                className={cn(
-                  'flex items-center gap-2 px-3 py-1.5 rounded-lg',
-                  'bg-[#24292f] text-white text-sm font-medium',
-                  'hover:bg-[#24292f]/80 transition-colors'
-                )}
-              >
-                <Github className="w-4 h-4" />
-                Sign in with GitHub
-              </button>
-              <button
-                onClick={handleExitDemo}
-                className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-                title="Exit demo mode"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-xl">
         <div className="flex items-center justify-between h-16 px-6">
@@ -113,12 +66,12 @@ export function AppLayout() {
               <Settings className="w-5 h-5" />
             </Link>
             <div className="ml-2 w-8 h-8 rounded-full bg-gradient-to-br from-twitter to-linkedin flex items-center justify-center text-xs font-semibold text-white">
-              {user?.login?.slice(0, 2).toUpperCase() || 'U'}
+              U
             </div>
           </div>
           {/* Mobile user avatar only */}
           <div className="md:hidden w-8 h-8 rounded-full bg-gradient-to-br from-twitter to-linkedin flex items-center justify-center text-xs font-semibold text-white">
-            {user?.login?.slice(0, 2).toUpperCase() || 'U'}
+            U
           </div>
         </div>
       </header>

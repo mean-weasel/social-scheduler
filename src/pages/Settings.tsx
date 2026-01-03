@@ -1,9 +1,11 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { ExternalLink, LogOut, Github, Check, AlertCircle, Sun, Moon, Monitor } from 'lucide-react'
-import { useAuth, useAuthStore, parseRepoConfig, validateToken } from '@/lib/auth'
-import { verifyRepoAccess, initializePostsDirectory } from '@/lib/github'
+import { useState, useEffect } from 'react'
+import { Bell, BellOff, Sun, Moon, Monitor, Check, AlertCircle } from 'lucide-react'
 import { useTheme, Theme } from '@/lib/theme'
+import {
+  useNotificationStore,
+  getNotificationPermission,
+  requestNotificationPermission,
+} from '@/lib/notifications'
 import { cn } from '@/lib/utils'
 
 const THEME_OPTIONS: { value: Theme; label: string; icon: typeof Sun }[] = [
@@ -13,136 +15,42 @@ const THEME_OPTIONS: { value: Theme; label: string; icon: typeof Sun }[] = [
 ]
 
 export function Settings() {
-  const navigate = useNavigate()
-  const { token, user, config, logout } = useAuth()
-  const { setToken, setUser, setConfig } = useAuthStore()
   const { theme, setTheme } = useTheme()
-
-  const [newToken, setNewToken] = useState('')
-  const [repoInput, setRepoInput] = useState(config ? `${config.owner}/${config.repo}` : '')
-  const [isValidating, setIsValidating] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const { enabled: notificationsEnabled, setEnabled: setNotificationsEnabled } =
+    useNotificationStore()
+  const [notificationPermission, setNotificationPermission] =
+    useState<NotificationPermission>('default')
   const [success, setSuccess] = useState<string | null>(null)
 
-  const handleSaveToken = async () => {
-    if (!newToken.trim()) {
-      setError('Please enter a token')
-      return
-    }
+  useEffect(() => {
+    setNotificationPermission(getNotificationPermission())
+  }, [])
 
-    setIsValidating(true)
-    setError(null)
-
-    try {
-      const userInfo = await validateToken(newToken.trim())
-      if (!userInfo) {
-        setError('Invalid token. Please check and try again.')
-        return
-      }
-
-      setToken(newToken.trim())
-      setUser(userInfo)
-      setNewToken('')
-      setSuccess('Token saved successfully!')
+  const handleRequestPermission = async () => {
+    const permission = await requestNotificationPermission()
+    setNotificationPermission(permission)
+    if (permission === 'granted') {
+      setSuccess('Notifications enabled!')
       setTimeout(() => setSuccess(null), 3000)
-    } catch {
-      setError('Failed to validate token')
-    } finally {
-      setIsValidating(false)
     }
   }
 
-  const handleSaveRepo = async () => {
-    if (!repoInput.trim()) {
-      setError('Please enter a repository')
-      return
-    }
-
-    const parsedConfig = parseRepoConfig(repoInput.trim())
-    if (!parsedConfig) {
-      setError('Invalid repository format. Use owner/repo or GitHub URL.')
-      return
-    }
-
-    if (!token) {
-      setError('Please add a GitHub token first')
-      return
-    }
-
-    setIsValidating(true)
-    setError(null)
-
-    try {
-      const hasAccess = await verifyRepoAccess(token, parsedConfig)
-      if (!hasAccess) {
-        setError('Cannot access this repository. Check permissions.')
-        return
-      }
-
-      // Initialize posts directories
-      await initializePostsDirectory(token, parsedConfig)
-
-      setConfig(parsedConfig)
-      setSuccess('Repository configured successfully!')
-      setTimeout(() => setSuccess(null), 3000)
-    } catch (err) {
-      setError('Failed to configure repository')
-    } finally {
-      setIsValidating(false)
-    }
-  }
-
-  const handleLogout = () => {
-    logout()
-    navigate('/login')
+  const handleToggleNotifications = () => {
+    setNotificationsEnabled(!notificationsEnabled)
   }
 
   return (
     <div className="max-w-2xl mx-auto p-8 animate-fade-in">
       <h1 className="text-2xl font-display font-semibold mb-2">Settings</h1>
       <p className="text-muted-foreground mb-8">
-        Configure your GitHub connection and preferences.
+        Configure your preferences.
       </p>
 
       {/* Status messages */}
-      {error && (
-        <div className="flex items-center gap-2 p-4 rounded-lg bg-destructive/10 text-destructive mb-6 animate-slide-up">
-          <AlertCircle className="w-4 h-4" />
-          {error}
-        </div>
-      )}
       {success && (
         <div className="flex items-center gap-2 p-4 rounded-lg bg-green-500/10 text-green-500 mb-6 animate-slide-up">
           <Check className="w-4 h-4" />
           {success}
-        </div>
-      )}
-
-      {/* Current user */}
-      {user && (
-        <div className="p-4 rounded-xl border border-border bg-card mb-6">
-          <div className="flex items-center gap-4">
-            <img
-              src={user.avatar_url}
-              alt={user.login}
-              className="w-12 h-12 rounded-full"
-            />
-            <div className="flex-1">
-              <div className="font-medium">{user.name || user.login}</div>
-              <div className="text-sm text-muted-foreground">@{user.login}</div>
-            </div>
-            <button
-              onClick={handleLogout}
-              className={cn(
-                'flex items-center gap-2 px-4 py-2 rounded-lg',
-                'text-sm font-medium text-destructive',
-                'hover:bg-destructive/10 transition-colors'
-              )}
-            >
-              <LogOut className="w-4 h-4" />
-              Logout
-            </button>
-          </div>
         </div>
       )}
 
@@ -179,114 +87,107 @@ export function Settings() {
         </div>
       </div>
 
-      {/* GitHub Token */}
+      {/* Notifications */}
       <div className="p-6 rounded-xl border border-border bg-card mb-6">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">
-          GitHub Token
+          Notifications
         </h2>
         <p className="text-sm text-muted-foreground mb-4">
-          Create a Personal Access Token with <code className="px-1 py-0.5 rounded bg-muted text-xs">repo</code> scope.
+          Get notified when your scheduled posts are due.
         </p>
-        <div className="flex gap-3">
-          <input
-            type="password"
-            value={newToken}
-            onChange={(e) => setNewToken(e.target.value)}
-            placeholder={token ? '••••••••••••••••' : 'ghp_xxxxxxxxxxxx'}
-            className={cn(
-              'flex-1 px-4 py-2.5 rounded-lg',
-              'bg-background border border-border',
-              'focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10',
-              'placeholder:text-muted-foreground'
-            )}
-          />
-          <button
-            onClick={handleSaveToken}
-            disabled={isValidating}
-            className={cn(
-              'flex items-center gap-2 px-4 py-2.5 rounded-lg',
-              'bg-primary text-primary-foreground font-medium text-sm',
-              'hover:opacity-90 transition-opacity',
-              'disabled:opacity-50'
-            )}
-          >
-            {isValidating ? 'Validating...' : 'Save Token'}
-          </button>
-        </div>
-        <a
-          href="https://github.com/settings/tokens/new?scopes=repo&description=Social%20Scheduler"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 mt-3 text-xs text-primary hover:underline"
-        >
-          Create a new token on GitHub
-          <ExternalLink className="w-3 h-3" />
-        </a>
-      </div>
 
-      {/* Repository */}
-      <div className="p-6 rounded-xl border border-border bg-card mb-6">
-        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">
-          Repository
-        </h2>
-        <p className="text-sm text-muted-foreground mb-4">
-          The GitHub repository where your posts will be stored.
-        </p>
-        <div className="flex gap-3">
-          <div className="flex-1 flex items-center gap-2 px-4 py-2.5 rounded-lg bg-background border border-border">
-            <Github className="w-4 h-4 text-muted-foreground" />
-            <input
-              type="text"
-              value={repoInput}
-              onChange={(e) => setRepoInput(e.target.value)}
-              placeholder="owner/repository"
-              className="flex-1 bg-transparent border-none focus:outline-none placeholder:text-muted-foreground"
-            />
+        {notificationPermission === 'denied' ? (
+          <div className="flex items-center gap-2 p-4 rounded-lg bg-destructive/10 text-destructive">
+            <AlertCircle className="w-4 h-4" />
+            <div>
+              <p className="font-medium">Notifications blocked</p>
+              <p className="text-sm opacity-80">
+                Please enable notifications in your browser settings.
+              </p>
+            </div>
           </div>
+        ) : notificationPermission === 'default' ? (
           <button
-            onClick={handleSaveRepo}
-            disabled={isValidating || !token}
+            onClick={handleRequestPermission}
             className={cn(
-              'flex items-center gap-2 px-4 py-2.5 rounded-lg',
+              'flex items-center gap-2 px-4 py-3 rounded-lg w-full',
               'bg-primary text-primary-foreground font-medium text-sm',
-              'hover:opacity-90 transition-opacity',
-              'disabled:opacity-50'
+              'hover:opacity-90 transition-opacity'
             )}
           >
-            {isValidating ? 'Verifying...' : 'Save Repo'}
+            <Bell className="w-4 h-4" />
+            Enable Notifications
           </button>
-        </div>
-        {config && (
-          <div className="flex items-center gap-2 mt-3 text-xs text-green-500">
-            <Check className="w-3 h-3" />
-            Connected to {config.owner}/{config.repo}
+        ) : (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-sm text-green-500">
+              <Check className="w-4 h-4" />
+              Browser notifications enabled
+            </div>
+            <button
+              onClick={handleToggleNotifications}
+              className={cn(
+                'flex items-center justify-between w-full px-4 py-3 rounded-lg',
+                'border-2 transition-all',
+                notificationsEnabled
+                  ? 'border-primary bg-primary/10'
+                  : 'border-border bg-background'
+              )}
+            >
+              <div className="flex items-center gap-3">
+                {notificationsEnabled ? (
+                  <Bell className="w-5 h-5 text-primary" />
+                ) : (
+                  <BellOff className="w-5 h-5 text-muted-foreground" />
+                )}
+                <div className="text-left">
+                  <p className="font-medium text-sm">Post reminders</p>
+                  <p className="text-xs text-muted-foreground">
+                    Notify when scheduled posts are due
+                  </p>
+                </div>
+              </div>
+              <div
+                className={cn(
+                  'w-10 h-6 rounded-full transition-colors relative',
+                  notificationsEnabled ? 'bg-primary' : 'bg-muted'
+                )}
+              >
+                <div
+                  className={cn(
+                    'absolute top-1 w-4 h-4 rounded-full bg-white transition-transform',
+                    notificationsEnabled ? 'translate-x-5' : 'translate-x-1'
+                  )}
+                />
+              </div>
+            </button>
           </div>
         )}
       </div>
 
-      {/* Info */}
+      {/* About */}
       <div className="p-6 rounded-xl border border-border bg-card">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">
-          How it works
+          About
         </h2>
         <ul className="space-y-3 text-sm text-muted-foreground">
           <li className="flex items-start gap-3">
             <span className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-medium flex-shrink-0 mt-0.5">
               1
             </span>
-            <span>Posts are stored as JSON files in your repository's <code className="px-1 py-0.5 rounded bg-muted text-xs">posts/</code> folder.</span>
+            <span>Create and organize your social media post ideas.</span>
           </li>
           <li className="flex items-start gap-3">
             <span className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-medium flex-shrink-0 mt-0.5">
               2
             </span>
-            <span>GitHub Actions runs every 15 minutes to check for scheduled posts.</span>
+            <span>Schedule posts and get reminded when they're due.</span>
           </li>
           <li className="flex items-start gap-3">
             <span className="w-5 h-5 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-medium flex-shrink-0 mt-0.5">
               3
             </span>
-            <span>When a post is due, the workflow publishes it to your connected platforms.</span>
+            <span>All data is stored locally in your browser.</span>
           </li>
         </ul>
       </div>

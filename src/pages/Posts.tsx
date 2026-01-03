@@ -1,12 +1,9 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { Clock, Edit2, Plus, FileText, Calendar, CheckCircle, AlertCircle } from 'lucide-react'
-import { useAuth } from '@/lib/auth'
-import { listPosts } from '@/lib/github'
+import { usePostsStore } from '@/lib/storage'
 import { Post, PostStatus, getPostPreviewText, PLATFORM_INFO } from '@/lib/posts'
-import { DEMO_POSTS } from '@/lib/demo-data'
 import { cn } from '@/lib/utils'
 
 type FilterStatus = 'all' | PostStatus
@@ -19,24 +16,8 @@ const STATUS_CONFIG: Record<PostStatus, { label: string; icon: typeof FileText; 
 }
 
 export function Posts() {
-  const { token, config, isDemoMode } = useAuth()
+  const allPosts = usePostsStore((state) => state.posts)
   const [filter, setFilter] = useState<FilterStatus>('all')
-
-  const { data: allPosts = [], isLoading } = useQuery({
-    queryKey: ['posts', config?.owner, config?.repo, isDemoMode],
-    queryFn: async () => {
-      // Return demo data in demo mode
-      if (isDemoMode) return DEMO_POSTS
-      if (!token || !config) return []
-      const [drafts, scheduled, published] = await Promise.all([
-        listPosts(token, config, 'drafts'),
-        listPosts(token, config, 'scheduled'),
-        listPosts(token, config, 'published'),
-      ])
-      return [...drafts, ...scheduled, ...published]
-    },
-    enabled: isDemoMode || (!!token && !!config),
-  })
 
   // Filter posts
   const filteredPosts = filter === 'all' ? allPosts : allPosts.filter((p) => p.status === filter)
@@ -53,14 +34,6 @@ export function Posts() {
     scheduled: allPosts.filter((p) => p.status === 'scheduled').length,
     published: allPosts.filter((p) => p.status === 'published').length,
     failed: allPosts.filter((p) => p.status === 'failed').length,
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-pulse text-muted-foreground">Loading posts...</div>
-      </div>
-    )
   }
 
   return (
