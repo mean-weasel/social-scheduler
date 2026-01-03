@@ -11,6 +11,8 @@ import {
   Trash2,
   X,
   Plus,
+  Copy,
+  CheckCircle,
 } from 'lucide-react'
 import { usePostsStore } from '@/lib/storage'
 import {
@@ -54,6 +56,7 @@ export function Editor() {
   const isNew = !id
   const existingPost = id ? getPost(id) : undefined
   const [isSaving, setIsSaving] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   // Form state
   const [post, setPost] = useState<Post>(() => {
@@ -179,6 +182,44 @@ export function Editor() {
     handleSave(toSave)
   }
 
+  // Copy content to clipboard
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(content)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // Fallback for older browsers
+      const textarea = document.createElement('textarea')
+      textarea.value = content
+      document.body.appendChild(textarea)
+      textarea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textarea)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
+
+  // Mark as posted (published)
+  const handleMarkAsPosted = () => {
+    const toSave = {
+      ...post,
+      status: 'published' as const,
+      publishResults: {
+        ...post.publishResults,
+        ...post.platforms.reduce((acc, platform) => ({
+          ...acc,
+          [platform]: {
+            success: true,
+            publishedAt: new Date().toISOString(),
+          },
+        }), {}),
+      },
+    }
+    handleSave(toSave)
+  }
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] min-h-[calc(100vh-4rem)]">
       {/* Editor */}
@@ -269,6 +310,20 @@ export function Editor() {
               })}
             </div>
             <div className="flex gap-1">
+              <button
+                onClick={handleCopy}
+                disabled={!content.trim()}
+                className={cn(
+                  'p-2 rounded-md transition-colors',
+                  copied
+                    ? 'bg-green-500/10 text-green-500'
+                    : 'hover:bg-accent text-muted-foreground hover:text-foreground',
+                  'disabled:opacity-50 disabled:cursor-not-allowed'
+                )}
+                title={copied ? 'Copied!' : 'Copy to clipboard'}
+              >
+                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+              </button>
               <button
                 onClick={() => setShowMediaInput(!showMediaInput)}
                 className={cn(
@@ -595,6 +650,23 @@ export function Editor() {
             <span className="hidden sm:inline">Publish Now</span>
             <span className="sm:hidden">Publish</span>
           </button>
+          {!isNew && post.status !== 'published' && (
+            <button
+              onClick={handleMarkAsPosted}
+              disabled={isSaving || post.platforms.length === 0}
+              className={cn(
+                'flex items-center gap-2 px-3 md:px-4 py-2.5 rounded-lg min-h-[44px]',
+                'bg-green-500/10 text-green-600 dark:text-green-400',
+                'font-medium text-sm',
+                'hover:bg-green-500/20 transition-colors',
+                'disabled:opacity-50'
+              )}
+            >
+              <CheckCircle className="w-4 h-4" />
+              <span className="hidden sm:inline">Mark as Posted</span>
+              <span className="sm:hidden">Posted</span>
+            </button>
+          )}
         </div>
       </div>
 
