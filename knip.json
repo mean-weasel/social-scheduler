@@ -1,0 +1,21 @@
+{
+  "$schema": "https://unpkg.com/knip@latest/schema.json",
+  "entry": ["src/main.tsx"],
+  "project": ["src/**/*.{ts,tsx}"],
+  "ignore": ["src/vite-env.d.ts"],
+  "ignoreDependencies": [
+    "@octokit/rest",
+    "@typescript-eslint/eslint-plugin",
+    "@typescript-eslint/parser",
+    "eslint-plugin-react-hooks",
+    "eslint-plugin-react-refresh",
+    "gh-pages",
+    "tsx"
+  ],
+  "playwright": {
+    "entry": ["e2e/**/*.spec.ts", "playwright.config.ts"]
+  },
+  "vitest": {
+    "entry": ["src/test/**/*.ts", "vitest.config.ts"]
+  }
+}

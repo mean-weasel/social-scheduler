@@ -2,7 +2,6 @@
 
 export type Platform = 'twitter' | 'linkedin' | 'reddit'
 export type PostStatus = 'draft' | 'scheduled' | 'published' | 'failed'
-export type PostFolder = 'drafts' | 'scheduled' | 'published'
 
 export interface TwitterContent {
   text: string
@@ -55,8 +54,6 @@ export const CHAR_LIMITS: Record<Platform, number> = {
   reddit: 40000, // For self-post body
 }
 
-export const REDDIT_TITLE_LIMIT = 300
-
 // Platform display info
 export const PLATFORM_INFO: Record<Platform, { name: string; color: string; bgColor: string }> = {
   twitter: {
@@ -76,14 +73,6 @@ export const PLATFORM_INFO: Record<Platform, { name: string; color: string; bgCo
   },
 }
 
-// Status display info
-export const STATUS_INFO: Record<PostStatus, { label: string; variant: string }> = {
-  draft: { label: 'Draft', variant: 'secondary' },
-  scheduled: { label: 'Scheduled', variant: 'default' },
-  published: { label: 'Published', variant: 'success' },
-  failed: { label: 'Failed', variant: 'destructive' },
-}
-
 // Helper to create a new post
 export function createPost(overrides: Partial<Post> = {}): Post {
   const now = new Date().toISOString()
@@ -96,19 +85,6 @@ export function createPost(overrides: Partial<Post> = {}): Post {
     platforms: [],
     content: {},
     ...overrides,
-  }
-}
-
-// Helper to determine folder from status
-export function getFolder(status: PostStatus): PostFolder {
-  switch (status) {
-    case 'draft':
-      return 'drafts'
-    case 'scheduled':
-      return 'scheduled'
-    case 'published':
-    case 'failed':
-      return 'published'
   }
 }
 
