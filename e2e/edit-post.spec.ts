@@ -7,7 +7,6 @@ import {
   saveDraft,
   schedulePost,
   waitForNavigation,
-  getPostCards,
   createTestPost,
   setSchedule,
 } from './helpers'
