@@ -11,6 +11,7 @@ export interface TwitterContent {
 export interface LinkedInContent {
   text: string
   visibility: 'public' | 'connections'
+  mediaUrl?: string  // Single image or video URL
 }
 
 export interface RedditContent {
