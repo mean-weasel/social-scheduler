@@ -2,7 +2,6 @@ import { test, expect } from '@playwright/test'
 import {
   enterDemoMode,
   goToPosts,
-  clickPost,
   deletePost,
   waitForNavigation,
   getPostCards,
