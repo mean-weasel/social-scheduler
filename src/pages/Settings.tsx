@@ -1,14 +1,22 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ExternalLink, LogOut, Github, Check, AlertCircle } from 'lucide-react'
+import { ExternalLink, LogOut, Github, Check, AlertCircle, Sun, Moon, Monitor } from 'lucide-react'
 import { useAuth, useAuthStore, parseRepoConfig, validateToken } from '@/lib/auth'
 import { verifyRepoAccess, initializePostsDirectory } from '@/lib/github'
+import { useTheme, Theme } from '@/lib/theme'
 import { cn } from '@/lib/utils'
+
+const THEME_OPTIONS: { value: Theme; label: string; icon: typeof Sun }[] = [
+  { value: 'light', label: 'Light', icon: Sun },
+  { value: 'dark', label: 'Dark', icon: Moon },
+  { value: 'system', label: 'System', icon: Monitor },
+]
 
 export function Settings() {
   const navigate = useNavigate()
   const { token, user, config, logout } = useAuth()
   const { setToken, setUser, setConfig } = useAuthStore()
+  const { theme, setTheme } = useTheme()
 
   const [newToken, setNewToken] = useState('')
   const [repoInput, setRepoInput] = useState(config ? `${config.owner}/${config.repo}` : '')
@@ -137,6 +145,39 @@ export function Settings() {
           </div>
         </div>
       )}
+
+      {/* Theme */}
+      <div className="p-6 rounded-xl border border-border bg-card mb-6">
+        <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-4">
+          Appearance
+        </h2>
+        <p className="text-sm text-muted-foreground mb-4">
+          Choose your preferred color scheme.
+        </p>
+        <div className="flex gap-2">
+          {THEME_OPTIONS.map((option) => {
+            const Icon = option.icon
+            const isActive = theme === option.value
+            return (
+              <button
+                key={option.value}
+                onClick={() => setTheme(option.value)}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg',
+                  'text-sm font-medium transition-all',
+                  'border-2',
+                  isActive
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border bg-background text-muted-foreground hover:border-primary/50 hover:text-foreground'
+                )}
+              >
+                <Icon className="w-4 h-4" />
+                {option.label}
+              </button>
+            )
+          })}
+        </div>
+      </div>
 
       {/* GitHub Token */}
       <div className="p-6 rounded-xl border border-border bg-card mb-6">

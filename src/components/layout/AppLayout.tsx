@@ -10,6 +10,7 @@ import {
   Github,
   X,
 } from 'lucide-react'
+import { BottomNav } from './BottomNav'
 
 export function AppLayout() {
   const { user, isDemoMode, exitDemoMode } = useAuth()
@@ -94,7 +95,8 @@ export function AppLayout() {
             </Link>
           </div>
 
-          <div className="flex items-center gap-2">
+          {/* Desktop nav icons - hidden on mobile */}
+          <div className="hidden md:flex items-center gap-2">
             <button className="p-2 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors">
               <Search className="w-5 h-5" />
             </button>
@@ -114,15 +116,19 @@ export function AppLayout() {
               {user?.login?.slice(0, 2).toUpperCase() || 'U'}
             </div>
           </div>
+          {/* Mobile user avatar only */}
+          <div className="md:hidden w-8 h-8 rounded-full bg-gradient-to-br from-twitter to-linkedin flex items-center justify-center text-xs font-semibold text-white">
+            {user?.login?.slice(0, 2).toUpperCase() || 'U'}
+          </div>
         </div>
       </header>
 
-      {/* Main content */}
-      <main className="flex-1">
+      {/* Main content - bottom padding for mobile nav */}
+      <main className="flex-1 pb-20 md:pb-0">
         <Outlet />
       </main>
 
-      {/* FAB for new post */}
+      {/* FAB for new post - hidden on mobile (replaced by bottom nav) */}
       {!isEditorPage && (
         <Link
           to="/new"
@@ -134,13 +140,17 @@ export function AppLayout() {
             'text-white shadow-lg',
             'hover:scale-110 hover:rotate-90',
             'transition-all duration-300',
-            'animate-pulse-glow'
+            'animate-pulse-glow',
+            'hidden md:flex' // Hide on mobile
           )}
           title="Create new post"
         >
           <Plus className="w-6 h-6" strokeWidth={2.5} />
         </Link>
       )}
+
+      {/* Bottom navigation for mobile */}
+      <BottomNav />
     </div>
   )
 }
