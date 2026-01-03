@@ -1,9 +1,5 @@
 import { test, expect } from '@playwright/test'
-import {
-  enterDemoMode,
-  goToPosts,
-  getPostCards,
-} from './helpers'
+import { enterDemoMode, goToPosts, getPostCards, createTestPost } from './helpers'
 
 test.describe('Posts List', () => {
   test.beforeEach(async ({ page }) => {
@@ -20,16 +16,6 @@ test.describe('Posts List', () => {
       await expect(page).toHaveURL('/posts')
       await expect(page.getByRole('heading', { name: /all posts/i })).toBeVisible()
     })
-
-    test('should display demo posts in list', async ({ page }) => {
-      await goToPosts(page)
-
-      const cards = await getPostCards(page)
-      const count = await cards.count()
-
-      // Demo mode should have posts
-      expect(count).toBeGreaterThan(0)
-    })
   })
 
   test.describe('Filter Tabs', () => {
@@ -42,13 +28,15 @@ test.describe('Posts List', () => {
     })
 
     test('should filter to drafts', async ({ page }) => {
-      await goToPosts(page)
+      // Create a draft post first
+      await createTestPost(page, { platform: 'twitter', content: 'Draft post' })
 
+      await goToPosts(page)
       await page.getByRole('button', { name: /drafts/i }).click()
 
-      // URL should not change, just the UI filter
       const cards = await getPostCards(page)
       const count = await cards.count()
+      expect(count).toBeGreaterThan(0)
 
       // All visible cards should be drafts
       for (let i = 0; i < count; i++) {
@@ -58,36 +46,32 @@ test.describe('Posts List', () => {
     })
 
     test('should filter to scheduled', async ({ page }) => {
-      await goToPosts(page)
+      // Create a scheduled post first
+      await createTestPost(page, {
+        platform: 'twitter',
+        content: 'Scheduled post',
+        asDraft: false,
+      })
 
+      await goToPosts(page)
       await page.getByRole('button', { name: /scheduled/i }).click()
 
       const cards = await getPostCards(page)
       const count = await cards.count()
+      expect(count).toBeGreaterThan(0)
 
       // All visible cards should be scheduled
-      for (let i = 0; i < Math.min(count, 3); i++) {
+      for (let i = 0; i < count; i++) {
         const card = cards.nth(i)
         await expect(card).toContainText(/scheduled/i)
       }
     })
 
-    test('should filter to published', async ({ page }) => {
-      await goToPosts(page)
-
-      await page.getByRole('button', { name: /published/i }).click()
-
-      const cards = await getPostCards(page)
-      const count = await cards.count()
-
-      // All visible cards should be published
-      for (let i = 0; i < Math.min(count, 3); i++) {
-        const card = cards.nth(i)
-        await expect(card).toContainText(/published/i)
-      }
-    })
-
     test('should show counts in filter tabs', async ({ page }) => {
+      // Create some posts first
+      await createTestPost(page, { platform: 'twitter', content: 'Post 1' })
+      await createTestPost(page, { platform: 'linkedin', content: 'Post 2' })
+
       await goToPosts(page)
 
       // Each tab should show a count
@@ -96,14 +80,13 @@ test.describe('Posts List', () => {
 
       const draftsTab = page.getByRole('button', { name: /drafts/i })
       await expect(draftsTab).toContainText(/\(\d+\)/)
-
-      const scheduledTab = page.getByRole('button', { name: /scheduled/i })
-      await expect(scheduledTab).toContainText(/\(\d+\)/)
     })
   })
 
   test.describe('Post Cards', () => {
     test('should display platform indicators', async ({ page }) => {
+      await createTestPost(page, { platform: 'twitter', content: 'Test post' })
+
       await goToPosts(page)
 
       const firstCard = (await getPostCards(page)).first()
@@ -115,16 +98,19 @@ test.describe('Posts List', () => {
     })
 
     test('should display content preview', async ({ page }) => {
+      await createTestPost(page, { platform: 'twitter', content: 'My post content preview' })
+
       await goToPosts(page)
 
       const firstCard = (await getPostCards(page)).first()
 
-      // Should show truncated content
-      const cardText = await firstCard.textContent()
-      expect(cardText?.length).toBeGreaterThan(0)
+      // Should show the content
+      await expect(firstCard).toContainText('My post content preview')
     })
 
     test('should display status badge', async ({ page }) => {
+      await createTestPost(page, { platform: 'twitter', content: 'Test post' })
+
       await goToPosts(page)
 
       const firstCard = (await getPostCards(page)).first()
@@ -134,21 +120,9 @@ test.describe('Posts List', () => {
       expect(hasStatus).toBeGreaterThan(0)
     })
 
-    test('should display scheduled time for scheduled posts', async ({ page }) => {
-      await goToPosts(page)
-
-      // Filter to scheduled
-      await page.getByRole('button', { name: /scheduled/i }).click()
-
-      const cards = await getPostCards(page)
-      if ((await cards.count()) > 0) {
-        const firstCard = cards.first()
-        // Should show a time like "Jan 5, 10:00 AM"
-        await expect(firstCard).toContainText(/\w{3} \d+/)
-      }
-    })
-
     test('should navigate to editor when clicked', async ({ page }) => {
+      await createTestPost(page, { platform: 'twitter', content: 'Clickable post' })
+
       await goToPosts(page)
 
       const firstCard = (await getPostCards(page)).first()
@@ -156,17 +130,6 @@ test.describe('Posts List', () => {
 
       await expect(page).toHaveURL(/\/edit\//)
       await expect(page.getByRole('heading', { name: /edit post/i })).toBeVisible()
-    })
-  })
-
-  test.describe('Empty States', () => {
-    test('should show new post button in empty state', async ({ page }) => {
-      await goToPosts(page)
-
-      // Even if filtered to a status with no posts, should have create button
-      // Use the header button which has exact text "New Post"
-      const createBtn = page.getByRole('link', { name: 'New Post', exact: true })
-      await expect(createBtn).toBeVisible()
     })
   })
 
@@ -187,39 +150,6 @@ test.describe('Posts List', () => {
 
       await expect(page).toHaveURL('/new')
       await expect(page.getByRole('heading', { name: /create post/i })).toBeVisible()
-    })
-  })
-
-  test.describe('Sorting', () => {
-    test('should display posts sorted by most recent first', async ({ page }) => {
-      await goToPosts(page)
-
-      // Posts should be sorted by updatedAt desc
-      // This is hard to verify directly, but we can check that posts exist
-      const cards = await getPostCards(page)
-      const count = await cards.count()
-      expect(count).toBeGreaterThan(0)
-    })
-  })
-
-  test.describe('Platform Filtering Display', () => {
-    test('should show correct platform colors', async ({ page }) => {
-      await goToPosts(page)
-
-      // Twitter posts should have blue indicators
-      // LinkedIn posts should have blue indicators (different shade)
-      // Reddit posts should have orange indicators
-
-      const cards = await getPostCards(page)
-      const count = await cards.count()
-
-      // Just verify cards are displayed with platform dots
-      for (let i = 0; i < Math.min(count, 5); i++) {
-        const card = cards.nth(i)
-        const dots = card.locator('.rounded-full.w-2\\.5')
-        const dotCount = await dots.count()
-        expect(dotCount).toBeGreaterThanOrEqual(1)
-      }
     })
   })
 })

@@ -278,7 +278,7 @@ test.describe('Create Post', () => {
       await fillContent(page, 'Some content')
 
       // Schedule button should be disabled
-      const scheduleBtn = page.getByRole('button', { name: /schedule post/i })
+      const scheduleBtn = page.getByRole('button', { name: /^schedule$/i })
       await expect(scheduleBtn).toBeDisabled()
     })
 

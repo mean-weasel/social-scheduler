@@ -1,15 +1,13 @@
 import { Page, expect } from '@playwright/test'
 
 /**
- * Enter demo mode from the login page
+ * Initialize the app - just navigate to the dashboard
+ * (No login required since we use localStorage)
  */
 export async function enterDemoMode(page: Page) {
-  await page.goto('/login')
-  await page.getByRole('button', { name: /try demo mode/i }).click()
-  // Wait for navigation to dashboard
-  await expect(page).toHaveURL('/')
-  // Verify demo mode banner is visible
-  await expect(page.getByText('Demo Mode')).toBeVisible()
+  await page.goto('/')
+  // Wait for the dashboard to load - look for the "New Post" link
+  await expect(page.getByRole('link', { name: /new post/i })).toBeVisible()
 }
 
 /**
@@ -103,7 +101,7 @@ export async function saveDraft(page: Page) {
  * Click schedule button
  */
 export async function schedulePost(page: Page) {
-  await page.getByRole('button', { name: /schedule post/i }).click()
+  await page.getByRole('button', { name: /^schedule$/i }).click()
 }
 
 /**
@@ -158,16 +156,42 @@ export async function waitForNavigation(page: Page, url: string | RegExp) {
 }
 
 /**
- * Get the demo mode banner
+ * Create a test post with given options
  */
-export async function getDemoBanner(page: Page) {
-  return page.locator('text=Demo Mode').first()
+export async function createTestPost(
+  page: Page,
+  options: {
+    platform?: 'twitter' | 'linkedin' | 'reddit'
+    content?: string
+    asDraft?: boolean
+  } = {}
+) {
+  const { platform = 'twitter', content = 'Test post content', asDraft = true } = options
+
+  await page.goto('/new')
+  await expect(page.getByRole('heading', { name: /create post/i })).toBeVisible()
+
+  // Select platform
+  await page.getByRole('button', { name: platform, exact: false }).click()
+
+  // Fill content
+  const textarea = page.locator('textarea').first()
+  await textarea.fill(content)
+
+  // Save
+  if (asDraft) {
+    await page.getByRole('button', { name: /save draft/i }).click()
+  } else {
+    // Set a schedule date in the future
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    const dateStr = tomorrow.toISOString().split('T')[0]
+    await page.locator('input[type="date"]').fill(dateStr)
+    await page.locator('input[type="time"]').fill('12:00')
+    await page.getByRole('button', { name: /^schedule$/i }).click()
+  }
+
+  // Wait for navigation back to dashboard
+  await expect(page).toHaveURL('/')
 }
 
-/**
- * Exit demo mode
- */
-export async function exitDemoMode(page: Page) {
-  await page.getByRole('button', { name: /sign in with github/i }).first().click()
-  await expect(page).toHaveURL('/login')
-}
