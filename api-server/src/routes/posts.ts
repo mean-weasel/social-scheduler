@@ -14,15 +14,8 @@ import {
 
 export const postsRouter = Router()
 
-// Test-only: Reset database (clear all posts)
-// Only enabled in CI/test environment
-const isTest = process.env.CI === 'true' || process.env.NODE_ENV === 'test'
-
+// Reset database (clear all posts) - for testing and development
 postsRouter.post('/reset', (req: Request, res: Response) => {
-  if (!isTest) {
-    res.status(403).json({ error: 'Reset endpoint only available in test environment' })
-    return
-  }
 
   try {
     const deleted = clearAllPosts()

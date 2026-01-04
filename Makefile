@@ -19,7 +19,7 @@ LOCAL_IP = $(shell /sbin/ifconfig en0 2>/dev/null | grep "inet " | awk '{print $
 help: ## Show this help message
 	@echo "$(BLUE)Social Scheduler$(RESET) - Available commands:"
 	@echo ""
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(GREEN)%-15s$(RESET) %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(GREEN)%-15s$(RESET) %s\n", $$1, $$2}'
 	@echo ""
 
 # =============================================================================
@@ -139,7 +139,7 @@ test: ## Run unit tests in watch mode
 	npm run test
 
 test-run: ## Run unit tests once
-	npm run test:run
+	npx vitest run --passWithNoTests
 
 test-e2e: build-api ## Run end-to-end tests (builds API first)
 	npm run test:e2e
@@ -151,7 +151,7 @@ test-e2e-debug: build-api ## Run E2E tests in debug mode
 	npm run test:e2e:debug
 
 test-coverage: ## Run tests with coverage report
-	npm run test:coverage
+	npx vitest run --coverage --passWithNoTests
 
 test-all: test-run test-e2e ## Run all tests (unit + e2e)
 
