@@ -3,51 +3,63 @@
 @tailwind utilities;
 
 @layer base {
-  /* Light mode (default) */
+  /* Light mode - Bold Editorial Theme */
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 199 89% 48%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
+    /* Rich cream paper background */
+    --background: 45 40% 95%;
+    --foreground: 25 30% 10%;
+    /* Antique white card surfaces */
+    --card: 45 50% 98%;
+    --card-foreground: 25 30% 10%;
+    --popover: 45 50% 98%;
+    --popover-foreground: 25 30% 10%;
+    /* Rich burgundy primary */
+    --primary: 350 65% 35%;
+    --primary-foreground: 45 50% 98%;
+    --secondary: 40 30% 88%;
+    --secondary-foreground: 25 30% 10%;
+    --muted: 40 25% 85%;
+    --muted-foreground: 25 15% 40%;
+    /* Bold gold accent */
+    --accent: 42 85% 55%;
+    --accent-foreground: 25 30% 10%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 199 89% 48%;
+    /* Warm sepia borders */
+    --border: 35 30% 75%;
+    --input: 35 30% 75%;
+    --ring: 350 65% 35%;
     --radius: 0.5rem;
+    /* Editorial gold for highlights */
+    --gold: 42 85% 55%;
+    --gold-dark: 38 70% 45%;
   }
 
-  /* Dark mode */
+  /* Dark mode - Luxe Editorial Theme */
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 5.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 5.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 199 89% 48%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
+    --background: 220 25% 6%;
+    --foreground: 45 30% 92%;
+    --card: 220 20% 10%;
+    --card-foreground: 45 30% 92%;
+    --popover: 220 20% 10%;
+    --popover-foreground: 45 30% 92%;
+    /* Bright gold primary in dark mode */
+    --primary: 42 90% 50%;
+    --primary-foreground: 220 25% 6%;
+    --secondary: 220 18% 15%;
+    --secondary-foreground: 45 30% 92%;
+    --muted: 220 18% 15%;
+    --muted-foreground: 220 15% 60%;
+    /* Rich gold accent */
+    --accent: 42 80% 45%;
+    --accent-foreground: 45 30% 92%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 199 89% 48%;
+    --border: 220 18% 18%;
+    --input: 220 18% 18%;
+    --ring: 42 90% 50%;
+    --gold: 42 90% 50%;
+    --gold-dark: 42 80% 40%;
   }
 
   * {
@@ -55,7 +67,7 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    @apply bg-background text-foreground font-serif antialiased;
   }
 }
 

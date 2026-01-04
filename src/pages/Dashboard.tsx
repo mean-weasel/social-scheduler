@@ -1,289 +1,282 @@
-import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday } from 'date-fns'
-import { ChevronLeft, ChevronRight, Clock, CalendarPlus } from 'lucide-react'
+import { format, formatDistanceToNow } from 'date-fns'
+import { Calendar, FileText, Clock, ChevronRight, Plus, Sparkles } from 'lucide-react'
 import { usePostsStore } from '@/lib/storage'
-import { Post, getPostPreviewText } from '@/lib/posts'
+import { Post, getPostPreviewText, PLATFORM_INFO } from '@/lib/posts'
 import { cn } from '@/lib/utils'
+
+// Platform icon component
+function PlatformIcon({ platform }: { platform: string }) {
+  if (platform === 'twitter') {
+    return (
+      <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+      </svg>
+    )
+  }
+  if (platform === 'linkedin') {
+    return (
+      <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+        <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z" />
+      </svg>
+    )
+  }
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+      <path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249z" />
+    </svg>
+  )
+}
+
+// Post card component
+function PostCard({ post, showSchedule = false }: { post: Post; showSchedule?: boolean }) {
+  const previewText = getPostPreviewText(post)
+
+  return (
+    <Link
+      to={`/edit/${post.id}`}
+      className={cn(
+        'block p-4 rounded-xl border border-border bg-card',
+        'hover:border-[hsl(var(--gold))]/50 hover:shadow-md',
+        'transition-all duration-200',
+        'group'
+      )}
+    >
+      {/* Platform indicators */}
+      <div className="flex items-center gap-2 mb-3">
+        {post.platforms.map((platform) => (
+          <div
+            key={platform}
+            className={cn(
+              'flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium',
+              platform === 'twitter' && 'bg-twitter/10 text-twitter',
+              platform === 'linkedin' && 'bg-linkedin/10 text-linkedin',
+              platform === 'reddit' && 'bg-reddit/10 text-reddit'
+            )}
+          >
+            <PlatformIcon platform={platform} />
+            <span className="hidden sm:inline">{PLATFORM_INFO[platform].label}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Content preview */}
+      <p className="text-sm leading-relaxed line-clamp-2 mb-3 group-hover:text-foreground transition-colors">
+        {previewText || <span className="text-muted-foreground italic">No content yet...</span>}
+      </p>
+
+      {/* Meta info */}
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <Clock className="w-3.5 h-3.5" />
+        {showSchedule && post.scheduledAt ? (
+          <span>{format(new Date(post.scheduledAt), 'MMM d, h:mm a')}</span>
+        ) : (
+          <span>Edited {formatDistanceToNow(new Date(post.updatedAt), { addSuffix: true })}</span>
+        )}
+        <ChevronRight className="w-3.5 h-3.5 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+      </div>
+    </Link>
+  )
+}
+
+// Section component
+function Section({
+  title,
+  icon: Icon,
+  children,
+  viewAllLink,
+  viewAllLabel = 'View all',
+  isEmpty = false,
+  emptyIcon: EmptyIcon,
+  emptyTitle,
+  emptyDescription,
+}: {
+  title: string
+  icon: typeof Calendar
+  children: React.ReactNode
+  viewAllLink: string
+  viewAllLabel?: string
+  isEmpty?: boolean
+  emptyIcon?: typeof Calendar
+  emptyTitle?: string
+  emptyDescription?: string
+}) {
+  return (
+    <section className="animate-fade-in">
+      {/* Section header */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <div className="p-2 rounded-lg bg-[hsl(var(--gold))]/10">
+            <Icon className="w-4 h-4 text-[hsl(var(--gold-dark))]" />
+          </div>
+          <h2 className="text-sm font-bold uppercase tracking-widest text-[hsl(var(--gold-dark))]">
+            {title}
+          </h2>
+        </div>
+        {!isEmpty && (
+          <Link
+            to={viewAllLink}
+            className="text-xs font-medium text-muted-foreground hover:text-[hsl(var(--gold-dark))] transition-colors flex items-center gap-1"
+          >
+            {viewAllLabel}
+            <ChevronRight className="w-3.5 h-3.5" />
+          </Link>
+        )}
+      </div>
+
+      {/* Content or empty state */}
+      {isEmpty ? (
+        <div className="text-center py-8 px-4 rounded-xl border border-dashed border-border bg-card/50">
+          {EmptyIcon && (
+            <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-[hsl(var(--gold))]/10 flex items-center justify-center">
+              <EmptyIcon className="w-6 h-6 text-[hsl(var(--gold-dark))]" />
+            </div>
+          )}
+          <p className="text-sm font-medium mb-1">{emptyTitle}</p>
+          <p className="text-xs text-muted-foreground">{emptyDescription}</p>
+        </div>
+      ) : (
+        <div className="space-y-3">{children}</div>
+      )}
+    </section>
+  )
+}
 
 export function Dashboard() {
   const allPosts = usePostsStore((state) => state.posts)
-  const [currentDate, setCurrentDate] = useState(new Date())
 
-  // Filter posts for current month view
-  const monthStart = startOfMonth(currentDate)
-  const monthEnd = endOfMonth(currentDate)
-  const calendarDays = eachDayOfInterval({ start: monthStart, end: monthEnd })
+  // Exclude archived posts
+  const activePosts = allPosts.filter((p) => p.status !== 'archived')
 
-  // Pad the start of the month to align with Sunday
-  const startPadding = monthStart.getDay()
-  const paddedDays = Array(startPadding).fill(null).concat(calendarDays)
-
-  // Group posts by date
-  const postsByDate = allPosts.reduce((acc, post) => {
-    if (post.scheduledAt) {
-      const date = format(new Date(post.scheduledAt), 'yyyy-MM-dd')
-      if (!acc[date]) acc[date] = []
-      acc[date].push(post)
-    }
-    return acc
-  }, {} as Record<string, Post[]>)
-
-  // Upcoming posts (next 5 scheduled)
-  const upcomingPosts = allPosts
+  // Upcoming scheduled posts (sorted by schedule date)
+  const upcomingPosts = activePosts
     .filter((p) => p.status === 'scheduled' && p.scheduledAt)
     .sort((a, b) => new Date(a.scheduledAt!).getTime() - new Date(b.scheduledAt!).getTime())
     .slice(0, 5)
 
+  // Recent drafts (sorted by last updated)
+  const recentDrafts = activePosts
+    .filter((p) => p.status === 'draft')
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+    .slice(0, 5)
+
   // Stats
   const stats = {
-    scheduled: allPosts.filter((p) => p.status === 'scheduled').length,
-    drafts: allPosts.filter((p) => p.status === 'draft').length,
-    published: allPosts.filter((p) => p.status === 'published').length,
+    scheduled: activePosts.filter((p) => p.status === 'scheduled').length,
+    drafts: activePosts.filter((p) => p.status === 'draft').length,
+    published: activePosts.filter((p) => p.status === 'published').length,
   }
 
-  const navigateMonth = (delta: number) => {
-    setCurrentDate((prev) => {
-      const next = new Date(prev)
-      next.setMonth(next.getMonth() + delta)
-      return next
-    })
-  }
+  const totalPosts = stats.scheduled + stats.drafts + stats.published
+  const hasNoPosts = totalPosts === 0
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] min-h-[calc(100vh-4rem)]">
-      {/* Calendar */}
-      <div className="p-4 md:p-6">
-        <div className="bg-card border border-border rounded-xl overflow-hidden animate-fade-in">
-          {/* Calendar header */}
-          <div className="flex items-center justify-between p-3 md:p-4 border-b border-border">
-            <div className="flex items-center gap-2 md:gap-4">
-              <h2 className="text-base md:text-lg font-medium font-display">
-                {format(currentDate, 'MMMM yyyy')}
-              </h2>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => navigateMonth(-1)}
-                  className="p-1.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setCurrentDate(new Date())}
-                  className="px-2 md:px-3 py-1.5 text-xs font-medium rounded hover:bg-accent transition-colors"
-                >
-                  Today
-                </button>
-                <button
-                  onClick={() => navigateMonth(1)}
-                  className="p-1.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
+    <div className="min-h-[calc(100vh-4rem)] p-4 md:p-6 max-w-5xl mx-auto">
+      {/* Stats bar */}
+      <div className="flex items-center gap-4 mb-6 p-4 rounded-xl bg-gradient-to-r from-[hsl(var(--gold))]/5 via-transparent to-[hsl(var(--gold))]/5 border border-[hsl(var(--gold))]/20">
+        <div className="flex-1 flex items-center gap-6">
+          <div className="text-center">
+            <div className="text-2xl font-display font-bold text-[hsl(var(--gold-dark))]">
+              {stats.scheduled}
+            </div>
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
+              Scheduled
             </div>
           </div>
-
-          {/* Mobile stats bar */}
-          <div className="flex lg:hidden border-b border-border">
-            <div className="flex-1 py-2 text-center border-r border-border">
-              <div className="text-lg font-semibold">{stats.scheduled}</div>
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Scheduled</div>
+          <div className="w-px h-8 bg-border" />
+          <div className="text-center">
+            <div className="text-2xl font-display font-bold text-[hsl(var(--gold-dark))]">
+              {stats.drafts}
             </div>
-            <div className="flex-1 py-2 text-center border-r border-border">
-              <div className="text-lg font-semibold">{stats.drafts}</div>
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Drafts</div>
-            </div>
-            <div className="flex-1 py-2 text-center">
-              <div className="text-lg font-semibold">{stats.published}</div>
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Published</div>
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
+              Drafts
             </div>
           </div>
-
-          {/* Scrollable calendar container for mobile */}
-          <div className="overflow-x-auto scroll-snap-x">
-            <div className="min-w-[560px]">
-              {/* Weekday headers */}
-              <div className="grid grid-cols-7 border-b border-border">
-                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-                  <div
-                    key={day}
-                    className="py-2 md:py-3 text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground scroll-snap-start"
-                  >
-                    {day}
-                  </div>
-                ))}
-              </div>
-
-              {/* Calendar grid */}
-              <div className="grid grid-cols-7">
-            {paddedDays.map((day, i) => {
-              if (!day) {
-                return <div key={`pad-${i}`} className="aspect-square border-r border-b border-border opacity-30" />
-              }
-
-              const dateKey = format(day, 'yyyy-MM-dd')
-              const dayPosts = postsByDate[dateKey] || []
-              const isCurrentMonth = isSameMonth(day, currentDate)
-              const isCurrentDay = isToday(day)
-
-              return (
-                <Link
-                  key={dateKey}
-                  to={`/new?date=${dateKey}`}
-                  className={cn(
-                    'min-h-[80px] md:min-h-[100px] p-1.5 md:p-2 border-r border-b border-border',
-                    'flex flex-col gap-1 cursor-pointer transition-colors',
-                    'hover:bg-accent/50',
-                    !isCurrentMonth && 'opacity-30',
-                    isCurrentDay && 'bg-accent/30'
-                  )}
-                >
-                  <span
-                    className={cn(
-                      'text-sm font-medium text-muted-foreground',
-                      isCurrentDay &&
-                        'w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center'
-                    )}
-                  >
-                    {format(day, 'd')}
-                  </span>
-                  <div className="flex flex-col gap-0.5 mt-auto">
-                    {dayPosts.slice(0, 3).map((post) => (
-                      <div
-                        key={post.id}
-                        className={cn(
-                          'flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium truncate',
-                          post.platforms[0] === 'twitter' && 'bg-twitter-soft text-twitter',
-                          post.platforms[0] === 'linkedin' && 'bg-linkedin-soft text-linkedin',
-                          post.platforms[0] === 'reddit' && 'bg-reddit-soft text-reddit'
-                        )}
-                        onClick={(e) => {
-                          e.preventDefault()
-                          window.location.href = `/edit/${post.id}`
-                        }}
-                      >
-                        <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                        {getPostPreviewText(post).slice(0, 20)}
-                      </div>
-                    ))}
-                    {dayPosts.length > 3 && (
-                      <span className="text-[10px] text-muted-foreground">
-                        +{dayPosts.length - 3} more
-                      </span>
-                    )}
-                  </div>
-                </Link>
-              )
-            })}
-              </div>
+          <div className="w-px h-8 bg-border" />
+          <div className="text-center">
+            <div className="text-2xl font-display font-bold text-[hsl(var(--gold-dark))]">
+              {stats.published}
+            </div>
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
+              Published
             </div>
           </div>
         </div>
+        <Link
+          to="/new"
+          className={cn(
+            'hidden md:flex items-center gap-2 px-4 py-2.5 rounded-lg',
+            'bg-gradient-to-br from-[hsl(var(--gold))] to-[hsl(var(--gold-dark))]',
+            'text-white font-medium text-sm',
+            'hover:shadow-lg hover:shadow-[hsl(var(--gold))]/30',
+            'transition-all duration-200'
+          )}
+        >
+          <Plus className="w-4 h-4" />
+          New Post
+        </Link>
       </div>
 
-      {/* Sidebar - hidden on mobile */}
-      <aside className="hidden lg:block border-l border-border bg-card p-6">
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-3 mb-6">
-          {[
-            { label: 'Scheduled', value: stats.scheduled },
-            { label: 'Drafts', value: stats.drafts },
-            { label: 'Published', value: stats.published },
-          ].map((stat) => (
-            <div
-              key={stat.label}
-              className="bg-background border border-border rounded-lg p-3 text-center"
-            >
-              <div className="text-xl font-display font-semibold">{stat.value}</div>
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">
-                {stat.label}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Upcoming posts */}
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Upcoming Posts
-          </h3>
+      {/* Empty state when no posts at all */}
+      {hasNoPosts ? (
+        <div className="text-center py-16 px-4 animate-fade-in">
+          <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-[hsl(var(--gold))]/20 to-[hsl(var(--gold))]/5 flex items-center justify-center">
+            <Sparkles className="w-10 h-10 text-[hsl(var(--gold-dark))]" />
+          </div>
+          <h2 className="text-2xl font-display font-bold mb-2">Welcome to Social Scheduler</h2>
+          <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+            Create your first post to get started. Schedule content for Twitter, LinkedIn, and Reddit all in one place.
+          </p>
           <Link
-            to="/posts"
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            to="/new"
+            className={cn(
+              'inline-flex items-center gap-2 px-6 py-3 rounded-xl',
+              'bg-gradient-to-br from-[hsl(var(--gold))] to-[hsl(var(--gold-dark))]',
+              'text-white font-semibold',
+              'hover:shadow-xl hover:shadow-[hsl(var(--gold))]/30',
+              'transition-all duration-200'
+            )}
           >
-            View all
+            <Plus className="w-5 h-5" />
+            Create Your First Post
           </Link>
         </div>
+      ) : (
+        /* Two-column layout on desktop, stacked on mobile */
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Upcoming section */}
+          <Section
+            title="Upcoming"
+            icon={Calendar}
+            viewAllLink="/posts?status=scheduled"
+            viewAllLabel="View all scheduled"
+            isEmpty={upcomingPosts.length === 0}
+            emptyIcon={Calendar}
+            emptyTitle="No posts scheduled"
+            emptyDescription="Schedule a post to see it here"
+          >
+            {upcomingPosts.map((post) => (
+              <PostCard key={post.id} post={post} showSchedule />
+            ))}
+          </Section>
 
-        <div className="space-y-3">
-          {upcomingPosts.length === 0 ? (
-            <div className="text-center py-8 px-4">
-              <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-gradient-to-br from-twitter/10 to-linkedin/10 flex items-center justify-center">
-                <CalendarPlus className="w-6 h-6 text-muted-foreground" />
-              </div>
-              <p className="text-sm font-medium mb-1">No posts scheduled</p>
-              <p className="text-xs text-muted-foreground mb-4">
-                Click any date on the calendar to schedule a post
-              </p>
-              <Link
-                to="/new"
-                className={cn(
-                  'inline-flex items-center gap-2 px-4 py-2 rounded-lg',
-                  'bg-primary/10 text-primary text-sm font-medium',
-                  'hover:bg-primary/20 transition-colors'
-                )}
-              >
-                <CalendarPlus className="w-4 h-4" />
-                Schedule a Post
-              </Link>
-            </div>
-          ) : (
-            upcomingPosts.map((post, i) => (
-              <Link
-                key={post.id}
-                to={`/edit/${post.id}`}
-                className={cn(
-                  'flex gap-3 p-3 rounded-lg border border-border bg-background',
-                  'hover:border-border hover:bg-accent/50 transition-all',
-                  'hover:translate-x-1',
-                  'animate-slide-up'
-                )}
-                style={{ animationDelay: `${i * 50}ms` }}
-              >
-                <div className="flex flex-col gap-1 pt-0.5">
-                  {post.platforms.map((platform) => (
-                    <span
-                      key={platform}
-                      className={cn(
-                        'w-2 h-2 rounded-full',
-                        platform === 'twitter' && 'bg-twitter shadow-[0_0_8px_rgba(29,161,242,0.5)]',
-                        platform === 'linkedin' && 'bg-linkedin shadow-[0_0_8px_rgba(10,102,194,0.5)]',
-                        platform === 'reddit' && 'bg-reddit shadow-[0_0_8px_rgba(255,69,0,0.5)]'
-                      )}
-                    />
-                  ))}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm line-clamp-2">{getPostPreviewText(post)}</p>
-                  <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
-                    <Clock className="w-3 h-3" />
-                    {post.scheduledAt && format(new Date(post.scheduledAt), 'MMM d, h:mm a')}
-                    <span
-                      className={cn(
-                        'px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wide',
-                        'bg-blue-500/10 text-blue-400'
-                      )}
-                    >
-                      Scheduled
-                    </span>
-                  </div>
-                </div>
-              </Link>
-            ))
-          )}
+          {/* Drafts section */}
+          <Section
+            title="Drafts"
+            icon={FileText}
+            viewAllLink="/posts?status=draft"
+            viewAllLabel="View all drafts"
+            isEmpty={recentDrafts.length === 0}
+            emptyIcon={FileText}
+            emptyTitle="No drafts"
+            emptyDescription="Start writing to create a draft"
+          >
+            {recentDrafts.map((post) => (
+              <PostCard key={post.id} post={post} />
+            ))}
+          </Section>
         </div>
-      </aside>
+      )}
     </div>
   )
 }

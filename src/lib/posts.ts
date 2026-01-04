@@ -1,7 +1,7 @@
 // Post type definitions and utilities
 
 export type Platform = 'twitter' | 'linkedin' | 'reddit'
-export type PostStatus = 'draft' | 'scheduled' | 'published' | 'failed'
+export type PostStatus = 'draft' | 'scheduled' | 'published' | 'failed' | 'archived'
 
 export interface TwitterContent {
   text: string
@@ -46,6 +46,35 @@ export interface Post {
   publishResults?: {
     [K in Platform]?: PublishResult
   }
+}
+
+// Status display info
+export const STATUS_INFO: Record<PostStatus, { label: string; color: string; bgColor: string }> = {
+  draft: {
+    label: 'Draft',
+    color: 'text-muted-foreground',
+    bgColor: 'bg-muted',
+  },
+  scheduled: {
+    label: 'Scheduled',
+    color: 'text-primary',
+    bgColor: 'bg-primary/10',
+  },
+  published: {
+    label: 'Published',
+    color: 'text-green-600 dark:text-green-400',
+    bgColor: 'bg-green-100 dark:bg-green-900/30',
+  },
+  failed: {
+    label: 'Failed',
+    color: 'text-destructive',
+    bgColor: 'bg-destructive/10',
+  },
+  archived: {
+    label: 'Archived',
+    color: 'text-muted-foreground',
+    bgColor: 'bg-muted/50',
+  },
 }
 
 // Character limits per platform

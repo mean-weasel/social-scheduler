@@ -82,8 +82,9 @@ export default {
         sm: 'calc(var(--radius) - 4px)',
       },
       fontFamily: {
-        sans: ['DM Sans', 'system-ui', 'sans-serif'],
-        display: ['Space Grotesk', 'system-ui', 'sans-serif'],
+        sans: ['Crimson Pro', 'Georgia', 'serif'],
+        serif: ['Crimson Pro', 'Georgia', 'serif'],
+        display: ['Playfair Display', 'Georgia', 'serif'],
         mono: ['JetBrains Mono', 'SF Mono', 'monospace'],
       },
       keyframes: {
