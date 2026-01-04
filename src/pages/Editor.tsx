@@ -114,8 +114,8 @@ export function Editor() {
       try {
         if (isNew) {
           const created = await addPost(toSave)
-          // Update local post state with the created post's ID
-          setPost((prev) => ({ ...prev, id: created.id }))
+          // Navigate to edit URL so subsequent auto-saves update instead of create
+          navigate(`/edit/${created.id}`, { replace: true })
         } else {
           await updatePost(toSave.id, toSave)
         }
