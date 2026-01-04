@@ -1,12 +1,12 @@
 import { test, expect } from '@playwright/test'
-import { enterDemoMode, goToPosts, getPostCards, createTestPost } from './helpers'
+import { enterDemoMode, goToPosts, getPostCards, createTestPost, generateTestId, uniqueContent } from './helpers'
 
 test.describe('Posts List', () => {
   test.beforeEach(async ({ page }) => {
     await enterDemoMode(page)
   })
 
-  test.describe('Navigation', () => {
+  test.describe.serial('Navigation', () => {
     test('should navigate to posts list from dashboard', async ({ page }) => {
       await page.goto('/')
 
@@ -18,7 +18,7 @@ test.describe('Posts List', () => {
     })
   })
 
-  test.describe('Filter Tabs', () => {
+  test.describe.serial('Filter Tabs', () => {
     test('should show all posts by default', async ({ page }) => {
       await goToPosts(page)
 
@@ -27,9 +27,11 @@ test.describe('Posts List', () => {
       await expect(allTab).toHaveClass(/bg-\[hsl\(var\(--gold\)\)\]/)
     })
 
-    test('should filter to drafts', async ({ page }) => {
+    test('should filter to drafts', async ({ page }, testInfo) => {
+      const testId = generateTestId(testInfo)
+      const content = uniqueContent('Draft post', testId)
       // Create a draft post first
-      await createTestPost(page, { platform: 'twitter', content: 'Draft post' })
+      await createTestPost(page, { platform: 'twitter', content })
 
       await goToPosts(page)
       await page.getByRole('button', { name: /drafts/i }).click()
@@ -45,11 +47,13 @@ test.describe('Posts List', () => {
       }
     })
 
-    test('should filter to scheduled', async ({ page }) => {
+    test('should filter to scheduled', async ({ page }, testInfo) => {
+      const testId = generateTestId(testInfo)
+      const content = uniqueContent('Scheduled post', testId)
       // Create a scheduled post first
       await createTestPost(page, {
         platform: 'twitter',
-        content: 'Scheduled post',
+        content,
         asDraft: false,
       })
 
@@ -83,9 +87,11 @@ test.describe('Posts List', () => {
     })
   })
 
-  test.describe('Post Cards', () => {
-    test('should display platform indicators', async ({ page }) => {
-      await createTestPost(page, { platform: 'twitter', content: 'Test post' })
+  test.describe.serial('Post Cards', () => {
+    test('should display platform indicators', async ({ page }, testInfo) => {
+      const testId = generateTestId(testInfo)
+      const content = uniqueContent('Test post', testId)
+      await createTestPost(page, { platform: 'twitter', content })
 
       await goToPosts(page)
 
@@ -97,19 +103,23 @@ test.describe('Posts List', () => {
       expect(dotCount).toBeGreaterThan(0)
     })
 
-    test('should display content preview', async ({ page }) => {
-      await createTestPost(page, { platform: 'twitter', content: 'My post content preview' })
+    test('should display content preview', async ({ page }, testInfo) => {
+      const testId = generateTestId(testInfo)
+      const content = uniqueContent('My post content preview', testId)
+      await createTestPost(page, { platform: 'twitter', content })
 
       await goToPosts(page)
 
       const firstCard = (await getPostCards(page)).first()
 
       // Should show the content
-      await expect(firstCard).toContainText('My post content preview')
+      await expect(firstCard).toContainText(content)
     })
 
-    test('should display status badge', async ({ page }) => {
-      await createTestPost(page, { platform: 'twitter', content: 'Test post' })
+    test('should display status badge', async ({ page }, testInfo) => {
+      const testId = generateTestId(testInfo)
+      const content = uniqueContent('Test post', testId)
+      await createTestPost(page, { platform: 'twitter', content })
 
       await goToPosts(page)
 
@@ -120,8 +130,10 @@ test.describe('Posts List', () => {
       expect(hasStatus).toBeGreaterThan(0)
     })
 
-    test('should navigate to editor when clicked', async ({ page }) => {
-      await createTestPost(page, { platform: 'twitter', content: 'Clickable post' })
+    test('should navigate to editor when clicked', async ({ page }, testInfo) => {
+      const testId = generateTestId(testInfo)
+      const content = uniqueContent('Clickable post', testId)
+      await createTestPost(page, { platform: 'twitter', content })
 
       await goToPosts(page)
 

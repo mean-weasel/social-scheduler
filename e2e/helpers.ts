@@ -1,6 +1,23 @@
-import { Page, expect } from '@playwright/test'
+import { Page, expect, TestInfo } from '@playwright/test'
 
 const API_BASE = 'http://localhost:3001/api'
+
+/**
+ * Generate a unique test ID for content isolation in parallel tests.
+ * Uses a combination of worker index and random string to ensure uniqueness.
+ */
+export function generateTestId(testInfo: TestInfo): string {
+  const workerId = testInfo.parallelIndex
+  const random = Math.random().toString(36).substring(2, 8)
+  return `w${workerId}-${random}`
+}
+
+/**
+ * Create unique content string for a test
+ */
+export function uniqueContent(baseContent: string, testId: string): string {
+  return `${baseContent} [${testId}]`
+}
 
 /**
  * Reset the test database before each test

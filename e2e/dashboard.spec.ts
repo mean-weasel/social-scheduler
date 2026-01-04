@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { enterDemoMode, createTestPost, deletePost, archivePost } from './helpers'
+import { enterDemoMode, createTestPost, deletePost, archivePost, generateTestId, uniqueContent } from './helpers'
 
 test.describe('Dashboard', () => {
   test.beforeEach(async ({ page }) => {
@@ -9,7 +9,8 @@ test.describe('Dashboard', () => {
     await enterDemoMode(page)
   })
 
-  test.describe('Stats Bar', () => {
+  // Stats tests need serial execution to ensure accurate counts
+  test.describe.serial('Stats Bar', () => {
     test('should show zero stats when no posts exist', async ({ page }) => {
       // Verify all stats show 0
       const statsBar = page.locator('.flex-1.flex.items-center.gap-6')
@@ -152,7 +153,8 @@ test.describe('Dashboard', () => {
     })
   })
 
-  test.describe('Empty State', () => {
+  // Empty state tests need serial execution to ensure no posts exist
+  test.describe.serial('Empty State', () => {
     test('should show welcome message when no posts exist', async ({ page }) => {
       await expect(page.getByRole('heading', { name: /welcome to social scheduler/i })).toBeVisible()
       // The paragraph contains more text, so use partial match
@@ -179,7 +181,8 @@ test.describe('Dashboard', () => {
     })
   })
 
-  test.describe('Upcoming Section', () => {
+  // Upcoming tests need serial execution to check empty/non-empty states
+  test.describe.serial('Upcoming Section', () => {
     test('should show upcoming posts section when scheduled posts exist', async ({ page }) => {
       // Create a scheduled post
       await createTestPost(page, { platform: 'twitter', content: 'Upcoming post', asDraft: false })
@@ -203,7 +206,8 @@ test.describe('Dashboard', () => {
     })
   })
 
-  test.describe('Drafts Section', () => {
+  // Drafts tests need serial execution to check empty/non-empty states
+  test.describe.serial('Drafts Section', () => {
     test('should show drafts section when drafts exist', async ({ page }) => {
       // Create a draft
       await createTestPost(page, { platform: 'twitter', content: 'My draft', asDraft: true })

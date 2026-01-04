@@ -8,6 +8,8 @@ import {
   restorePost,
   filterByStatus,
   deletePost,
+  generateTestId,
+  uniqueContent,
 } from './helpers'
 
 test.describe('Archive Post', () => {
@@ -15,9 +17,10 @@ test.describe('Archive Post', () => {
     await enterDemoMode(page)
   })
 
-  test('should archive a draft post from editor', async ({ page }) => {
+  test('should archive a draft post from editor', async ({ page }, testInfo) => {
+    const testId = generateTestId(testInfo)
     // Create a test post
-    await createTestPost(page, { platform: 'twitter', content: 'Post to archive' })
+    await createTestPost(page, { platform: 'twitter', content: uniqueContent('Post to archive', testId) })
 
     // Navigate to posts and click on it
     await goToPosts(page)
@@ -31,9 +34,11 @@ test.describe('Archive Post', () => {
     await expect(page).toHaveURL('/')
   })
 
-  test('should show archived posts in archived filter', async ({ page }) => {
+  test('should show archived posts in archived filter', async ({ page }, testInfo) => {
+    const testId = generateTestId(testInfo)
+    const content = uniqueContent('Archived post content', testId)
     // Create and archive a post
-    await createTestPost(page, { platform: 'twitter', content: 'Archived post content' })
+    await createTestPost(page, { platform: 'twitter', content })
     await goToPosts(page)
     const cards = await getPostCards(page)
     await cards.first().click()
@@ -44,13 +49,16 @@ test.describe('Archive Post', () => {
     await filterByStatus(page, 'archived')
 
     // Should see the archived post
-    await expect(page.getByText('Archived post content')).toBeVisible()
+    await expect(page.getByText(content)).toBeVisible()
   })
 
-  test('should hide archived posts from All view', async ({ page }) => {
+  test('should hide archived posts from All view', async ({ page }, testInfo) => {
+    const testId = generateTestId(testInfo)
+    const visibleContent = uniqueContent('Visible post', testId)
+    const hiddenContent = uniqueContent('Hidden archived post', testId)
     // Create two posts
-    await createTestPost(page, { platform: 'twitter', content: 'Visible post' })
-    await createTestPost(page, { platform: 'twitter', content: 'Hidden archived post' })
+    await createTestPost(page, { platform: 'twitter', content: visibleContent })
+    await createTestPost(page, { platform: 'twitter', content: hiddenContent })
 
     // Archive the second post
     await goToPosts(page)
@@ -60,13 +68,15 @@ test.describe('Archive Post', () => {
 
     // Check All view - should only see the visible post
     await goToPosts(page)
-    await expect(page.getByText('Visible post')).toBeVisible()
-    await expect(page.getByText('Hidden archived post')).not.toBeVisible()
+    await expect(page.getByText(visibleContent)).toBeVisible()
+    await expect(page.getByText(hiddenContent)).not.toBeVisible()
   })
 
-  test('should restore archived post to drafts', async ({ page }) => {
+  test('should restore archived post to drafts', async ({ page }, testInfo) => {
+    const testId = generateTestId(testInfo)
+    const content = uniqueContent('Post to restore', testId)
     // Create and archive a post
-    await createTestPost(page, { platform: 'twitter', content: 'Post to restore' })
+    await createTestPost(page, { platform: 'twitter', content })
     await goToPosts(page)
     let cards = await getPostCards(page)
     await cards.first().click()
@@ -87,12 +97,14 @@ test.describe('Archive Post', () => {
     // Verify restored to drafts
     await goToPosts(page)
     await filterByStatus(page, 'draft')
-    await expect(page.getByText('Post to restore')).toBeVisible()
+    await expect(page.getByText(content)).toBeVisible()
   })
 
-  test('should permanently delete archived post', async ({ page }) => {
+  test('should permanently delete archived post', async ({ page }, testInfo) => {
+    const testId = generateTestId(testInfo)
+    const content = uniqueContent('Post to delete forever', testId)
     // Create and archive a post
-    await createTestPost(page, { platform: 'twitter', content: 'Post to delete forever' })
+    await createTestPost(page, { platform: 'twitter', content })
     await goToPosts(page)
     let cards = await getPostCards(page)
     await cards.first().click()
@@ -116,9 +128,11 @@ test.describe('Archive Post', () => {
     await expect(page.getByRole('button', { name: /archived/i })).not.toBeVisible()
   })
 
-  test('should cancel archive confirmation', async ({ page }) => {
+  test('should cancel archive confirmation', async ({ page }, testInfo) => {
+    const testId = generateTestId(testInfo)
+    const content = uniqueContent('Post to keep', testId)
     // Create a test post
-    await createTestPost(page, { platform: 'twitter', content: 'Post to keep' })
+    await createTestPost(page, { platform: 'twitter', content })
     await goToPosts(page)
     const cards = await getPostCards(page)
     await cards.first().click()
@@ -136,12 +150,14 @@ test.describe('Archive Post', () => {
     // Post should still exist in drafts
     await goToPosts(page)
     await filterByStatus(page, 'draft')
-    await expect(page.getByText('Post to keep')).toBeVisible()
+    await expect(page.getByText(content)).toBeVisible()
   })
 
-  test('should show restore button only for archived posts', async ({ page }) => {
+  test('should show restore button only for archived posts', async ({ page }, testInfo) => {
+    const testId = generateTestId(testInfo)
+    const content = uniqueContent('Draft post', testId)
     // Create a draft post
-    await createTestPost(page, { platform: 'twitter', content: 'Draft post' })
+    await createTestPost(page, { platform: 'twitter', content })
     await goToPosts(page)
     const cards = await getPostCards(page)
     await cards.first().click()
@@ -151,9 +167,11 @@ test.describe('Archive Post', () => {
     await expect(page.getByRole('button', { name: /restore/i })).not.toBeVisible()
   })
 
-  test('should hide archived tab when no archived posts', async ({ page }) => {
+  test('should hide archived tab when no archived posts', async ({ page }, testInfo) => {
+    const testId = generateTestId(testInfo)
+    const content = uniqueContent('Regular post', testId)
     // Create a post but don't archive it
-    await createTestPost(page, { platform: 'twitter', content: 'Regular post' })
+    await createTestPost(page, { platform: 'twitter', content })
 
     // Go to posts
     await goToPosts(page)
@@ -162,9 +180,11 @@ test.describe('Archive Post', () => {
     await expect(page.getByRole('button', { name: /archived/i })).not.toBeVisible()
   })
 
-  test('should show archived tab when archived posts exist', async ({ page }) => {
+  test('should show archived tab when archived posts exist', async ({ page }, testInfo) => {
+    const testId = generateTestId(testInfo)
+    const content = uniqueContent('To be archived', testId)
     // Create and archive a post
-    await createTestPost(page, { platform: 'twitter', content: 'To be archived' })
+    await createTestPost(page, { platform: 'twitter', content })
     await goToPosts(page)
     const cards = await getPostCards(page)
     await cards.first().click()
