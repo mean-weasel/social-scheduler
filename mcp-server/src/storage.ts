@@ -52,8 +52,8 @@ export interface Post {
   }
 }
 
-// Storage path - uses home directory for persistence
-const STORAGE_DIR = path.join(os.homedir(), '.social-scheduler')
+// Storage path - uses home directory for persistence (or TEST_STORAGE_DIR env var for testing)
+const STORAGE_DIR = process.env.TEST_STORAGE_DIR || path.join(os.homedir(), '.social-scheduler')
 const STORAGE_PATH = path.join(STORAGE_DIR, 'posts.json')
 
 /**
