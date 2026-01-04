@@ -3,8 +3,6 @@ import { cn } from '@/lib/utils'
 import {
   Calendar,
   Settings,
-  Search,
-  Bell,
   Plus,
 } from 'lucide-react'
 import { BottomNav } from './BottomNav'
@@ -50,12 +48,6 @@ export function AppLayout() {
 
           {/* Desktop nav icons - hidden on mobile */}
           <div className="hidden md:flex items-center gap-2">
-            <button className="p-2 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors">
-              <Search className="w-5 h-5" />
-            </button>
-            <button className="p-2 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors">
-              <Bell className="w-5 h-5" />
-            </button>
             <Link
               to="/settings"
               className={cn(

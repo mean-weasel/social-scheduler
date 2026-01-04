@@ -101,25 +101,35 @@ export function Posts() {
 
       {/* Posts list */}
       {sortedPosts.length === 0 ? (
-        <div className="text-center py-16 bg-card border border-border rounded-xl">
-          <FileText className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium mb-2">No posts yet</h3>
-          <p className="text-muted-foreground mb-6">
+        <div className="text-center py-12 md:py-16 bg-card border border-border rounded-xl">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-twitter/20 via-linkedin/20 to-reddit/20 flex items-center justify-center">
+            <FileText className="w-8 h-8 text-muted-foreground" />
+          </div>
+          <h3 className="text-lg font-semibold mb-2">
+            {filter === 'all' ? 'No posts yet' : `No ${filter} posts`}
+          </h3>
+          <p className="text-muted-foreground mb-6 max-w-sm mx-auto px-4">
             {filter === 'all'
-              ? "Create your first post to get started."
-              : `No ${filter} posts found.`}
+              ? 'Start creating content for Twitter, LinkedIn, and Reddit. Schedule posts and never miss the perfect time to share.'
+              : filter === 'draft'
+                ? 'All your drafts have been published or scheduled. Start a new post to keep the content flowing.'
+                : filter === 'scheduled'
+                  ? 'No posts scheduled right now. Create a post and schedule it for the perfect time.'
+                  : filter === 'published'
+                    ? 'You haven\'t published any posts yet. Mark posts as published once they\'re live.'
+                    : 'No failed posts. Everything is running smoothly!'}
           </p>
           <Link
             to="/new"
             className={cn(
-              'inline-flex items-center gap-2 px-4 py-2.5 rounded-lg',
-              'bg-primary text-primary-foreground',
+              'inline-flex items-center gap-2 px-5 py-3 rounded-xl',
+              'bg-gradient-to-r from-twitter to-[#0d8bd9] text-white',
               'font-medium text-sm',
-              'hover:opacity-90 transition-opacity'
+              'hover:opacity-90 transition-opacity shadow-lg shadow-twitter/20'
             )}
           >
             <Plus className="w-4 h-4" />
-            Create Post
+            Create Your First Post
           </Link>
         </div>
       ) : (
