@@ -153,7 +153,7 @@ test.describe('Auto-save', () => {
     })
   })
 
-  test.describe('Auto-save Edge Cases', () => {
+  test.describe.serial('Auto-save Edge Cases', () => {
     test('should not auto-save if no changes made', async ({ page }) => {
       // Create a draft
       await page.goto('/new')
