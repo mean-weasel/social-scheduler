@@ -4,6 +4,7 @@ import {
   goToNewPost,
   togglePlatform,
   fillContent,
+  fillNotes,
   fillRedditFields,
   setLinkedInVisibility,
   setSchedule,
@@ -267,6 +268,120 @@ test.describe('Create Post', () => {
 
       // LinkedIn should still be visible
       await expect(previewPanel.getByText('LinkedIn').first()).toBeVisible()
+    })
+  })
+
+  test.describe('Notes', () => {
+    test('should add notes to a post', async ({ page }) => {
+      await goToNewPost(page)
+
+      await togglePlatform(page, 'twitter')
+      await fillContent(page, 'Post with notes attached')
+
+      // Add notes
+      await fillNotes(page, 'Remember to use #hashtags and mention @partner')
+
+      // Verify notes section is expanded and has content
+      await expect(page.getByPlaceholder(/add notes about this post/i)).toHaveValue(
+        'Remember to use #hashtags and mention @partner'
+      )
+
+      await saveDraft(page)
+      await waitForNavigation(page, '/')
+    })
+
+    test('should collapse and expand notes section', async ({ page }) => {
+      await goToNewPost(page)
+
+      await togglePlatform(page, 'twitter')
+
+      // Notes section should be collapsed by default
+      const notesTextarea = page.getByPlaceholder(/add notes about this post/i)
+      await expect(notesTextarea).not.toBeVisible()
+
+      // Click to expand
+      await page.getByRole('button', { name: /notes/i }).click()
+      await expect(notesTextarea).toBeVisible()
+
+      // Click to collapse
+      await page.getByRole('button', { name: /notes/i }).click()
+      await expect(notesTextarea).not.toBeVisible()
+    })
+  })
+
+  test.describe('Multi-Subreddit Posts', () => {
+    test('should add multiple subreddits', async ({ page }) => {
+      await goToNewPost(page)
+
+      await togglePlatform(page, 'reddit')
+
+      // Add multiple subreddits
+      await fillRedditFields(page, {
+        subreddits: ['startups', 'SaaS', 'sideproject'],
+        title: 'Cross-posting to multiple subreddits',
+      })
+
+      // Verify all subreddits are shown as tags (use exact match to avoid preview)
+      await expect(page.getByText('r/startups', { exact: true })).toBeVisible()
+      await expect(page.getByText('r/SaaS', { exact: true })).toBeVisible()
+      await expect(page.getByText('r/sideproject', { exact: true })).toBeVisible()
+
+      // Verify count is shown
+      await expect(page.getByText('(3)')).toBeVisible()
+
+      await fillContent(page, 'This post will go to multiple subreddits!')
+
+      await saveDraft(page)
+      await waitForNavigation(page, '/')
+    })
+
+    test('should remove subreddits', async ({ page }) => {
+      await goToNewPost(page)
+
+      await togglePlatform(page, 'reddit')
+
+      // Add subreddits
+      await fillRedditFields(page, {
+        subreddits: ['startups', 'SaaS'],
+        title: 'Test removing subreddits',
+      })
+
+      // The tag container is in Reddit Settings section
+      const tagsContainer = page.locator('.flex.flex-wrap.gap-2')
+
+      // Verify both are visible as tags
+      await expect(tagsContainer.getByText('r/startups', { exact: true })).toBeVisible()
+      await expect(tagsContainer.getByText('r/SaaS', { exact: true })).toBeVisible()
+
+      // Count should be 2
+      await expect(page.getByText('(2)')).toBeVisible()
+
+      // Remove one subreddit by clicking the X button on the tag
+      const startupTag = tagsContainer.locator('span', { hasText: 'r/startups' })
+      await startupTag.locator('button').click()
+
+      // Verify it's removed from tags
+      await expect(tagsContainer.getByText('r/startups', { exact: true })).not.toBeVisible()
+      await expect(tagsContainer.getByText('r/SaaS', { exact: true })).toBeVisible()
+
+      // Count should be 1
+      await expect(page.getByText('(1)')).toBeVisible()
+    })
+
+    test('should show subreddits in preview', async ({ page }) => {
+      await goToNewPost(page)
+
+      await togglePlatform(page, 'reddit')
+
+      await fillRedditFields(page, {
+        subreddits: ['startups', 'SaaS'],
+        title: 'Preview test',
+      })
+
+      // Check preview panel shows both subreddits
+      const previewPanel = page.locator('.border-l.border-border')
+      await expect(previewPanel).toContainText('r/startups')
+      await expect(previewPanel).toContainText('r/SaaS')
     })
   })
 
