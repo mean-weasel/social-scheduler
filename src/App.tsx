@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { Dashboard } from '@/pages/Dashboard'
@@ -5,8 +6,19 @@ import { Editor } from '@/pages/Editor'
 import { Posts } from '@/pages/Posts'
 import { Settings } from '@/pages/Settings'
 import { useScheduleChecker } from '@/hooks/useScheduleChecker'
+import { usePostsStore } from '@/lib/storage'
 
 export default function App() {
+  const fetchPosts = usePostsStore((state) => state.fetchPosts)
+  const initialized = usePostsStore((state) => state.initialized)
+
+  // Fetch posts on app load
+  useEffect(() => {
+    if (!initialized) {
+      fetchPosts()
+    }
+  }, [fetchPosts, initialized])
+
   // Check for due posts and send notifications
   useScheduleChecker()
 

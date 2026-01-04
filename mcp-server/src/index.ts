@@ -230,7 +230,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           }
         }
 
-        const post = createPost({
+        const post = await createPost({
           platforms,
           content: content || {},
           scheduledAt: scheduledAt || null,
@@ -250,7 +250,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case 'get_post': {
         const { id } = args as { id: string }
-        const post = getPost(id)
+        const post = await getPost(id)
 
         if (!post) {
           return {
@@ -271,7 +271,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case 'update_post': {
         const { id, ...updates } = args as { id: string } & Partial<Post>
-        const post = updatePost(id, updates)
+        const post = await updatePost(id, updates)
 
         if (!post) {
           return {
@@ -292,7 +292,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case 'delete_post': {
         const { id } = args as { id: string }
-        const success = deletePost(id)
+        const success = await deletePost(id)
 
         if (!success) {
           return {
@@ -313,7 +313,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case 'archive_post': {
         const { id } = args as { id: string }
-        const post = archivePost(id)
+        const post = await archivePost(id)
 
         if (!post) {
           return {
@@ -334,7 +334,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case 'restore_post': {
         const { id } = args as { id: string }
-        const post = restorePost(id)
+        const post = await restorePost(id)
 
         if (!post) {
           return {
@@ -360,7 +360,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           limit?: number
         }
 
-        const posts = listPosts({
+        const posts = await listPosts({
           status,
           platform,
           limit: limit || 50,
