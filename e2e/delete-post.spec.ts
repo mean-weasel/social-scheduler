@@ -7,16 +7,21 @@ import {
   getPostCards,
   createTestPost,
   filterByStatus,
+  generateTestId,
+  uniqueContent,
 } from './helpers'
 
-test.describe('Delete Post', () => {
+// Delete tests need serial execution to avoid interference
+test.describe.serial('Delete Post', () => {
   test.beforeEach(async ({ page }) => {
     await enterDemoMode(page)
   })
 
-  test('should permanently delete an archived post from editor', async ({ page }) => {
+  test('should permanently delete an archived post from editor', async ({ page }, testInfo) => {
+    const testId = generateTestId(testInfo)
+    const content = uniqueContent('Post to delete', testId)
     // Create a post first
-    await createTestPost(page, { platform: 'twitter', content: 'Post to delete' })
+    await createTestPost(page, { platform: 'twitter', content })
 
     // Go to posts and archive the post
     await page.goto('/posts')
@@ -37,11 +42,13 @@ test.describe('Delete Post', () => {
     await waitForNavigation(page, '/')
   })
 
-  test('should delete a scheduled post after archiving', async ({ page }) => {
+  test('should delete a scheduled post after archiving', async ({ page }, testInfo) => {
+    const testId = generateTestId(testInfo)
+    const content = uniqueContent('Scheduled post to delete', testId)
     // Create a scheduled post
     await createTestPost(page, {
       platform: 'twitter',
-      content: 'Scheduled post to delete',
+      content,
       asDraft: false,
     })
 
