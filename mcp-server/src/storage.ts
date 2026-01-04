@@ -1,8 +1,9 @@
-import fs from 'fs'
-import path from 'path'
-import os from 'os'
+// API-based storage for MCP server
+// Connects to the shared API server for unified data access
 
-// Post type definitions (mirrored from main app)
+const API_BASE = process.env.API_URL || 'http://localhost:3001/api'
+
+// Type definitions (shared with web app and API server)
 export type Platform = 'twitter' | 'linkedin' | 'reddit'
 export type PostStatus = 'draft' | 'scheduled' | 'published' | 'failed' | 'archived'
 
@@ -52,171 +53,140 @@ export interface Post {
   }
 }
 
-// Storage path - uses home directory for persistence (or TEST_STORAGE_DIR env var for testing)
-const STORAGE_DIR = process.env.TEST_STORAGE_DIR || path.join(os.homedir(), '.social-scheduler')
-const STORAGE_PATH = path.join(STORAGE_DIR, 'posts.json')
+// CRUD Operations - all async via API
 
-/**
- * Ensure the storage directory exists
- */
-function ensureStorageDir(): void {
-  if (!fs.existsSync(STORAGE_DIR)) {
-    fs.mkdirSync(STORAGE_DIR, { recursive: true })
-  }
-}
-
-/**
- * Read all posts from storage
- */
-export function readPosts(): Post[] {
-  ensureStorageDir()
-  if (!fs.existsSync(STORAGE_PATH)) {
-    return []
-  }
-  try {
-    const data = fs.readFileSync(STORAGE_PATH, 'utf-8')
-    const parsed = JSON.parse(data)
-    return parsed.posts || []
-  } catch {
-    return []
-  }
-}
-
-/**
- * Write all posts to storage
- */
-export function writePosts(posts: Post[]): void {
-  ensureStorageDir()
-  fs.writeFileSync(STORAGE_PATH, JSON.stringify({ posts }, null, 2))
-}
-
-/**
- * Generate a unique ID
- */
-export function generateId(): string {
-  return crypto.randomUUID()
-}
-
-/**
- * Get current ISO timestamp
- */
-export function now(): string {
-  return new Date().toISOString()
-}
-
-// CRUD Operations
-
-/**
- * Create a new post
- */
-export function createPost(data: {
+export async function createPost(data: {
   platforms: Platform[]
   content: Post['content']
   scheduledAt?: string | null
   status?: PostStatus
   notes?: string
-}): Post {
-  const posts = readPosts()
-  const timestamp = now()
+}): Promise<Post> {
+  const res = await fetch(`${API_BASE}/posts`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
 
-  const newPost: Post = {
-    id: generateId(),
-    createdAt: timestamp,
-    updatedAt: timestamp,
-    scheduledAt: data.scheduledAt || null,
-    status: data.status || 'draft',
-    platforms: data.platforms,
-    notes: data.notes,
-    content: data.content,
+  if (!res.ok) {
+    throw new Error(`Failed to create post: ${res.statusText}`)
   }
 
-  posts.push(newPost)
-  writePosts(posts)
-  return newPost
+  const { post } = await res.json()
+  return post
 }
 
-/**
- * Get a post by ID
- */
-export function getPost(id: string): Post | undefined {
-  const posts = readPosts()
-  return posts.find(p => p.id === id)
-}
+export async function getPost(id: string): Promise<Post | undefined> {
+  const res = await fetch(`${API_BASE}/posts/${id}`)
 
-/**
- * Update a post
- */
-export function updatePost(id: string, updates: Partial<Omit<Post, 'id' | 'createdAt'>>): Post | undefined {
-  const posts = readPosts()
-  const index = posts.findIndex(p => p.id === id)
-
-  if (index === -1) return undefined
-
-  posts[index] = {
-    ...posts[index],
-    ...updates,
-    updatedAt: now(),
+  if (res.status === 404) {
+    return undefined
   }
 
-  writePosts(posts)
-  return posts[index]
+  if (!res.ok) {
+    throw new Error(`Failed to get post: ${res.statusText}`)
+  }
+
+  const { post } = await res.json()
+  return post
 }
 
-/**
- * Delete a post
- */
-export function deletePost(id: string): boolean {
-  const posts = readPosts()
-  const initialLength = posts.length
-  const filtered = posts.filter(p => p.id !== id)
+export async function updatePost(
+  id: string,
+  updates: Partial<Omit<Post, 'id' | 'createdAt'>>
+): Promise<Post | undefined> {
+  const res = await fetch(`${API_BASE}/posts/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates),
+  })
 
-  if (filtered.length === initialLength) return false
+  if (res.status === 404) {
+    return undefined
+  }
 
-  writePosts(filtered)
+  if (!res.ok) {
+    throw new Error(`Failed to update post: ${res.statusText}`)
+  }
+
+  const { post } = await res.json()
+  return post
+}
+
+export async function deletePost(id: string): Promise<boolean> {
+  const res = await fetch(`${API_BASE}/posts/${id}`, {
+    method: 'DELETE',
+  })
+
+  if (res.status === 404) {
+    return false
+  }
+
+  if (!res.ok) {
+    throw new Error(`Failed to delete post: ${res.statusText}`)
+  }
+
   return true
 }
 
-/**
- * Archive a post
- */
-export function archivePost(id: string): Post | undefined {
-  return updatePost(id, { status: 'archived' })
+export async function archivePost(id: string): Promise<Post | undefined> {
+  const res = await fetch(`${API_BASE}/posts/${id}/archive`, {
+    method: 'POST',
+  })
+
+  if (res.status === 404) {
+    return undefined
+  }
+
+  if (!res.ok) {
+    throw new Error(`Failed to archive post: ${res.statusText}`)
+  }
+
+  const { post } = await res.json()
+  return post
 }
 
-/**
- * Restore an archived post to draft
- */
-export function restorePost(id: string): Post | undefined {
-  return updatePost(id, { status: 'draft', scheduledAt: null })
+export async function restorePost(id: string): Promise<Post | undefined> {
+  const res = await fetch(`${API_BASE}/posts/${id}/restore`, {
+    method: 'POST',
+  })
+
+  if (res.status === 404) {
+    return undefined
+  }
+
+  if (!res.ok) {
+    throw new Error(`Failed to restore post: ${res.statusText}`)
+  }
+
+  const { post } = await res.json()
+  return post
 }
 
-/**
- * List posts with optional filters
- */
-export function listPosts(options?: {
+export async function listPosts(options?: {
   status?: PostStatus | 'all'
   platform?: Platform
   limit?: number
-}): Post[] {
-  let posts = readPosts()
+}): Promise<Post[]> {
+  const params = new URLSearchParams()
 
-  // Filter by status
   if (options?.status && options.status !== 'all') {
-    posts = posts.filter(p => p.status === options.status)
+    params.set('status', options.status)
   }
-
-  // Filter by platform
   if (options?.platform) {
-    posts = posts.filter(p => p.platforms.includes(options.platform!))
+    params.set('platform', options.platform)
+  }
+  if (options?.limit) {
+    params.set('limit', String(options.limit))
   }
 
-  // Sort by most recent first
-  posts.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+  const url = `${API_BASE}/posts${params.toString() ? '?' + params.toString() : ''}`
+  const res = await fetch(url)
 
-  // Apply limit
-  if (options?.limit && options.limit > 0) {
-    posts = posts.slice(0, options.limit)
+  if (!res.ok) {
+    throw new Error(`Failed to list posts: ${res.statusText}`)
   }
 
+  const { posts } = await res.json()
   return posts
 }

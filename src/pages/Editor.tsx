@@ -108,15 +108,22 @@ export function Editor() {
   // Auto-save (only for drafts or new posts)
   const { status: autoSaveStatus } = useAutoSave({
     data: { post, content, mediaUrls, linkedInMediaUrl, redditUrl },
-    onSave: () => {
+    onSave: async () => {
       // Silently save without navigating
       const toSave = { ...post, status: 'draft' as const }
-      if (isNew) {
-        addPost(toSave)
-      } else {
-        updatePost(toSave.id, toSave)
+      try {
+        if (isNew) {
+          const created = await addPost(toSave)
+          // Update local post state with the created post's ID
+          setPost((prev) => ({ ...prev, id: created.id }))
+        } else {
+          await updatePost(toSave.id, toSave)
+        }
+        setIsDirty(false) // Reset dirty after auto-save
+      } catch (error) {
+        // Silently fail auto-save - user can still manually save
+        console.error('Auto-save failed:', error)
       }
-      setIsDirty(false) // Reset dirty after auto-save
     },
     delay: 2000,
     enabled: post.status === 'draft' || isNew,
@@ -169,16 +176,22 @@ export function Editor() {
   }, [existingPost])
 
   // Handle save
-  const handleSave = (postToSave: Post) => {
+  const handleSave = async (postToSave: Post) => {
     setIsSaving(true)
     setIsDirty(false) // Clear dirty state before navigation
-    if (isNew) {
-      addPost(postToSave)
-    } else {
-      updatePost(postToSave.id, postToSave)
+    try {
+      if (isNew) {
+        await addPost(postToSave)
+      } else {
+        await updatePost(postToSave.id, postToSave)
+      }
+      navigate('/')
+    } catch (error) {
+      toast.error('Failed to save post')
+      setIsDirty(true)
+    } finally {
+      setIsSaving(false)
     }
-    setIsSaving(false)
-    navigate('/')
   }
 
   // Handle delete
@@ -186,11 +199,15 @@ export function Editor() {
     setShowDeleteConfirm(true)
   }
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (id) {
-      deletePost(id)
-      toast.success('Post deleted')
-      navigate('/')
+      try {
+        await deletePost(id)
+        toast.success('Post deleted')
+        navigate('/')
+      } catch (error) {
+        toast.error('Failed to delete post')
+      }
     }
   }
 
@@ -199,20 +216,28 @@ export function Editor() {
     setShowArchiveConfirm(true)
   }
 
-  const confirmArchive = () => {
+  const confirmArchive = async () => {
     if (id) {
-      archivePost(id)
-      toast.success('Post archived')
-      navigate('/')
+      try {
+        await archivePost(id)
+        toast.success('Post archived')
+        navigate('/')
+      } catch (error) {
+        toast.error('Failed to archive post')
+      }
     }
   }
 
   // Handle restore
-  const handleRestore = () => {
+  const handleRestore = async () => {
     if (id) {
-      restorePost(id)
-      toast.success('Post restored to drafts')
-      navigate('/')
+      try {
+        await restorePost(id)
+        toast.success('Post restored to drafts')
+        navigate('/')
+      } catch (error) {
+        toast.error('Failed to restore post')
+      }
     }
   }
 

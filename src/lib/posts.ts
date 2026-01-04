@@ -117,22 +117,3 @@ export function isDue(post: Post): boolean {
   }
   return new Date(post.scheduledAt) <= new Date()
 }
-
-// Migrate legacy post data (subreddit string → subreddits array)
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function migratePost(post: any): Post {
-  if (post.content?.reddit?.subreddit && !post.content?.reddit?.subreddits) {
-    return {
-      ...post,
-      content: {
-        ...post.content,
-        reddit: {
-          ...post.content.reddit,
-          subreddits: [post.content.reddit.subreddit],
-          subreddit: undefined,
-        },
-      },
-    }
-  }
-  return post as Post
-}

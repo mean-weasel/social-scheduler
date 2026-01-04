@@ -104,6 +104,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install API server dependencies
+        run: cd api-server && npm ci
+
+      - name: Build API server
+        run: npm run api:build
+
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
