@@ -48,35 +48,6 @@ export interface Post {
   }
 }
 
-// Status display info
-export const STATUS_INFO: Record<PostStatus, { label: string; color: string; bgColor: string }> = {
-  draft: {
-    label: 'Draft',
-    color: 'text-muted-foreground',
-    bgColor: 'bg-muted',
-  },
-  scheduled: {
-    label: 'Scheduled',
-    color: 'text-primary',
-    bgColor: 'bg-primary/10',
-  },
-  published: {
-    label: 'Published',
-    color: 'text-green-600 dark:text-green-400',
-    bgColor: 'bg-green-100 dark:bg-green-900/30',
-  },
-  failed: {
-    label: 'Failed',
-    color: 'text-destructive',
-    bgColor: 'bg-destructive/10',
-  },
-  archived: {
-    label: 'Archived',
-    color: 'text-muted-foreground',
-    bgColor: 'bg-muted/50',
-  },
-}
-
 // Character limits per platform
 export const CHAR_LIMITS: Record<Platform, number> = {
   twitter: 280,
@@ -85,19 +56,22 @@ export const CHAR_LIMITS: Record<Platform, number> = {
 }
 
 // Platform display info
-export const PLATFORM_INFO: Record<Platform, { name: string; color: string; bgColor: string }> = {
+export const PLATFORM_INFO: Record<Platform, { name: string; label: string; color: string; bgColor: string }> = {
   twitter: {
     name: 'Twitter / X',
+    label: 'Twitter',
     color: 'text-twitter',
     bgColor: 'bg-twitter-soft',
   },
   linkedin: {
     name: 'LinkedIn',
+    label: 'LinkedIn',
     color: 'text-linkedin',
     bgColor: 'bg-linkedin-soft',
   },
   reddit: {
     name: 'Reddit',
+    label: 'Reddit',
     color: 'text-reddit',
     bgColor: 'bg-reddit-soft',
   },
