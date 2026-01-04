@@ -63,13 +63,12 @@ test.describe('Delete Post', () => {
 
     await expect(page.getByRole('heading', { name: /edit post/i })).toBeVisible()
 
-    // Set up dialog handler to decline
-    page.on('dialog', async (dialog) => {
-      await dialog.dismiss()
-    })
-
-    // Click delete
+    // Click delete to open modal
     await page.getByRole('button', { name: /delete/i }).click()
+
+    // Wait for modal and click Keep (cancel button)
+    await page.getByRole('alertdialog').waitFor()
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Keep' }).click()
 
     // Should still be on the edit page
     await expect(page.getByRole('heading', { name: /edit post/i })).toBeVisible()
@@ -104,19 +103,15 @@ test.describe('Delete Post', () => {
     const cards = await getPostCards(page)
     await cards.first().click()
 
-    let dialogShown = false
-
-    page.on('dialog', async (dialog) => {
-      dialogShown = true
-      expect(dialog.type()).toBe('confirm')
-      expect(dialog.message()).toContain('delete')
-      await dialog.accept()
-    })
-
+    // Click delete to open modal
     await page.getByRole('button', { name: /delete/i }).click()
 
-    // Wait a bit for dialog
-    await page.waitForTimeout(500)
-    expect(dialogShown).toBe(true)
+    // Modal dialog should appear with title and description
+    const dialog = page.getByRole('alertdialog')
+    await expect(dialog).toBeVisible()
+    await expect(dialog.getByText('Delete this post?')).toBeVisible()
+    await expect(dialog.getByText('This action cannot be undone')).toBeVisible()
+    await expect(dialog.getByRole('button', { name: 'Delete' })).toBeVisible()
+    await expect(dialog.getByRole('button', { name: 'Keep' })).toBeVisible()
   })
 })

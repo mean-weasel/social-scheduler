@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday } from 'date-fns'
-import { ChevronLeft, ChevronRight, Clock } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Clock, CalendarPlus } from 'lucide-react'
 import { usePostsStore } from '@/lib/storage'
 import { Post, getPostPreviewText } from '@/lib/posts'
 import { cn } from '@/lib/utils'
@@ -218,13 +218,26 @@ export function Dashboard() {
 
         <div className="space-y-3">
           {upcomingPosts.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">
-              No scheduled posts yet.
-              <br />
-              <Link to="/new" className="text-primary hover:underline">
-                Create your first post
+            <div className="text-center py-8 px-4">
+              <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-gradient-to-br from-twitter/10 to-linkedin/10 flex items-center justify-center">
+                <CalendarPlus className="w-6 h-6 text-muted-foreground" />
+              </div>
+              <p className="text-sm font-medium mb-1">No posts scheduled</p>
+              <p className="text-xs text-muted-foreground mb-4">
+                Click any date on the calendar to schedule a post
+              </p>
+              <Link
+                to="/new"
+                className={cn(
+                  'inline-flex items-center gap-2 px-4 py-2 rounded-lg',
+                  'bg-primary/10 text-primary text-sm font-medium',
+                  'hover:bg-primary/20 transition-colors'
+                )}
+              >
+                <CalendarPlus className="w-4 h-4" />
+                Schedule a Post
               </Link>
-            </p>
+            </div>
           ) : (
             upcomingPosts.map((post, i) => (
               <Link

@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { format } from 'date-fns'
+import toast from 'react-hot-toast'
 import {
   Calendar,
   Clock,
@@ -23,6 +24,11 @@ import {
   PLATFORM_INFO,
 } from '@/lib/posts'
 import { cn } from '@/lib/utils'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { AutoSaveIndicator } from '@/components/ui/AutoSaveIndicator'
+import { useAutoSave } from '@/hooks/useAutoSave'
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges'
+import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 
 // Platform icons
 const PlatformIcon = ({ platform }: { platform: Platform }) => {
@@ -57,6 +63,7 @@ export function Editor() {
   const existingPost = id ? getPost(id) : undefined
   const [isSaving, setIsSaving] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   // Form state
   const [post, setPost] = useState<Post>(() => {
@@ -75,6 +82,38 @@ export function Editor() {
   const [showMediaInput, setShowMediaInput] = useState(false)
   const [newMediaUrl, setNewMediaUrl] = useState('')
 
+  // Track if form has unsaved changes
+  const initialContentRef = useRef('')
+  const [isDirty, setIsDirty] = useState(false)
+
+  // Update dirty state when content changes
+  useEffect(() => {
+    const currentContent = JSON.stringify({ content, mediaUrls, linkedInMediaUrl, redditUrl, platforms: post.platforms })
+    if (initialContentRef.current && currentContent !== initialContentRef.current) {
+      setIsDirty(true)
+    }
+  }, [content, mediaUrls, linkedInMediaUrl, redditUrl, post.platforms])
+
+  // Warn about unsaved changes on browser close/refresh
+  useUnsavedChanges({ isDirty })
+
+  // Auto-save (only for drafts or new posts)
+  const { status: autoSaveStatus } = useAutoSave({
+    data: { post, content, mediaUrls, linkedInMediaUrl, redditUrl },
+    onSave: () => {
+      // Silently save without navigating
+      const toSave = { ...post, status: 'draft' as const }
+      if (isNew) {
+        addPost(toSave)
+      } else {
+        updatePost(toSave.id, toSave)
+      }
+      setIsDirty(false) // Reset dirty after auto-save
+    },
+    delay: 2000,
+    enabled: post.status === 'draft' || isNew,
+  })
+
   // Load existing post data into form
   useEffect(() => {
     if (existingPost) {
@@ -87,23 +126,38 @@ export function Editor() {
         ''
       setContent(text)
       // Load mediaUrls from Twitter content
-      if (existingPost.content.twitter?.mediaUrls) {
-        setMediaUrls(existingPost.content.twitter.mediaUrls)
-      }
+      const loadedMediaUrls = existingPost.content.twitter?.mediaUrls || []
+      setMediaUrls(loadedMediaUrls)
       // Load LinkedIn media URL
-      if (existingPost.content.linkedin?.mediaUrl) {
-        setLinkedInMediaUrl(existingPost.content.linkedin.mediaUrl)
-      }
+      const loadedLinkedInMedia = existingPost.content.linkedin?.mediaUrl || ''
+      setLinkedInMediaUrl(loadedLinkedInMedia)
       // Load Reddit URL
-      if (existingPost.content.reddit?.url) {
-        setRedditUrl(existingPost.content.reddit.url)
-      }
+      const loadedRedditUrl = existingPost.content.reddit?.url || ''
+      setRedditUrl(loadedRedditUrl)
+      // Set initial content reference for dirty tracking
+      initialContentRef.current = JSON.stringify({
+        content: text,
+        mediaUrls: loadedMediaUrls,
+        linkedInMediaUrl: loadedLinkedInMedia,
+        redditUrl: loadedRedditUrl,
+        platforms: existingPost.platforms,
+      })
+    } else {
+      // New post - set initial state
+      initialContentRef.current = JSON.stringify({
+        content: '',
+        mediaUrls: [],
+        linkedInMediaUrl: '',
+        redditUrl: '',
+        platforms: [],
+      })
     }
   }, [existingPost])
 
   // Handle save
   const handleSave = (postToSave: Post) => {
     setIsSaving(true)
+    setIsDirty(false) // Clear dirty state before navigation
     if (isNew) {
       addPost(postToSave)
     } else {
@@ -115,11 +169,14 @@ export function Editor() {
 
   // Handle delete
   const handleDelete = () => {
-    if (confirm('Are you sure you want to delete this post? This cannot be undone.')) {
-      if (id) {
-        deletePost(id)
-        navigate('/')
-      }
+    setShowDeleteConfirm(true)
+  }
+
+  const confirmDelete = () => {
+    if (id) {
+      deletePost(id)
+      toast.success('Post deleted')
+      navigate('/')
     }
   }
 
@@ -167,26 +224,28 @@ export function Editor() {
   const handleSaveDraft = () => {
     const toSave = { ...post, status: 'draft' as const }
     handleSave(toSave)
+    toast.success('Draft saved')
   }
 
   // Schedule
   const handleSchedule = () => {
     if (!post.scheduledAt) {
-      alert('Please select a date and time')
+      toast.error('Please select a date and time')
       return
     }
     const toSave = { ...post, status: 'scheduled' as const }
     handleSave(toSave)
+    toast.success('Post scheduled')
   }
 
   // Publish Now - schedules for immediate publishing (reminder)
   const handlePublishNow = () => {
     if (post.platforms.length === 0) {
-      alert('Please select at least one platform')
+      toast.error('Please select at least one platform')
       return
     }
     if (!content.trim()) {
-      alert('Please add some content')
+      toast.error('Please add some content')
       return
     }
     const toSave = {
@@ -195,6 +254,7 @@ export function Editor() {
       scheduledAt: new Date().toISOString(), // Schedule for now (triggers immediate notification)
     }
     handleSave(toSave)
+    toast.success('Ready to publish!')
   }
 
   // Copy content to clipboard
@@ -203,6 +263,7 @@ export function Editor() {
       await navigator.clipboard.writeText(content)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
+      toast.success('Copied to clipboard')
     } catch {
       // Fallback for older browsers
       const textarea = document.createElement('textarea')
@@ -213,6 +274,7 @@ export function Editor() {
       document.body.removeChild(textarea)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
+      toast.success('Copied to clipboard')
     }
   }
 
@@ -233,16 +295,45 @@ export function Editor() {
       },
     }
     handleSave(toSave)
+    toast.success('Marked as posted')
   }
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts({
+    shortcuts: [
+      {
+        key: 's',
+        ctrl: true,
+        handler: handleSaveDraft,
+      },
+      {
+        key: 'Enter',
+        ctrl: true,
+        handler: handleSchedule,
+      },
+      {
+        key: 'Escape',
+        handler: () => {
+          if (!isDirty || window.confirm('You have unsaved changes. Leave anyway?')) {
+            setIsDirty(false)
+            navigate('/')
+          }
+        },
+      },
+    ],
+  })
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] min-h-[calc(100vh-4rem)]">
       {/* Editor */}
       <div className="p-4 md:p-8 max-w-2xl animate-slide-up">
         <div className="mb-4 md:mb-6">
-          <h1 className="text-xl md:text-2xl font-display font-semibold mb-1 md:mb-2">
-            {isNew ? 'Create Post' : 'Edit Post'}
-          </h1>
+          <div className="flex items-center gap-3 mb-1 md:mb-2">
+            <h1 className="text-xl md:text-2xl font-display font-semibold">
+              {isNew ? 'Create Post' : 'Edit Post'}
+            </h1>
+            <AutoSaveIndicator status={autoSaveStatus} />
+          </div>
           <p className="text-sm md:text-base text-muted-foreground">
             Compose your message and schedule it across multiple platforms.
           </p>
@@ -701,6 +792,7 @@ export function Editor() {
           <button
             onClick={handleSaveDraft}
             disabled={isSaving}
+            title="Save Draft (⌘S)"
             className={cn(
               'flex items-center gap-2 px-3 md:px-4 py-2.5 rounded-lg min-h-[44px]',
               'bg-secondary text-secondary-foreground border border-border',
@@ -717,6 +809,7 @@ export function Editor() {
           <button
             onClick={handleSchedule}
             disabled={isSaving || post.platforms.length === 0}
+            title="Schedule Post (⌘↵)"
             className={cn(
               'flex items-center gap-2 px-3 md:px-4 py-2.5 rounded-lg min-h-[44px]',
               'bg-gradient-to-r from-twitter to-[#0d8bd9] text-white',
@@ -894,6 +987,18 @@ export function Editor() {
           </div>
         )}
       </div>
+
+      {/* Delete confirmation dialog */}
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        onConfirm={confirmDelete}
+        onCancel={() => setShowDeleteConfirm(false)}
+        title="Delete this post?"
+        description="This action cannot be undone. The post will be permanently removed."
+        confirmText="Delete"
+        cancelText="Keep"
+        variant="danger"
+      />
     </div>
   )
 }

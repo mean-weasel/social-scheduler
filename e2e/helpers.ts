@@ -112,11 +112,15 @@ export async function publishNow(page: Page) {
 }
 
 /**
- * Click delete button and confirm
+ * Click delete button and confirm in modal dialog
  */
 export async function deletePost(page: Page) {
-  page.on('dialog', (dialog) => dialog.accept())
+  // Click the delete button
   await page.getByRole('button', { name: /delete/i }).click()
+
+  // Wait for the confirmation dialog modal to appear and click Delete
+  await page.getByRole('alertdialog').waitFor()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Delete' }).click()
 }
 
 /**
