@@ -54,14 +54,29 @@ export async function fillContent(page: Page, content: string) {
 }
 
 /**
+ * Add notes to a post
+ */
+export async function fillNotes(page: Page, notes: string) {
+  // Click the Notes section to expand it
+  await page.getByRole('button', { name: /notes/i }).click()
+  // Fill in the notes textarea (it's the one with "Add notes about this post" placeholder)
+  const notesTextarea = page.getByPlaceholder(/add notes about this post/i)
+  await notesTextarea.fill(notes)
+}
+
+/**
  * Fill in Reddit-specific fields
  */
 export async function fillRedditFields(
   page: Page,
-  options: { subreddit?: string; title?: string; flair?: string }
+  options: { subreddit?: string; subreddits?: string[]; title?: string; flair?: string }
 ) {
-  if (options.subreddit) {
-    await page.getByPlaceholder(/sideproject/i).fill(options.subreddit)
+  // Handle single subreddit (legacy) or multiple subreddits
+  const subredditsToAdd = options.subreddits || (options.subreddit ? [options.subreddit] : [])
+  for (const sub of subredditsToAdd) {
+    const input = page.getByPlaceholder(/type subreddit, press enter/i)
+    await input.fill(sub)
+    await input.press('Enter')
   }
   if (options.title) {
     await page.getByPlaceholder(/title for your reddit post/i).fill(options.title)

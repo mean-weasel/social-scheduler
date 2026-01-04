@@ -16,6 +16,9 @@ import {
   CheckCircle,
   Archive,
   RotateCcw,
+  StickyNote,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react'
 import { usePostsStore } from '@/lib/storage'
 import {
@@ -84,6 +87,8 @@ export function Editor() {
   const [redditUrl, setRedditUrl] = useState('')
   const [showMediaInput, setShowMediaInput] = useState(false)
   const [newMediaUrl, setNewMediaUrl] = useState('')
+  const [showNotes, setShowNotes] = useState(false)
+  const [newSubreddit, setNewSubreddit] = useState('')
 
   // Track if form has unsaved changes
   const initialContentRef = useRef('')
@@ -91,11 +96,11 @@ export function Editor() {
 
   // Update dirty state when content changes
   useEffect(() => {
-    const currentContent = JSON.stringify({ content, mediaUrls, linkedInMediaUrl, redditUrl, platforms: post.platforms })
+    const currentContent = JSON.stringify({ content, mediaUrls, linkedInMediaUrl, redditUrl, platforms: post.platforms, notes: post.notes })
     if (initialContentRef.current && currentContent !== initialContentRef.current) {
       setIsDirty(true)
     }
-  }, [content, mediaUrls, linkedInMediaUrl, redditUrl, post.platforms])
+  }, [content, mediaUrls, linkedInMediaUrl, redditUrl, post.platforms, post.notes])
 
   // Warn about unsaved changes on browser close/refresh
   useUnsavedChanges({ isDirty })
@@ -144,7 +149,12 @@ export function Editor() {
         linkedInMediaUrl: loadedLinkedInMedia,
         redditUrl: loadedRedditUrl,
         platforms: existingPost.platforms,
+        notes: existingPost.notes || '',
       })
+      // Expand notes if they exist
+      if (existingPost.notes) {
+        setShowNotes(true)
+      }
     } else {
       // New post - set initial state
       initialContentRef.current = JSON.stringify({
@@ -153,6 +163,7 @@ export function Editor() {
         linkedInMediaUrl: '',
         redditUrl: '',
         platforms: [],
+        notes: '',
       })
     }
   }, [existingPost])
@@ -234,7 +245,7 @@ export function Editor() {
         } else if (platform === 'reddit') {
           updated.content.reddit = {
             ...updated.content.reddit,
-            subreddit: updated.content.reddit?.subreddit || '',
+            subreddits: updated.content.reddit?.subreddits || [],
             title: updated.content.reddit?.title || '',
             body: content,
             ...(redditUrl && { url: redditUrl })
@@ -392,6 +403,56 @@ export function Editor() {
               </button>
             )
           })}
+        </div>
+
+        {/* Notes section (collapsible) */}
+        <div className="mb-4 md:mb-6">
+          <button
+            onClick={() => setShowNotes(!showNotes)}
+            className={cn(
+              'w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all',
+              showNotes || post.notes
+                ? 'border-[hsl(var(--gold))]/30 bg-[hsl(var(--gold))]/5'
+                : 'border-border bg-card hover:border-[hsl(var(--gold))]/30'
+            )}
+          >
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <StickyNote className="w-4 h-4 text-[hsl(var(--gold-dark))]" />
+              <span>Notes</span>
+              {post.notes && !showNotes && (
+                <span className="text-xs text-muted-foreground truncate max-w-[200px]">
+                  — {post.notes}
+                </span>
+              )}
+            </div>
+            {showNotes ? (
+              <ChevronUp className="w-4 h-4 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="w-4 h-4 text-muted-foreground" />
+            )}
+          </button>
+          {showNotes && (
+            <div className="mt-2 animate-slide-up">
+              <textarea
+                value={post.notes || ''}
+                onChange={(e) =>
+                  setPost((prev) => ({ ...prev, notes: e.target.value }))
+                }
+                placeholder="Add notes about this post (e.g., context, hashtags to use, posting strategy)..."
+                className={cn(
+                  'w-full min-h-[100px] p-3 md:p-4 rounded-xl',
+                  'bg-card border border-[hsl(var(--gold))]/20',
+                  'text-sm leading-relaxed',
+                  'placeholder:text-muted-foreground',
+                  'focus:outline-none focus:border-[hsl(var(--gold))] focus:ring-4 focus:ring-[hsl(var(--gold))]/10',
+                  'resize-y transition-all'
+                )}
+              />
+              <p className="text-xs text-muted-foreground mt-1.5">
+                Notes are private and won't be published. Use them to track ideas or instructions.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Content textarea */}
@@ -663,52 +724,121 @@ export function Editor() {
               <span className="w-2 h-2 rounded-full bg-reddit" />
               Reddit Settings
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                  Subreddit
-                </label>
-                <div className="flex items-center">
-                  <span className="px-3 py-2.5 rounded-l-lg bg-muted border border-r-0 border-border text-muted-foreground text-sm">
-                    r/
-                  </span>
-                  <input
-                    type="text"
-                    value={post.content.reddit?.subreddit || ''}
-                    onChange={(e) =>
+            {/* Subreddits - multi-select tags */}
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                Subreddits {(post.content.reddit?.subreddits?.length || 0) > 0 && (
+                  <span className="text-reddit">({post.content.reddit?.subreddits?.length})</span>
+                )}
+              </label>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="px-3 py-2.5 rounded-l-lg bg-muted border border-r-0 border-border text-muted-foreground text-sm">
+                  r/
+                </span>
+                <input
+                  type="text"
+                  value={newSubreddit}
+                  onChange={(e) => setNewSubreddit(e.target.value.replace(/^r\//, ''))}
+                  onKeyDown={(e) => {
+                    if ((e.key === 'Enter' || e.key === ',') && newSubreddit.trim()) {
+                      e.preventDefault()
+                      const sub = newSubreddit.trim().replace(/^r\//, '')
+                      if (sub && !post.content.reddit?.subreddits?.includes(sub)) {
+                        setPost((prev) => ({
+                          ...prev,
+                          content: {
+                            ...prev.content,
+                            reddit: {
+                              ...prev.content.reddit!,
+                              subreddits: [...(prev.content.reddit?.subreddits || []), sub],
+                            },
+                          },
+                        }))
+                      }
+                      setNewSubreddit('')
+                    }
+                  }}
+                  placeholder="Type subreddit, press Enter"
+                  className="flex-1 px-4 py-2.5 rounded-r-lg bg-background border border-border focus:outline-none focus:border-reddit"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const sub = newSubreddit.trim().replace(/^r\//, '')
+                    if (sub && !post.content.reddit?.subreddits?.includes(sub)) {
                       setPost((prev) => ({
                         ...prev,
                         content: {
                           ...prev.content,
-                          reddit: { ...prev.content.reddit!, subreddit: e.target.value.replace(/^r\//, '') },
+                          reddit: {
+                            ...prev.content.reddit!,
+                            subreddits: [...(prev.content.reddit?.subreddits || []), sub],
+                          },
                         },
                       }))
                     }
-                    placeholder="SideProject"
-                    className="flex-1 px-4 py-2.5 rounded-r-lg bg-background border border-border focus:outline-none focus:border-reddit"
-                  />
+                    setNewSubreddit('')
+                  }}
+                  disabled={!newSubreddit.trim()}
+                  className="p-2.5 rounded-lg bg-reddit text-white hover:bg-reddit/90 disabled:opacity-50 transition-colors"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+              </div>
+              {/* Subreddit tags */}
+              {(post.content.reddit?.subreddits?.length || 0) > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {post.content.reddit?.subreddits?.map((sub) => (
+                    <span
+                      key={sub}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-reddit/10 text-reddit text-sm font-medium"
+                    >
+                      r/{sub}
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPost((prev) => ({
+                            ...prev,
+                            content: {
+                              ...prev.content,
+                              reddit: {
+                                ...prev.content.reddit!,
+                                subreddits: prev.content.reddit?.subreddits?.filter((s) => s !== sub) || [],
+                              },
+                            },
+                          }))
+                        }
+                        className="p-0.5 rounded-full hover:bg-reddit/20 transition-colors"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
                 </div>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                  Flair (optional)
-                </label>
-                <input
-                  type="text"
-                  value={post.content.reddit?.flairText || ''}
-                  onChange={(e) =>
-                    setPost((prev) => ({
-                      ...prev,
-                      content: {
-                        ...prev.content,
-                        reddit: { ...prev.content.reddit!, flairText: e.target.value },
-                      },
-                    }))
-                  }
-                  placeholder="e.g., Show and Tell"
-                  className="w-full px-4 py-2.5 rounded-lg bg-background border border-border focus:outline-none focus:border-reddit"
-                />
-              </div>
+              )}
+              <p className="text-xs text-muted-foreground mt-1.5">
+                Add multiple subreddits to cross-post. Press Enter or comma to add.
+              </p>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                Flair (optional)
+              </label>
+              <input
+                type="text"
+                value={post.content.reddit?.flairText || ''}
+                onChange={(e) =>
+                  setPost((prev) => ({
+                    ...prev,
+                    content: {
+                      ...prev.content,
+                      reddit: { ...prev.content.reddit!, flairText: e.target.value },
+                    },
+                  }))
+                }
+                placeholder="e.g., Show and Tell"
+                className="w-full px-4 py-2.5 rounded-lg bg-background border border-border focus:outline-none focus:border-reddit"
+              />
             </div>
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
@@ -1026,7 +1156,9 @@ export function Editor() {
                 <div className="bg-[#1A1A1B] border border-[#343536] rounded">
                   <div className="flex items-center gap-2 px-3 py-2 text-xs text-[#818384]">
                     <span className="font-bold text-[#D7DADC]">
-                      r/{post.content.reddit?.subreddit || 'subreddit'}
+                      {post.content.reddit?.subreddits?.length
+                        ? post.content.reddit.subreddits.map(s => `r/${s}`).join(', ')
+                        : 'r/subreddit'}
                     </span>
                     • Posted by u/yourname
                   </div>

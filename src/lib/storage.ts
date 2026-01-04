@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { Post, PostStatus } from './posts'
+import { Post, PostStatus, migratePost } from './posts'
 
 interface PostsState {
   posts: Post[]
@@ -68,6 +68,15 @@ export const usePostsStore = create<PostsState & PostsActions>()(
     }),
     {
       name: 'social-scheduler-posts',
+      // Migrate legacy posts on load (subreddit → subreddits)
+      merge: (persistedState, currentState) => {
+        const persisted = persistedState as PostsState | undefined
+        if (!persisted?.posts) return currentState
+        return {
+          ...currentState,
+          posts: persisted.posts.map(migratePost),
+        }
+      },
     }
   )
 )

@@ -18,7 +18,7 @@ export interface LinkedInContent {
 }
 
 export interface RedditContent {
-  subreddit: string
+  subreddits: string[]
   title: string
   body?: string
   url?: string
@@ -41,6 +41,7 @@ export interface Post {
   scheduledAt: string | null
   status: PostStatus
   platforms: Platform[]
+  notes?: string
   content: {
     twitter?: TwitterContent
     linkedin?: LinkedInContent
@@ -51,8 +52,8 @@ export interface Post {
   }
 }
 
-// Storage path - uses home directory for persistence
-const STORAGE_DIR = path.join(os.homedir(), '.social-scheduler')
+// Storage path - uses home directory for persistence (or TEST_STORAGE_DIR env var for testing)
+const STORAGE_DIR = process.env.TEST_STORAGE_DIR || path.join(os.homedir(), '.social-scheduler')
 const STORAGE_PATH = path.join(STORAGE_DIR, 'posts.json')
 
 /**
@@ -113,6 +114,7 @@ export function createPost(data: {
   content: Post['content']
   scheduledAt?: string | null
   status?: PostStatus
+  notes?: string
 }): Post {
   const posts = readPosts()
   const timestamp = now()
@@ -124,6 +126,7 @@ export function createPost(data: {
     scheduledAt: data.scheduledAt || null,
     status: data.status || 'draft',
     platforms: data.platforms,
+    notes: data.notes,
     content: data.content,
   }
 

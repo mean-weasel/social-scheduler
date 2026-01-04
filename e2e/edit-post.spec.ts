@@ -4,6 +4,7 @@ import {
   goToPosts,
   clickPost,
   fillContent,
+  fillNotes,
   saveDraft,
   schedulePost,
   waitForNavigation,
@@ -115,6 +116,53 @@ test.describe('Edit Post', () => {
       await page.locator('input[type="date"]').fill('')
 
       // Save as draft
+      await saveDraft(page)
+      await waitForNavigation(page, '/')
+    })
+  })
+
+  test.describe('Edit Notes', () => {
+    test('should add notes to existing post', async ({ page }) => {
+      await createTestPost(page, { platform: 'twitter', content: 'Post without notes' })
+
+      await goToPosts(page)
+      await clickPost(page, 0)
+
+      // Add notes
+      await fillNotes(page, 'Added notes after creation')
+
+      // Save
+      await saveDraft(page)
+      await waitForNavigation(page, '/')
+
+      // Go back and verify notes are saved
+      await goToPosts(page)
+      await clickPost(page, 0)
+
+      // Notes section should auto-expand since notes exist
+      const notesTextarea = page.getByPlaceholder(/add notes about this post/i)
+      await expect(notesTextarea).toBeVisible()
+      await expect(notesTextarea).toHaveValue('Added notes after creation')
+    })
+
+    test('should edit existing notes', async ({ page }) => {
+      await createTestPost(page, { platform: 'twitter', content: 'Post to edit notes' })
+
+      await goToPosts(page)
+      await clickPost(page, 0)
+
+      // Add initial notes
+      await fillNotes(page, 'Initial notes')
+      await saveDraft(page)
+      await waitForNavigation(page, '/')
+
+      // Go back and edit notes
+      await goToPosts(page)
+      await clickPost(page, 0)
+
+      const notesTextarea = page.getByPlaceholder(/add notes about this post/i)
+      await notesTextarea.fill('Updated notes content')
+
       await saveDraft(page)
       await waitForNavigation(page, '/')
     })

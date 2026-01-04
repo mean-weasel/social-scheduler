@@ -69,13 +69,17 @@ const TOOLS = [
             reddit: {
               type: 'object',
               properties: {
-                subreddit: { type: 'string', description: 'Subreddit name (without r/)' },
+                subreddits: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  description: 'Subreddit names (without r/) to cross-post to'
+                },
                 title: { type: 'string', description: 'Post title (max 300 chars)' },
                 body: { type: 'string', description: 'Post body text' },
                 url: { type: 'string', description: 'Link URL for link posts' },
                 flairText: { type: 'string', description: 'Flair text' },
               },
-              required: ['subreddit', 'title'],
+              required: ['subreddits', 'title'],
             },
           },
           description: 'Content for each platform',
@@ -88,6 +92,10 @@ const TOOLS = [
           type: 'string',
           enum: ['draft', 'scheduled'],
           description: 'Post status (default: draft)',
+        },
+        notes: {
+          type: 'string',
+          description: 'Private notes about this post (not published)',
         },
       },
       required: ['platforms'],
@@ -128,6 +136,10 @@ const TOOLS = [
           type: 'string',
           enum: ['draft', 'scheduled', 'published'],
           description: 'Post status',
+        },
+        notes: {
+          type: 'string',
+          description: 'Private notes about this post (not published)',
         },
       },
       required: ['id'],
@@ -203,11 +215,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   try {
     switch (name) {
       case 'create_post': {
-        const { platforms, content, scheduledAt, status } = args as {
+        const { platforms, content, scheduledAt, status, notes } = args as {
           platforms: Platform[]
           content: Post['content']
           scheduledAt?: string
           status?: 'draft' | 'scheduled'
+          notes?: string
         }
 
         if (!platforms || platforms.length === 0) {
@@ -222,6 +235,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           content: content || {},
           scheduledAt: scheduledAt || null,
           status: status || 'draft',
+          notes,
         })
 
         return {
