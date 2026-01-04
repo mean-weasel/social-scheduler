@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { enterDemoMode, createTestPost, deletePost, archivePost, generateTestId, uniqueContent } from './helpers'
+import { enterDemoMode, createTestPost, deletePost, archivePost, waitForNavigation } from './helpers'
 
 test.describe('Dashboard', () => {
   test.beforeEach(async ({ page }) => {
@@ -102,7 +102,7 @@ test.describe('Dashboard', () => {
 
       // Archive the post first
       await archivePost(page)
-      await expect(page).toHaveURL('/')
+      await waitForNavigation(page, '/')
 
       // Verify drafts count decreased to 1
       await expect(draftsSection.locator('.text-2xl')).toHaveText('1')
@@ -146,7 +146,7 @@ test.describe('Dashboard', () => {
       await archivePost(page)
 
       // Should navigate back to dashboard
-      await expect(page).toHaveURL('/')
+      await waitForNavigation(page, '/')
 
       // Verify scheduled count decreased to 1
       await expect(scheduledSection.locator('.text-2xl')).toHaveText('1')
