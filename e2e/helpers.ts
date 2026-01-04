@@ -1,13 +1,32 @@
 import { Page, expect } from '@playwright/test'
 
+const API_BASE = 'http://localhost:3001/api'
+
+/**
+ * Reset the test database before each test
+ */
+export async function resetDatabase() {
+  try {
+    const response = await fetch(`${API_BASE}/posts/reset`, { method: 'POST' })
+    if (!response.ok) {
+      console.warn('Failed to reset database:', response.statusText)
+    }
+  } catch (error) {
+    console.warn('Error resetting database:', error)
+  }
+}
+
 /**
  * Initialize the app - just navigate to the dashboard
  * (No login required since we use localStorage)
  */
 export async function enterDemoMode(page: Page) {
+  // Reset the database before each test to ensure clean state
+  await resetDatabase()
+
   await page.goto('/')
   // Wait for the dashboard to load - look for the header
-  await expect(page.getByRole('link', { name: 'Social Scheduler' })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Social Scheduler', exact: true })).toBeVisible()
 }
 
 /**

@@ -219,6 +219,13 @@ export function listPosts(options?: {
   return rows.map(rowToPost)
 }
 
+// Clear all posts (for testing)
+export function clearAllPosts(): number {
+  const stmt = db.prepare('DELETE FROM posts')
+  const result = stmt.run()
+  return result.changes
+}
+
 // Migration: Import posts from JSON file
 export function importFromJson(jsonPath: string): number {
   if (!fs.existsSync(jsonPath)) {

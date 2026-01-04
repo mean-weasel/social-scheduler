@@ -7,11 +7,31 @@ import {
   archivePost,
   restorePost,
   listPosts,
+  clearAllPosts,
   Platform,
   PostStatus,
 } from '../storage.js'
 
 export const postsRouter = Router()
+
+// Test-only: Reset database (clear all posts)
+// Only enabled in CI/test environment
+const isTest = process.env.CI === 'true' || process.env.NODE_ENV === 'test'
+
+postsRouter.post('/reset', (req: Request, res: Response) => {
+  if (!isTest) {
+    res.status(403).json({ error: 'Reset endpoint only available in test environment' })
+    return
+  }
+
+  try {
+    const deleted = clearAllPosts()
+    res.json({ success: true, deleted })
+  } catch (error) {
+    console.error('Error resetting database:', error)
+    res.status(500).json({ error: 'Failed to reset database' })
+  }
+})
 
 // List posts with optional filters
 postsRouter.get('/', (req: Request, res: Response) => {

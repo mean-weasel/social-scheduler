@@ -3,13 +3,24 @@ import path from 'path'
 import os from 'os'
 import fs from 'fs'
 
-// Storage directory
-const STORAGE_DIR = process.env.STORAGE_DIR || path.join(os.homedir(), '.social-scheduler')
-const DB_PATH = path.join(STORAGE_DIR, 'posts.db')
+// Use in-memory database for tests, file-based for production
+const isTest = process.env.CI === 'true' || process.env.NODE_ENV === 'test'
 
-// Ensure storage directory exists
-if (!fs.existsSync(STORAGE_DIR)) {
-  fs.mkdirSync(STORAGE_DIR, { recursive: true })
+let DB_PATH: string
+
+if (isTest) {
+  // Use temp directory for test database
+  const tmpDir = os.tmpdir()
+  DB_PATH = path.join(tmpDir, `social-scheduler-test-${process.pid}.db`)
+} else {
+  // Storage directory for production
+  const STORAGE_DIR = process.env.STORAGE_DIR || path.join(os.homedir(), '.social-scheduler')
+  DB_PATH = path.join(STORAGE_DIR, 'posts.db')
+
+  // Ensure storage directory exists
+  if (!fs.existsSync(STORAGE_DIR)) {
+    fs.mkdirSync(STORAGE_DIR, { recursive: true })
+  }
 }
 
 // Initialize database
