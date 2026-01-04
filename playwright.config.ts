@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
 
 const PORT = process.env.TEST_PORT || 5176
+const API_PORT = 3001
 
 export default defineConfig({
   testDir: './e2e',
@@ -20,10 +21,18 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
-  webServer: {
-    command: `npm run dev -- --port ${PORT}`,
-    url: `http://localhost:${PORT}`,
-    reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000,
-  },
+  webServer: [
+    {
+      command: 'npm run api:start',
+      url: `http://localhost:${API_PORT}/api/posts`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 30 * 1000,
+    },
+    {
+      command: `npm run dev -- --port ${PORT}`,
+      url: `http://localhost:${PORT}`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 120 * 1000,
+    },
+  ],
 })
