@@ -41,10 +41,11 @@ export function Settings() {
 
   return (
     <div className="max-w-2xl mx-auto p-8 animate-fade-in">
-      <h1 className="text-2xl font-display font-semibold mb-2">Settings</h1>
-      <p className="text-muted-foreground mb-8">
+      <h1 className="text-2xl md:text-3xl font-display font-bold tracking-tight mb-2">Settings</h1>
+      <p className="text-muted-foreground mb-2">
         Configure your preferences.
       </p>
+      <div className="h-1 w-16 bg-gradient-to-r from-[hsl(var(--gold))] to-transparent mb-8 rounded-full" />
 
       {/* Status messages */}
       {success && (

@@ -2,9 +2,11 @@ import { test, expect } from '@playwright/test'
 import {
   enterDemoMode,
   deletePost,
+  archivePost,
   waitForNavigation,
   getPostCards,
   createTestPost,
+  filterByStatus,
 } from './helpers'
 
 test.describe('Delete Post', () => {
@@ -12,25 +14,30 @@ test.describe('Delete Post', () => {
     await enterDemoMode(page)
   })
 
-  test('should delete a draft post from editor', async ({ page }) => {
+  test('should permanently delete an archived post from editor', async ({ page }) => {
     // Create a post first
     await createTestPost(page, { platform: 'twitter', content: 'Post to delete' })
 
-    // Go to posts and click on the post
+    // Go to posts and archive the post
     await page.goto('/posts')
     const cards = await getPostCards(page)
     await cards.first().click()
+    await archivePost(page)
 
-    await expect(page.getByRole('heading', { name: /edit post/i })).toBeVisible()
+    // Navigate to archived posts
+    await page.goto('/posts')
+    await filterByStatus(page, 'archived')
+    const archivedCards = await getPostCards(page)
+    await archivedCards.first().click()
 
-    // Delete the post
+    // Delete the archived post
     await deletePost(page)
 
     // Should navigate back to dashboard
     await waitForNavigation(page, '/')
   })
 
-  test('should delete a scheduled post from editor', async ({ page }) => {
+  test('should delete a scheduled post after archiving', async ({ page }) => {
     // Create a scheduled post
     await createTestPost(page, {
       platform: 'twitter',
@@ -38,12 +45,17 @@ test.describe('Delete Post', () => {
       asDraft: false,
     })
 
-    // Go to posts and click on the post
+    // Go to posts and archive it
     await page.goto('/posts')
     const cards = await getPostCards(page)
     await cards.first().click()
+    await archivePost(page)
 
-    await expect(page.getByRole('heading', { name: /edit post/i })).toBeVisible()
+    // Navigate to archived and delete permanently
+    await page.goto('/posts')
+    await filterByStatus(page, 'archived')
+    const archivedCards = await getPostCards(page)
+    await archivedCards.first().click()
 
     // Delete the post
     await deletePost(page)
@@ -52,16 +64,19 @@ test.describe('Delete Post', () => {
     await waitForNavigation(page, '/')
   })
 
-  test('should cancel delete when declining confirmation', async ({ page }) => {
-    // Create a post first
+  test('should cancel delete when declining confirmation on archived post', async ({ page }) => {
+    // Create and archive a post
     await createTestPost(page, { platform: 'twitter', content: 'Post to keep' })
-
-    // Go to posts and click on the post
     await page.goto('/posts')
     const cards = await getPostCards(page)
     await cards.first().click()
+    await archivePost(page)
 
-    await expect(page.getByRole('heading', { name: /edit post/i })).toBeVisible()
+    // Navigate to archived
+    await page.goto('/posts')
+    await filterByStatus(page, 'archived')
+    const archivedCards = await getPostCards(page)
+    await archivedCards.first().click()
 
     // Click delete to open modal
     await page.getByRole('button', { name: /delete/i }).click()
@@ -74,17 +89,27 @@ test.describe('Delete Post', () => {
     await expect(page.getByRole('heading', { name: /edit post/i })).toBeVisible()
   })
 
-  test('should show delete button on edit page', async ({ page }) => {
-    // Create a post first
+  test('should show delete button only on archived posts', async ({ page }) => {
+    // Create and archive a post
     await createTestPost(page, { platform: 'twitter', content: 'Test post' })
-
-    // Go to posts and click on the post
     await page.goto('/posts')
     const cards = await getPostCards(page)
     await cards.first().click()
 
-    const deleteBtn = page.getByRole('button', { name: /delete/i })
-    await expect(deleteBtn).toBeVisible()
+    // Should NOT see delete button on non-archived post
+    await expect(page.getByRole('button', { name: /delete/i })).not.toBeVisible()
+
+    // Archive the post
+    await archivePost(page)
+
+    // Navigate to archived
+    await page.goto('/posts')
+    await filterByStatus(page, 'archived')
+    const archivedCards = await getPostCards(page)
+    await archivedCards.first().click()
+
+    // Should see delete button on archived post
+    await expect(page.getByRole('button', { name: /delete/i })).toBeVisible()
   })
 
   test('should not show delete button on new post page', async ({ page }) => {
@@ -95,13 +120,18 @@ test.describe('Delete Post', () => {
   })
 
   test('should show confirmation dialog before delete', async ({ page }) => {
-    // Create a post first
+    // Create and archive a post
     await createTestPost(page, { platform: 'twitter', content: 'Test post' })
-
-    // Go to posts and click on the post
     await page.goto('/posts')
     const cards = await getPostCards(page)
     await cards.first().click()
+    await archivePost(page)
+
+    // Navigate to archived
+    await page.goto('/posts')
+    await filterByStatus(page, 'archived')
+    const archivedCards = await getPostCards(page)
+    await archivedCards.first().click()
 
     // Click delete to open modal
     await page.getByRole('button', { name: /delete/i }).click()

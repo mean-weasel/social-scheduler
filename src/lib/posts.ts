@@ -1,7 +1,7 @@
 // Post type definitions and utilities
 
 export type Platform = 'twitter' | 'linkedin' | 'reddit'
-export type PostStatus = 'draft' | 'scheduled' | 'published' | 'failed'
+export type PostStatus = 'draft' | 'scheduled' | 'published' | 'failed' | 'archived'
 
 export interface TwitterContent {
   text: string
@@ -56,19 +56,22 @@ export const CHAR_LIMITS: Record<Platform, number> = {
 }
 
 // Platform display info
-export const PLATFORM_INFO: Record<Platform, { name: string; color: string; bgColor: string }> = {
+export const PLATFORM_INFO: Record<Platform, { name: string; label: string; color: string; bgColor: string }> = {
   twitter: {
     name: 'Twitter / X',
+    label: 'Twitter',
     color: 'text-twitter',
     bgColor: 'bg-twitter-soft',
   },
   linkedin: {
     name: 'LinkedIn',
+    label: 'LinkedIn',
     color: 'text-linkedin',
     bgColor: 'bg-linkedin-soft',
   },
   reddit: {
     name: 'Reddit',
+    label: 'Reddit',
     color: 'text-reddit',
     bgColor: 'bg-reddit-soft',
   },

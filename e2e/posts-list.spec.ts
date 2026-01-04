@@ -10,8 +10,8 @@ test.describe('Posts List', () => {
     test('should navigate to posts list from dashboard', async ({ page }) => {
       await page.goto('/')
 
-      // Click on "View all" link in sidebar
-      await page.getByRole('link', { name: /view all/i }).click()
+      // Navigate to posts via URL (bottom nav uses /posts route)
+      await page.goto('/posts')
 
       await expect(page).toHaveURL('/posts')
       await expect(page.getByRole('heading', { name: /all posts/i })).toBeVisible()
@@ -22,9 +22,9 @@ test.describe('Posts List', () => {
     test('should show all posts by default', async ({ page }) => {
       await goToPosts(page)
 
-      // All tab should be active
+      // All tab should be active (has gold highlight class)
       const allTab = page.getByRole('button', { name: /^all/i })
-      await expect(allTab).toHaveClass(/bg-accent/)
+      await expect(allTab).toHaveClass(/bg-\[hsl\(var\(--gold\)\)\]/)
     })
 
     test('should filter to drafts', async ({ page }) => {

@@ -14,6 +14,8 @@ import {
   Plus,
   Copy,
   CheckCircle,
+  Archive,
+  RotateCcw,
 } from 'lucide-react'
 import { usePostsStore } from '@/lib/storage'
 import {
@@ -57,13 +59,14 @@ export function Editor() {
   const { id } = useParams()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
-  const { addPost, updatePost, deletePost, getPost } = usePostsStore()
+  const { addPost, updatePost, deletePost, archivePost, restorePost, getPost } = usePostsStore()
 
   const isNew = !id
   const existingPost = id ? getPost(id) : undefined
   const [isSaving, setIsSaving] = useState(false)
   const [copied, setCopied] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showArchiveConfirm, setShowArchiveConfirm] = useState(false)
 
   // Form state
   const [post, setPost] = useState<Post>(() => {
@@ -176,6 +179,28 @@ export function Editor() {
     if (id) {
       deletePost(id)
       toast.success('Post deleted')
+      navigate('/')
+    }
+  }
+
+  // Handle archive
+  const handleArchive = () => {
+    setShowArchiveConfirm(true)
+  }
+
+  const confirmArchive = () => {
+    if (id) {
+      archivePost(id)
+      toast.success('Post archived')
+      navigate('/')
+    }
+  }
+
+  // Handle restore
+  const handleRestore = () => {
+    if (id) {
+      restorePost(id)
+      toast.success('Post restored to drafts')
       navigate('/')
     }
   }
@@ -329,7 +354,7 @@ export function Editor() {
       <div className="p-4 md:p-8 max-w-2xl animate-slide-up">
         <div className="mb-4 md:mb-6">
           <div className="flex items-center gap-3 mb-1 md:mb-2">
-            <h1 className="text-xl md:text-2xl font-display font-semibold">
+            <h1 className="text-2xl md:text-3xl font-display font-bold tracking-tight">
               {isNew ? 'Create Post' : 'Edit Post'}
             </h1>
             <AutoSaveIndicator status={autoSaveStatus} />
@@ -337,6 +362,7 @@ export function Editor() {
           <p className="text-sm md:text-base text-muted-foreground">
             Compose your message and schedule it across multiple platforms.
           </p>
+          <div className="h-1 w-16 bg-gradient-to-r from-[hsl(var(--gold))] to-transparent mt-2 rounded-full" />
         </div>
 
         {/* Platform selector */}
@@ -773,21 +799,55 @@ export function Editor() {
 
         {/* Actions */}
         <div className="flex flex-wrap gap-2 md:gap-3 pt-4 md:pt-6 border-t border-border">
-          {!isNew && (
+          {/* Archive button for non-archived posts */}
+          {!isNew && post.status !== 'archived' && (
             <button
-              onClick={handleDelete}
+              onClick={handleArchive}
               disabled={isSaving}
               className={cn(
                 'flex items-center gap-2 px-3 md:px-4 py-2.5 rounded-lg min-h-[44px]',
-                'text-destructive hover:bg-destructive/10',
+                'text-muted-foreground hover:bg-accent',
                 'font-medium text-sm',
                 'transition-colors',
                 'disabled:opacity-50'
               )}
             >
-              <Trash2 className="w-4 h-4" />
-              <span className="hidden sm:inline">Delete</span>
+              <Archive className="w-4 h-4" />
+              <span className="hidden sm:inline">Archive</span>
             </button>
+          )}
+          {/* Restore and Delete buttons for archived posts */}
+          {!isNew && post.status === 'archived' && (
+            <>
+              <button
+                onClick={handleRestore}
+                disabled={isSaving}
+                className={cn(
+                  'flex items-center gap-2 px-3 md:px-4 py-2.5 rounded-lg min-h-[44px]',
+                  'bg-primary/10 text-primary',
+                  'font-medium text-sm',
+                  'hover:bg-primary/20 transition-colors',
+                  'disabled:opacity-50'
+                )}
+              >
+                <RotateCcw className="w-4 h-4" />
+                <span className="hidden sm:inline">Restore</span>
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={isSaving}
+                className={cn(
+                  'flex items-center gap-2 px-3 md:px-4 py-2.5 rounded-lg min-h-[44px]',
+                  'text-destructive hover:bg-destructive/10',
+                  'font-medium text-sm',
+                  'transition-colors',
+                  'disabled:opacity-50'
+                )}
+              >
+                <Trash2 className="w-4 h-4" />
+                <span className="hidden sm:inline">Delete</span>
+              </button>
+            </>
           )}
           <button
             onClick={handleSaveDraft}
@@ -998,6 +1058,17 @@ export function Editor() {
         confirmText="Delete"
         cancelText="Keep"
         variant="danger"
+      />
+
+      {/* Archive confirmation dialog */}
+      <ConfirmDialog
+        open={showArchiveConfirm}
+        onConfirm={confirmArchive}
+        onCancel={() => setShowArchiveConfirm(false)}
+        title="Archive this post?"
+        description="The post will be moved to your archive. You can restore it later or delete it permanently."
+        confirmText="Archive"
+        cancelText="Cancel"
       />
     </div>
   )

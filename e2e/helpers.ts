@@ -6,8 +6,8 @@ import { Page, expect } from '@playwright/test'
  */
 export async function enterDemoMode(page: Page) {
   await page.goto('/')
-  // Wait for the dashboard to load - look for the "New Post" link
-  await expect(page.getByRole('link', { name: /new post/i })).toBeVisible()
+  // Wait for the dashboard to load - look for the header
+  await expect(page.getByRole('link', { name: 'Social Scheduler' })).toBeVisible()
 }
 
 /**
@@ -121,6 +121,39 @@ export async function deletePost(page: Page) {
   // Wait for the confirmation dialog modal to appear and click Delete
   await page.getByRole('alertdialog').waitFor()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Delete' }).click()
+}
+
+/**
+ * Click archive button and confirm in modal dialog
+ */
+export async function archivePost(page: Page) {
+  // Click the archive button
+  await page.getByRole('button', { name: /archive/i }).click()
+
+  // Wait for the confirmation dialog modal to appear and click Archive
+  await page.getByRole('alertdialog').waitFor()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Archive' }).click()
+}
+
+/**
+ * Click restore button to restore an archived post
+ */
+export async function restorePost(page: Page) {
+  await page.getByRole('button', { name: /restore/i }).click()
+}
+
+/**
+ * Filter posts list by status
+ */
+export async function filterByStatus(page: Page, status: 'all' | 'draft' | 'scheduled' | 'published' | 'archived') {
+  const statusNames: Record<string, string> = {
+    all: 'All',
+    draft: 'Drafts',
+    scheduled: 'Scheduled',
+    published: 'Published',
+    archived: 'Archived',
+  }
+  await page.getByRole('button', { name: new RegExp(statusNames[status], 'i') }).click()
 }
 
 /**

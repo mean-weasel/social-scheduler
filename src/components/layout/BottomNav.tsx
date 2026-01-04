@@ -27,27 +27,29 @@ export function BottomNav() {
     <nav
       className={cn(
         'fixed bottom-0 left-0 right-0 z-50',
-        'bg-card/95 backdrop-blur-xl border-t border-border',
+        'bg-card/95 backdrop-blur-xl',
         'md:hidden', // Only show on mobile
         'pb-safe' // iOS safe area for home indicator
       )}
     >
+      {/* Gold accent line at top */}
+      <div className="h-1 bg-gradient-to-r from-transparent via-[hsl(var(--gold))] to-transparent" />
       <div className="flex items-center justify-around h-16">
         {navItems.map((item) => {
           const isActive = location.pathname === item.path
           const Icon = item.icon
 
           if (item.isAction) {
-            // Center "+" button with special styling
+            // Center "+" button with gold styling
             return (
               <Link
                 key={item.path}
                 to={item.path}
                 className={cn(
                   'flex items-center justify-center',
-                  'w-12 h-12 -mt-4 rounded-full',
-                  'bg-gradient-to-br from-twitter to-[#0d8bd9]',
-                  'text-white shadow-lg',
+                  'w-14 h-14 -mt-6 rounded-full',
+                  'bg-gradient-to-br from-[hsl(var(--gold))] to-[hsl(var(--gold-dark))]',
+                  'text-white shadow-lg shadow-[hsl(var(--gold))]/40',
                   'active:scale-95 transition-transform'
                 )}
                 aria-label={item.label}
@@ -66,18 +68,18 @@ export function BottomNav() {
                 'w-16 h-full',
                 'text-muted-foreground',
                 'active:scale-95 transition-all',
-                isActive && 'text-twitter'
+                isActive && 'text-[hsl(var(--gold-dark))]'
               )}
             >
               <Icon className={cn('w-6 h-6', isActive && 'stroke-[2.5]')} />
               <span className={cn(
-                'text-[10px] mt-1 font-medium',
-                isActive && 'text-twitter'
+                'text-[10px] mt-1 font-semibold tracking-wide uppercase',
+                isActive && 'text-[hsl(var(--gold-dark))]'
               )}>
                 {item.label}
               </span>
               {isActive && (
-                <div className="absolute bottom-1 w-1 h-1 rounded-full bg-twitter" />
+                <div className="absolute bottom-1 w-4 h-0.5 rounded-full bg-[hsl(var(--gold))]" />
               )}
             </Link>
           )

@@ -14,7 +14,7 @@ export function AppLayout() {
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-xl">
+      <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-xl">
         <div className="flex items-center justify-between h-16 px-6">
           <div className="flex items-center gap-3">
             {isEditorPage && (
@@ -37,10 +37,10 @@ export function AppLayout() {
               </Link>
             )}
             <Link to="/" className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-twitter via-linkedin to-reddit flex items-center justify-center">
-                <Calendar className="w-4 h-4 text-white" />
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[hsl(var(--gold))] to-[hsl(var(--gold-dark))] flex items-center justify-center shadow-lg shadow-[hsl(var(--gold))]/30">
+                <Calendar className="w-5 h-5 text-white" />
               </div>
-              <span className="font-display font-semibold text-lg tracking-tight">
+              <span className="font-display font-bold text-xl md:text-2xl tracking-tight">
                 Social Scheduler
               </span>
             </Link>
@@ -57,15 +57,17 @@ export function AppLayout() {
             >
               <Settings className="w-5 h-5" />
             </Link>
-            <div className="ml-2 w-8 h-8 rounded-full bg-gradient-to-br from-twitter to-linkedin flex items-center justify-center text-xs font-semibold text-white">
+            <div className="ml-2 w-8 h-8 rounded-full bg-gradient-to-br from-[hsl(var(--gold))] to-[hsl(var(--gold-dark))] flex items-center justify-center text-xs font-semibold text-white">
               U
             </div>
           </div>
           {/* Mobile user avatar only */}
-          <div className="md:hidden w-8 h-8 rounded-full bg-gradient-to-br from-twitter to-linkedin flex items-center justify-center text-xs font-semibold text-white">
+          <div className="md:hidden w-8 h-8 rounded-full bg-gradient-to-br from-[hsl(var(--gold))] to-[hsl(var(--gold-dark))] flex items-center justify-center text-xs font-semibold text-white">
             U
           </div>
         </div>
+        {/* Gold accent line under header */}
+        <div className="h-1 bg-gradient-to-r from-transparent via-[hsl(var(--gold))] to-transparent" />
       </header>
 
       {/* Main content - bottom padding for mobile nav */}
