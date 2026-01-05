@@ -101,7 +101,8 @@ export async function fillNotes(page: Page, notes: string) {
 }
 
 /**
- * Fill in Reddit-specific fields
+ * Fill in Reddit-specific fields (subreddits and optional flair)
+ * Note: Titles are now per-subreddit via collapsible cards
  */
 export async function fillRedditFields(
   page: Page,
@@ -114,12 +115,89 @@ export async function fillRedditFields(
     await input.fill(sub)
     await input.press('Enter')
   }
-  if (options.title) {
-    await page.getByPlaceholder(/title for your reddit post/i).fill(options.title)
+  // If title is provided, set it for all subreddits via their cards
+  if (options.title && subredditsToAdd.length > 0) {
+    for (const sub of subredditsToAdd) {
+      await expandSubredditCard(page, sub)
+      await fillSubredditTitle(page, sub, options.title)
+    }
   }
   if (options.flair) {
     await page.getByPlaceholder(/show and tell/i).fill(options.flair)
   }
+}
+
+/**
+ * Expand a subreddit card to reveal title and schedule fields
+ */
+export async function expandSubredditCard(page: Page, subreddit: string) {
+  const card = page.locator(`[data-testid="subreddit-card-${subreddit}"]`)
+  // Check if card is already expanded by looking for the title input
+  const titleInput = card.locator(`[data-testid="subreddit-title-${subreddit}"]`)
+  const isExpanded = await titleInput.isVisible().catch(() => false)
+  if (!isExpanded) {
+    // Click using JavaScript for more reliable interaction
+    await page.evaluate((sub) => {
+      const btn = document.querySelector(`[data-testid="subreddit-toggle-${sub}"]`) as HTMLButtonElement
+      if (btn) btn.click()
+    }, subreddit)
+    await page.waitForTimeout(300)
+
+    // Check if expanded, try fallback click on chevron if not
+    const isExpandedNow = await titleInput.isVisible().catch(() => false)
+    if (!isExpandedNow) {
+      const chevron = card.locator('button').last()
+      await chevron.click()
+      await page.waitForTimeout(300)
+    }
+
+    await titleInput.waitFor({ state: 'visible', timeout: 5000 })
+  }
+}
+
+/**
+ * Collapse a subreddit card
+ */
+export async function collapseSubredditCard(page: Page, subreddit: string) {
+  const card = page.locator(`[data-testid="subreddit-card-${subreddit}"]`)
+  const toggleButton = page.locator(`[data-testid="subreddit-toggle-${subreddit}"]`)
+  const titleInput = card.locator(`[data-testid="subreddit-title-${subreddit}"]`)
+  const isExpanded = await titleInput.isVisible().catch(() => false)
+  if (isExpanded) {
+    await toggleButton.click()
+    await titleInput.waitFor({ state: 'hidden' })
+  }
+}
+
+/**
+ * Fill in the title for a specific subreddit (card must be expanded)
+ */
+export async function fillSubredditTitle(page: Page, subreddit: string, title: string) {
+  const titleInput = page.locator(`[data-testid="subreddit-title-${subreddit}"]`)
+  await titleInput.fill(title)
+}
+
+/**
+ * Set schedule for a specific subreddit (card must be expanded)
+ */
+export async function setSubredditSchedule(page: Page, subreddit: string, date: Date) {
+  const dateStr = date.toISOString().split('T')[0]
+  const timeStr = date.toTimeString().slice(0, 5)
+
+  const dateInput = page.locator(`[data-testid="subreddit-date-${subreddit}"]`)
+  const timeInput = page.locator(`[data-testid="subreddit-time-${subreddit}"]`)
+
+  await dateInput.fill(dateStr)
+  await timeInput.fill(timeStr)
+}
+
+/**
+ * Remove a subreddit via its card's X button
+ */
+export async function removeSubredditViaCard(page: Page, subreddit: string) {
+  const card = page.locator(`[data-testid="subreddit-card-${subreddit}"]`)
+  const removeButton = card.locator('button[aria-label="Remove subreddit"]')
+  await removeButton.click()
 }
 
 /**
@@ -131,14 +209,15 @@ export async function setLinkedInVisibility(page: Page, visibility: 'public' | '
 }
 
 /**
- * Set schedule date and time
+ * Set schedule date and time (main schedule, not per-subreddit)
  */
 export async function setSchedule(page: Page, date: Date) {
   const dateStr = date.toISOString().split('T')[0]
   const timeStr = date.toTimeString().slice(0, 5)
 
-  await page.locator('input[type="date"]').fill(dateStr)
-  await page.locator('input[type="time"]').fill(timeStr)
+  // Use test-id to target the main schedule inputs specifically
+  await page.locator('[data-testid="main-schedule-date"]').fill(dateStr)
+  await page.locator('[data-testid="main-schedule-time"]').fill(timeStr)
 }
 
 /**
@@ -274,8 +353,8 @@ export async function createTestPost(
     const tomorrow = new Date()
     tomorrow.setDate(tomorrow.getDate() + 1)
     const dateStr = tomorrow.toISOString().split('T')[0]
-    await page.locator('input[type="date"]').fill(dateStr)
-    await page.locator('input[type="time"]').fill('12:00')
+    await page.locator('[data-testid="main-schedule-date"]').fill(dateStr)
+    await page.locator('[data-testid="main-schedule-time"]').fill('12:00')
     await page.getByRole('button', { name: /^schedule$/i }).click()
   }
 

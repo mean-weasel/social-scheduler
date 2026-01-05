@@ -65,7 +65,7 @@ export function Editor() {
   const { id } = useParams()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
-  const { addPost, updatePost, deletePost, archivePost, restorePost, getPost } = usePostsStore()
+  const { addPost, updatePost, deletePost, archivePost, restorePost, getPost, fetchPosts, initialized: postsInitialized } = usePostsStore()
   const { campaigns, fetchCampaigns, initialized: campaignsInitialized } = useCampaignsStore()
 
   const isNew = !id
@@ -75,6 +75,13 @@ export function Editor() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false)
   const [showCampaignDropdown, setShowCampaignDropdown] = useState(false)
+
+  // Fetch posts on mount if not initialized (needed for direct navigation to /edit/:id)
+  useEffect(() => {
+    if (!postsInitialized) {
+      fetchPosts()
+    }
+  }, [postsInitialized, fetchPosts])
 
   // Fetch campaigns on mount
   useEffect(() => {
@@ -108,6 +115,52 @@ export function Editor() {
   const [showPublishedLinks, setShowPublishedLinks] = useState(false)
   const [newSubreddit, setNewSubreddit] = useState('')
   const [subredditsInput, setSubredditsInput] = useState<string[]>([])  // Multi-subreddit UI input
+  const [subredditSchedules, setSubredditSchedules] = useState<Record<string, string>>({})  // Per-subreddit scheduledAt ISO strings
+  const [subredditTitles, setSubredditTitles] = useState<Record<string, string>>({})  // Per-subreddit titles
+  const [expandedSubreddits, setExpandedSubreddits] = useState<Record<string, boolean>>({})  // Track which cards are expanded
+
+  // Helper functions for subreddit card management
+  const toggleSubredditExpanded = (subreddit: string) => {
+    setExpandedSubreddits(prev => ({
+      ...prev,
+      [subreddit]: !prev[subreddit]
+    }))
+  }
+
+  const updateSubredditTitle = (subreddit: string, title: string) => {
+    setSubredditTitles(prev => ({ ...prev, [subreddit]: title }))
+  }
+
+  const updateSubredditSchedule = (subreddit: string, isoString: string | null) => {
+    if (isoString === null) {
+      setSubredditSchedules(prev => {
+        const next = { ...prev }
+        delete next[subreddit]
+        return next
+      })
+    } else {
+      setSubredditSchedules(prev => ({ ...prev, [subreddit]: isoString }))
+    }
+  }
+
+  const removeSubreddit = (subreddit: string) => {
+    setSubredditsInput(prev => prev.filter(s => s !== subreddit))
+    setSubredditTitles(prev => {
+      const next = { ...prev }
+      delete next[subreddit]
+      return next
+    })
+    setSubredditSchedules(prev => {
+      const next = { ...prev }
+      delete next[subreddit]
+      return next
+    })
+    setExpandedSubreddits(prev => {
+      const next = { ...prev }
+      delete next[subreddit]
+      return next
+    })
+  }
 
   // Track if form has unsaved changes
   const initialContentRef = useRef('')
@@ -170,9 +223,20 @@ export function Editor() {
       // Load Reddit URL
       const loadedRedditUrl = existingPost.content.reddit?.url || ''
       setRedditUrl(loadedRedditUrl)
-      // Load subreddits (now singular in data, but we keep UI as array for future)
+      // Load subreddits and titles (singular in data model)
       if (existingPost.content.reddit?.subreddit) {
-        setSubredditsInput([existingPost.content.reddit.subreddit])
+        const subreddit = existingPost.content.reddit.subreddit
+        setSubredditsInput([subreddit])
+        // Initialize title for this subreddit
+        if (existingPost.content.reddit.title) {
+          setSubredditTitles({ [subreddit]: existingPost.content.reddit.title })
+        }
+        // Initialize schedule for this subreddit from post.scheduledAt
+        if (existingPost.scheduledAt) {
+          setSubredditSchedules({ [subreddit]: existingPost.scheduledAt })
+        }
+        // Auto-expand the card when editing
+        setExpandedSubreddits({ [subreddit]: true })
       }
       // Set initial content reference for dirty tracking
       initialContentRef.current = JSON.stringify({
@@ -237,16 +301,21 @@ export function Editor() {
         // Create separate Reddit posts for each subreddit
         for (let i = 0; i < subredditsInput.length; i++) {
           const subreddit = subredditsInput[i]
+          // Use per-subreddit schedule and title if set, otherwise fall back to defaults
+          const subredditScheduledAt = subredditSchedules[subreddit] || postToSave.scheduledAt
+          const subredditTitle = subredditTitles[subreddit] || ''
           const postForSubreddit: Post = {
             ...postToSave,
             id: crypto.randomUUID(),
             platforms: ['reddit'],
             groupId,
             groupType: 'reddit-crosspost',
+            scheduledAt: subredditScheduledAt,
             content: {
               reddit: {
                 ...postToSave.content.reddit!,
                 subreddit,
+                title: subredditTitle,
               },
             },
           }
@@ -256,9 +325,11 @@ export function Editor() {
         // Single subreddit or non-Reddit post
         const finalPost = { ...postToSave }
         if (finalPost.platforms.includes('reddit') && subredditsInput.length === 1) {
+          const subreddit = subredditsInput[0]
           finalPost.content.reddit = {
             ...finalPost.content.reddit!,
-            subreddit: subredditsInput[0],
+            subreddit,
+            title: subredditTitles[subreddit] || finalPost.content.reddit?.title || '',
           }
         }
         await addPost(finalPost)
@@ -266,9 +337,11 @@ export function Editor() {
         // Updating existing post
         const finalPost = { ...postToSave }
         if (finalPost.platforms.includes('reddit') && subredditsInput.length >= 1) {
+          const subreddit = subredditsInput[0]
           finalPost.content.reddit = {
             ...finalPost.content.reddit!,
-            subreddit: subredditsInput[0],
+            subreddit,
+            title: subredditTitles[subreddit] || finalPost.content.reddit?.title || '',
           }
         }
         await updatePost(finalPost.id, finalPost)
@@ -380,7 +453,14 @@ export function Editor() {
 
   // Schedule
   const handleSchedule = () => {
-    if (!post.scheduledAt) {
+    // Check if scheduling is valid:
+    // - For Reddit with multiple subreddits: each subreddit must have its own schedule
+    // - Otherwise: main post.scheduledAt must be set
+    const isRedditMulti = post.platforms.includes('reddit') && subredditsInput.length > 1
+    const allSubredditsHaveSchedule = isRedditMulti &&
+      subredditsInput.every(sub => subredditSchedules[sub])
+
+    if (!post.scheduledAt && !allSubredditsHaveSchedule) {
       toast.error('Please select a date and time')
       return
     }
@@ -939,30 +1019,145 @@ export function Editor() {
                   <Plus className="w-4 h-4" />
                 </button>
               </div>
-              {/* Subreddit tags */}
-              {subredditsInput.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {subredditsInput.map((sub) => (
-                    <span
-                      key={sub}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-reddit/10 text-reddit text-sm font-medium"
-                    >
-                      r/{sub}
-                      <button
-                        type="button"
-                        onClick={() => setSubredditsInput((prev) => prev.filter((s) => s !== sub))}
-                        className="p-0.5 rounded-full hover:bg-reddit/20 transition-colors"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
               <p className="text-xs text-muted-foreground mt-1.5">
-                Add multiple subreddits to cross-post. Press Enter or comma to add.
+                Add subreddits to cross-post. Each gets its own title and schedule.
               </p>
             </div>
+
+            {/* Collapsible cards for each subreddit */}
+            {subredditsInput.length > 0 && (
+              <div className="space-y-3">
+                {subredditsInput.map((sub) => {
+                  const isExpanded = !!expandedSubreddits[sub]
+                  const title = subredditTitles[sub] || ''
+                  const schedule = subredditSchedules[sub]
+                  const schedulePreview = schedule
+                    ? format(new Date(schedule), 'MMM d, h:mm a')
+                    : 'No schedule'
+
+                  return (
+                    <div key={sub} data-testid={`subreddit-card-${sub}`}>
+                      {/* Card Header */}
+                      <div
+                        className={cn(
+                          'w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all',
+                          isExpanded
+                            ? 'border-reddit/30 bg-reddit/5'
+                            : 'border-border bg-card hover:border-reddit/30'
+                        )}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => toggleSubredditExpanded(sub)}
+                          className="flex items-center gap-2 text-sm font-medium flex-1 min-w-0 text-left"
+                          data-testid={`subreddit-toggle-${sub}`}
+                        >
+                          <span className="text-reddit font-semibold">r/{sub}</span>
+                          {!isExpanded && (
+                            <span className="text-xs text-muted-foreground truncate">
+                              — {title || 'No title'} • {schedulePreview}
+                            </span>
+                          )}
+                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => removeSubreddit(sub)}
+                            className="p-1 rounded-full hover:bg-reddit/20 text-muted-foreground hover:text-reddit transition-colors"
+                            aria-label="Remove subreddit"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => toggleSubredditExpanded(sub)}
+                            className="p-1"
+                          >
+                            {isExpanded ? (
+                              <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                            ) : (
+                              <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Card Body */}
+                      {isExpanded && (
+                        <div className="mt-2 p-4 rounded-xl border border-reddit/20 bg-background/50 space-y-4 animate-slide-up">
+                          {/* Title Input */}
+                          <div>
+                            <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                              Post Title
+                            </label>
+                            <input
+                              type="text"
+                              value={title}
+                              onChange={(e) => updateSubredditTitle(sub, e.target.value)}
+                              placeholder={`Title for r/${sub}`}
+                              data-testid={`subreddit-title-${sub}`}
+                              className="w-full px-4 py-2.5 rounded-lg bg-background border border-border focus:outline-none focus:border-reddit"
+                            />
+                            <p className="text-xs text-muted-foreground mt-1.5">
+                              {title.length} / 300 characters
+                            </p>
+                          </div>
+
+                          {/* Schedule Inputs */}
+                          <div>
+                            <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                              Schedule (optional)
+                            </label>
+                            <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-background border border-border flex-1">
+                                <Calendar className="w-4 h-4 text-muted-foreground" />
+                                <input
+                                  type="date"
+                                  value={schedule ? format(new Date(schedule), 'yyyy-MM-dd') : ''}
+                                  onChange={(e) => {
+                                    if (!e.target.value) {
+                                      updateSubredditSchedule(sub, null)
+                                      return
+                                    }
+                                    const existingTime = schedule
+                                      ? format(new Date(schedule), 'HH:mm')
+                                      : '12:00'
+                                    const localDate = new Date(`${e.target.value}T${existingTime}:00`)
+                                    updateSubredditSchedule(sub, localDate.toISOString())
+                                  }}
+                                  data-testid={`subreddit-date-${sub}`}
+                                  className="bg-transparent border-none focus:outline-none text-sm flex-1"
+                                />
+                              </div>
+                              <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-background border border-border">
+                                <Clock className="w-4 h-4 text-muted-foreground" />
+                                <input
+                                  type="time"
+                                  value={schedule ? format(new Date(schedule), 'HH:mm') : ''}
+                                  onChange={(e) => {
+                                    const dateStr = schedule
+                                      ? format(new Date(schedule), 'yyyy-MM-dd')
+                                      : format(new Date(), 'yyyy-MM-dd')
+                                    const localDate = new Date(`${dateStr}T${e.target.value}:00`)
+                                    updateSubredditSchedule(sub, localDate.toISOString())
+                                  }}
+                                  data-testid={`subreddit-time-${sub}`}
+                                  className="bg-transparent border-none focus:outline-none text-sm w-[80px]"
+                                />
+                              </div>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1.5">
+                              Leave blank to use the default schedule above.
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
                 Flair (optional)
@@ -982,29 +1177,6 @@ export function Editor() {
                 placeholder="e.g., Show and Tell"
                 className="w-full px-4 py-2.5 rounded-lg bg-background border border-border focus:outline-none focus:border-reddit"
               />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                Post Title
-              </label>
-              <input
-                type="text"
-                value={post.content.reddit?.title || ''}
-                onChange={(e) =>
-                  setPost((prev) => ({
-                    ...prev,
-                    content: {
-                      ...prev.content,
-                      reddit: { ...prev.content.reddit!, title: e.target.value },
-                    },
-                  }))
-                }
-                placeholder="Title for your Reddit post"
-                className="w-full px-4 py-2.5 rounded-lg bg-background border border-border focus:outline-none focus:border-reddit"
-              />
-              <p className="text-xs text-muted-foreground mt-1.5">
-                {(post.content.reddit?.title || '').length} / 300 characters
-              </p>
             </div>
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
@@ -1176,6 +1348,7 @@ export function Editor() {
               <Calendar className="w-4 h-4 text-muted-foreground" />
               <input
                 type="date"
+                data-testid="main-schedule-date"
                 value={post.scheduledAt ? format(new Date(post.scheduledAt), 'yyyy-MM-dd') : ''}
                 onChange={(e) =>
                   setPost((prev) => {
@@ -1197,6 +1370,7 @@ export function Editor() {
               <Clock className="w-4 h-4 text-muted-foreground" />
               <input
                 type="time"
+                data-testid="main-schedule-time"
                 value={post.scheduledAt ? format(new Date(post.scheduledAt), 'HH:mm') : ''}
                 onChange={(e) =>
                   setPost((prev) => {
@@ -1213,7 +1387,7 @@ export function Editor() {
         </div>
 
         {/* Actions */}
-        <div className="flex flex-wrap gap-2 md:gap-3 pt-4 md:pt-6 border-t border-border">
+        <div className="flex gap-2 md:gap-3 pt-4 md:pt-6 border-t border-border overflow-x-auto pb-2 -mb-2 md:overflow-visible md:flex-wrap">
           {/* Archive button for non-archived posts */}
           {!isNew && post.status !== 'archived' && (
             <button
@@ -1224,7 +1398,8 @@ export function Editor() {
                 'text-muted-foreground hover:bg-accent',
                 'font-medium text-sm',
                 'transition-colors',
-                'disabled:opacity-50'
+                'disabled:opacity-50',
+                'flex-shrink-0'
               )}
             >
               <Archive className="w-4 h-4" />
@@ -1242,7 +1417,8 @@ export function Editor() {
                   'bg-primary/10 text-primary',
                   'font-medium text-sm',
                   'hover:bg-primary/20 transition-colors',
-                  'disabled:opacity-50'
+                  'disabled:opacity-50',
+                  'flex-shrink-0'
                 )}
               >
                 <RotateCcw className="w-4 h-4" />
@@ -1256,7 +1432,8 @@ export function Editor() {
                   'text-destructive hover:bg-destructive/10',
                   'font-medium text-sm',
                   'transition-colors',
-                  'disabled:opacity-50'
+                  'disabled:opacity-50',
+                  'flex-shrink-0'
                 )}
               >
                 <Trash2 className="w-4 h-4" />
@@ -1274,6 +1451,7 @@ export function Editor() {
               'font-medium text-sm',
               'hover:bg-accent transition-colors',
               'disabled:opacity-50',
+              'flex-shrink-0',
               !isNew && 'sm:ml-auto'
             )}
           >
@@ -1290,7 +1468,8 @@ export function Editor() {
               'bg-gradient-to-r from-twitter to-[#0d8bd9] text-white',
               'font-medium text-sm',
               'hover:opacity-90 transition-opacity',
-              'disabled:opacity-50'
+              'disabled:opacity-50',
+              'flex-shrink-0'
             )}
           >
             <Calendar className="w-4 h-4" />
@@ -1305,6 +1484,7 @@ export function Editor() {
               'font-medium text-sm',
               'hover:bg-accent hover:text-foreground transition-colors',
               'disabled:opacity-50',
+              'flex-shrink-0',
               isNew && 'sm:ml-auto'
             )}
           >
@@ -1321,7 +1501,8 @@ export function Editor() {
                 'bg-green-500/10 text-green-600 dark:text-green-400',
                 'font-medium text-sm',
                 'hover:bg-green-500/20 transition-colors',
-                'disabled:opacity-50'
+                'disabled:opacity-50',
+                'flex-shrink-0'
               )}
             >
               <CheckCircle className="w-4 h-4" />
