@@ -295,6 +295,9 @@ interface PostFromAPI {
   status: 'draft' | 'scheduled' | 'published' | 'archived'
   platforms: string[]
   notes?: string
+  campaignId?: string
+  groupId?: string
+  groupType?: 'reddit-crosspost'
   content: {
     twitter?: {
       text: string
@@ -308,13 +311,13 @@ interface PostFromAPI {
       launchedUrl?: string
     }
     reddit?: {
-      subreddits: string[]
+      subreddit: string
       title: string
       body?: string
       url?: string
       flairId?: string
       flairText?: string
-      launchedUrls?: Record<string, string>
+      launchedUrl?: string
     }
   }
 }

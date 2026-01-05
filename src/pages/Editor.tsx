@@ -125,6 +125,8 @@ export function Editor() {
   useUnsavedChanges({ isDirty })
 
   // Auto-save (only for drafts or new posts)
+  // Disable auto-save for new posts with multiple subreddits (those need explicit save to create multiple posts)
+  const hasMultipleSubreddits = post.platforms.includes('reddit') && subredditsInput.length > 1
   const { status: autoSaveStatus } = useAutoSave({
     data: { post, content, mediaUrls, linkedInMediaUrl, redditUrl },
     onSave: async () => {
@@ -145,7 +147,7 @@ export function Editor() {
       }
     },
     delay: 2000,
-    enabled: post.status === 'draft' || isNew,
+    enabled: (post.status === 'draft' || isNew) && !(isNew && hasMultipleSubreddits),
   })
 
   // Load existing post data into form
@@ -215,15 +217,33 @@ export function Editor() {
       if (isNew && postToSave.platforms.includes('reddit') && subredditsInput.length > 1) {
         // Create multiple posts, one per subreddit, with shared groupId
         const groupId = crypto.randomUUID()
+        const hasOtherPlatforms = postToSave.platforms.some(p => p !== 'reddit')
+
+        // If there are other platforms (Twitter, LinkedIn), create a separate post for them
+        if (hasOtherPlatforms) {
+          const otherPlatforms = postToSave.platforms.filter(p => p !== 'reddit') as Platform[]
+          const otherPlatformPost: Post = {
+            ...postToSave,
+            platforms: otherPlatforms,
+            content: {
+              twitter: postToSave.content.twitter,
+              linkedin: postToSave.content.linkedin,
+              // No reddit content for this post
+            },
+          }
+          await addPost(otherPlatformPost)
+        }
+
+        // Create separate Reddit posts for each subreddit
         for (let i = 0; i < subredditsInput.length; i++) {
           const subreddit = subredditsInput[i]
           const postForSubreddit: Post = {
             ...postToSave,
-            id: i === 0 ? postToSave.id : crypto.randomUUID(), // Keep original ID for first
+            id: crypto.randomUUID(),
+            platforms: ['reddit'],
             groupId,
             groupType: 'reddit-crosspost',
             content: {
-              ...postToSave.content,
               reddit: {
                 ...postToSave.content.reddit!,
                 subreddit,
