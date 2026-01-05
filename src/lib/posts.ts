@@ -6,12 +6,14 @@ export type PostStatus = 'draft' | 'scheduled' | 'published' | 'failed' | 'archi
 export interface TwitterContent {
   text: string
   mediaUrls?: string[]
+  launchedUrl?: string  // URL of the published tweet
 }
 
 export interface LinkedInContent {
   text: string
   visibility: 'public' | 'connections'
   mediaUrl?: string  // Single image or video URL
+  launchedUrl?: string  // URL of the published LinkedIn post
 }
 
 export interface RedditContent {
@@ -21,6 +23,7 @@ export interface RedditContent {
   url?: string
   flairId?: string
   flairText?: string
+  launchedUrls?: Record<string, string>  // Map of subreddit name to published post URL
 }
 
 export interface PublishResult {

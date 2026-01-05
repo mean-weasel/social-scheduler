@@ -19,6 +19,7 @@ import {
   StickyNote,
   ChevronDown,
   ChevronUp,
+  Link,
 } from 'lucide-react'
 import { usePostsStore } from '@/lib/storage'
 import {
@@ -88,6 +89,7 @@ export function Editor() {
   const [showMediaInput, setShowMediaInput] = useState(false)
   const [newMediaUrl, setNewMediaUrl] = useState('')
   const [showNotes, setShowNotes] = useState(false)
+  const [showPublishedLinks, setShowPublishedLinks] = useState(false)
   const [newSubreddit, setNewSubreddit] = useState('')
 
   // Track if form has unsaved changes
@@ -161,6 +163,14 @@ export function Editor() {
       // Expand notes if they exist
       if (existingPost.notes) {
         setShowNotes(true)
+      }
+      // Expand published links if any exist
+      const hasLaunchedUrls =
+        existingPost.content.twitter?.launchedUrl ||
+        existingPost.content.linkedin?.launchedUrl ||
+        Object.keys(existingPost.content.reddit?.launchedUrls || {}).length > 0
+      if (hasLaunchedUrls) {
+        setShowPublishedLinks(true)
       }
     } else {
       // New post - set initial state
@@ -258,11 +268,13 @@ export function Editor() {
       for (const platform of prev.platforms) {
         if (platform === 'twitter') {
           updated.content.twitter = {
+            ...prev.content.twitter,
             text: content,
             ...(mediaUrls.length > 0 && { mediaUrls })
           }
         } else if (platform === 'linkedin') {
           updated.content.linkedin = {
+            ...prev.content.linkedin,
             text: content,
             visibility: prev.content.linkedin?.visibility || 'public',
             ...(linkedInMediaUrl && { mediaUrl: linkedInMediaUrl })
@@ -903,6 +915,143 @@ export function Editor() {
                 Add a URL for link posts (YouTube, articles, etc.). Leave empty for text posts.
               </p>
             </div>
+          </div>
+        )}
+
+        {/* Published Links section (collapsible) */}
+        {post.platforms.length > 0 && (
+          <div className="mb-4 md:mb-6">
+            <button
+              onClick={() => setShowPublishedLinks(!showPublishedLinks)}
+              className={cn(
+                'w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all',
+                showPublishedLinks ||
+                  post.content.twitter?.launchedUrl ||
+                  post.content.linkedin?.launchedUrl ||
+                  Object.keys(post.content.reddit?.launchedUrls || {}).length > 0
+                  ? 'border-primary/30 bg-primary/5'
+                  : 'border-border bg-card hover:border-primary/30'
+              )}
+            >
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Link className="w-4 h-4 text-primary" />
+                <span>Published Links</span>
+                {(() => {
+                  const count =
+                    (post.content.twitter?.launchedUrl ? 1 : 0) +
+                    (post.content.linkedin?.launchedUrl ? 1 : 0) +
+                    Object.values(post.content.reddit?.launchedUrls || {}).filter(Boolean).length
+                  return count > 0 ? (
+                    <span className="text-xs text-primary">({count})</span>
+                  ) : null
+                })()}
+              </div>
+              {showPublishedLinks ? (
+                <ChevronUp className="w-4 h-4 text-muted-foreground" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+              )}
+            </button>
+            {showPublishedLinks && (
+              <div className="mt-2 space-y-3 animate-slide-up">
+                {/* Twitter launched URL */}
+                {post.platforms.includes('twitter') && (
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-card border border-border">
+                    <div className="flex items-center gap-2 min-w-[100px]">
+                      <span className="w-2 h-2 rounded-full bg-twitter" />
+                      <span className="text-sm font-medium text-twitter">Twitter</span>
+                    </div>
+                    <input
+                      type="url"
+                      value={post.content.twitter?.launchedUrl || ''}
+                      onChange={(e) =>
+                        setPost((prev) => ({
+                          ...prev,
+                          content: {
+                            ...prev.content,
+                            twitter: {
+                              ...prev.content.twitter,
+                              text: prev.content.twitter?.text || '',
+                              launchedUrl: e.target.value,
+                            },
+                          },
+                        }))
+                      }
+                      placeholder="https://twitter.com/user/status/..."
+                      className="flex-1 px-3 py-2 rounded-lg bg-background border border-border text-sm focus:outline-none focus:border-twitter"
+                    />
+                  </div>
+                )}
+
+                {/* LinkedIn launched URL */}
+                {post.platforms.includes('linkedin') && (
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-card border border-border">
+                    <div className="flex items-center gap-2 min-w-[100px]">
+                      <span className="w-2 h-2 rounded-full bg-linkedin" />
+                      <span className="text-sm font-medium text-linkedin">LinkedIn</span>
+                    </div>
+                    <input
+                      type="url"
+                      value={post.content.linkedin?.launchedUrl || ''}
+                      onChange={(e) =>
+                        setPost((prev) => ({
+                          ...prev,
+                          content: {
+                            ...prev.content,
+                            linkedin: {
+                              ...prev.content.linkedin,
+                              text: prev.content.linkedin?.text || '',
+                              visibility: prev.content.linkedin?.visibility || 'public',
+                              launchedUrl: e.target.value,
+                            },
+                          },
+                        }))
+                      }
+                      placeholder="https://linkedin.com/posts/..."
+                      className="flex-1 px-3 py-2 rounded-lg bg-background border border-border text-sm focus:outline-none focus:border-linkedin"
+                    />
+                  </div>
+                )}
+
+                {/* Reddit launched URLs (one per subreddit) */}
+                {post.platforms.includes('reddit') &&
+                  post.content.reddit?.subreddits?.map((subreddit) => (
+                    <div key={subreddit} className="flex items-center gap-3 p-3 rounded-lg bg-card border border-border">
+                      <div className="flex items-center gap-2 min-w-[100px]">
+                        <span className="w-2 h-2 rounded-full bg-reddit" />
+                        <span className="text-sm font-medium text-reddit">r/{subreddit}</span>
+                      </div>
+                      <input
+                        type="url"
+                        value={post.content.reddit?.launchedUrls?.[subreddit] || ''}
+                        onChange={(e) =>
+                          setPost((prev) => ({
+                            ...prev,
+                            content: {
+                              ...prev.content,
+                              reddit: {
+                                ...prev.content.reddit,
+                                subreddits: prev.content.reddit?.subreddits || [],
+                                title: prev.content.reddit?.title || '',
+                                launchedUrls: {
+                                  ...prev.content.reddit?.launchedUrls,
+                                  [subreddit]: e.target.value,
+                                },
+                              },
+                            },
+                          }))
+                        }
+                        placeholder={`https://reddit.com/r/${subreddit}/...`}
+                        className="flex-1 px-3 py-2 rounded-lg bg-background border border-border text-sm focus:outline-none focus:border-reddit"
+                      />
+                    </div>
+                  ))}
+
+                <p className="text-xs text-muted-foreground px-1">
+                  Add URLs after publishing to track where your content was posted.
+                </p>
+              </div>
+            )}
           </div>
         )}
 
