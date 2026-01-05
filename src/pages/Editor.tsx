@@ -1015,6 +1015,12 @@ export function Editor() {
 
                 {/* Reddit launched URLs (one per subreddit) */}
                 {post.platforms.includes('reddit') &&
+                  (!post.content.reddit?.subreddits?.length ? (
+                    <p className="text-sm text-muted-foreground italic p-3 rounded-lg bg-card border border-border">
+                      Add subreddits above to track published links for each community.
+                    </p>
+                  ) : null)}
+                {post.platforms.includes('reddit') &&
                   post.content.reddit?.subreddits?.map((subreddit) => (
                     <div key={subreddit} className="flex items-center gap-3 p-3 rounded-lg bg-card border border-border">
                       <div className="flex items-center gap-2 min-w-[100px]">
