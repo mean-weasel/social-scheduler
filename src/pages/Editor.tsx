@@ -20,8 +20,10 @@ import {
   ChevronDown,
   ChevronUp,
   Link,
+  FolderOpen,
 } from 'lucide-react'
 import { usePostsStore } from '@/lib/storage'
+import { useCampaignsStore } from '@/lib/campaigns'
 import {
   Post,
   Platform,
@@ -64,6 +66,7 @@ export function Editor() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const { addPost, updatePost, deletePost, archivePost, restorePost, getPost } = usePostsStore()
+  const { campaigns, fetchCampaigns, initialized: campaignsInitialized } = useCampaignsStore()
 
   const isNew = !id
   const existingPost = id ? getPost(id) : undefined
@@ -71,6 +74,14 @@ export function Editor() {
   const [copied, setCopied] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false)
+  const [showCampaignDropdown, setShowCampaignDropdown] = useState(false)
+
+  // Fetch campaigns on mount
+  useEffect(() => {
+    if (!campaignsInitialized) {
+      fetchCampaigns()
+    }
+  }, [campaignsInitialized, fetchCampaigns])
 
   // Form state
   const [post, setPost] = useState<Post>(() => {
@@ -79,6 +90,11 @@ export function Editor() {
     const dateParam = searchParams.get('date')
     if (dateParam) {
       newPost.scheduledAt = `${dateParam}T12:00:00.000Z`
+    }
+    // Handle campaign from URL param
+    const campaignParam = searchParams.get('campaign')
+    if (campaignParam) {
+      newPost.campaignId = campaignParam
     }
     return newPost
   })
@@ -440,6 +456,63 @@ export function Editor() {
               </button>
             )
           })}
+        </div>
+
+        {/* Campaign selector */}
+        <div className="mb-4 md:mb-6 relative">
+          <button
+            onClick={() => setShowCampaignDropdown(!showCampaignDropdown)}
+            className={cn(
+              'flex items-center gap-2 px-4 py-2.5 rounded-xl border transition-all w-full',
+              post.campaignId
+                ? 'border-[hsl(var(--gold))]/30 bg-[hsl(var(--gold))]/5'
+                : 'border-border bg-card hover:border-[hsl(var(--gold))]/30'
+            )}
+          >
+            <FolderOpen className="w-4 h-4 text-[hsl(var(--gold-dark))]" />
+            <span className="text-sm font-medium flex-1 text-left truncate">
+              {post.campaignId
+                ? campaigns.find((c) => c.id === post.campaignId)?.name || 'Unknown Campaign'
+                : 'No Campaign'}
+            </span>
+            <ChevronDown className={cn('w-4 h-4 text-muted-foreground transition-transform', showCampaignDropdown && 'rotate-180')} />
+          </button>
+          {showCampaignDropdown && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setShowCampaignDropdown(false)} />
+              <div className="absolute top-full left-0 right-0 mt-1 z-20 bg-card border border-border rounded-xl shadow-lg py-1 max-h-[200px] overflow-y-auto">
+                <button
+                  onClick={() => {
+                    setPost((prev) => ({ ...prev, campaignId: undefined }))
+                    setShowCampaignDropdown(false)
+                  }}
+                  className={cn(
+                    'w-full flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-accent transition-colors text-left',
+                    !post.campaignId && 'bg-[hsl(var(--gold))]/10 text-[hsl(var(--gold-dark))]'
+                  )}
+                >
+                  <X className="w-4 h-4" />
+                  No Campaign
+                </button>
+                {campaigns.filter((c) => c.status !== 'archived').map((campaign) => (
+                  <button
+                    key={campaign.id}
+                    onClick={() => {
+                      setPost((prev) => ({ ...prev, campaignId: campaign.id }))
+                      setShowCampaignDropdown(false)
+                    }}
+                    className={cn(
+                      'w-full flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-accent transition-colors text-left',
+                      post.campaignId === campaign.id && 'bg-[hsl(var(--gold))]/10 text-[hsl(var(--gold-dark))]'
+                    )}
+                  >
+                    <FolderOpen className="w-4 h-4" />
+                    <span className="truncate">{campaign.name}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
         {/* Notes section (collapsible) */}

@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
-import { Home, Calendar, Plus, Settings } from 'lucide-react'
+import { Home, Calendar, Plus, Settings, FolderOpen } from 'lucide-react'
 
 interface NavItem {
   icon: typeof Home
@@ -13,6 +13,7 @@ const navItems: NavItem[] = [
   { icon: Home, label: 'Home', path: '/' },
   { icon: Calendar, label: 'Posts', path: '/posts' },
   { icon: Plus, label: 'New', path: '/new', isAction: true },
+  { icon: FolderOpen, label: 'Campaigns', path: '/campaigns' },
   { icon: Settings, label: 'Settings', path: '/settings' },
 ]
 

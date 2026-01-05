@@ -4,6 +4,8 @@ import { AppLayout } from '@/components/layout/AppLayout'
 import { Dashboard } from '@/pages/Dashboard'
 import { Editor } from '@/pages/Editor'
 import { Posts } from '@/pages/Posts'
+import { Campaigns } from '@/pages/Campaigns'
+import { CampaignDetail } from '@/pages/CampaignDetail'
 import { Settings } from '@/pages/Settings'
 import { useScheduleChecker } from '@/hooks/useScheduleChecker'
 import { usePostsStore } from '@/lib/storage'
@@ -27,6 +29,8 @@ export default function App() {
       <Route path="/" element={<AppLayout />}>
         <Route index element={<Dashboard />} />
         <Route path="posts" element={<Posts />} />
+        <Route path="campaigns" element={<Campaigns />} />
+        <Route path="campaigns/:id" element={<CampaignDetail />} />
         <Route path="new" element={<Editor />} />
         <Route path="edit/:id" element={<Editor />} />
         <Route path="settings" element={<Settings />} />

@@ -40,12 +40,38 @@ db.exec(`
     platforms TEXT NOT NULL,
     notes TEXT,
     content TEXT NOT NULL,
-    publish_results TEXT
+    publish_results TEXT,
+    campaign_id TEXT
   );
 
   CREATE INDEX IF NOT EXISTS idx_posts_status ON posts(status);
   CREATE INDEX IF NOT EXISTS idx_posts_scheduled_at ON posts(scheduled_at);
   CREATE INDEX IF NOT EXISTS idx_posts_updated_at ON posts(updated_at);
+  CREATE INDEX IF NOT EXISTS idx_posts_campaign_id ON posts(campaign_id);
+
+  CREATE TABLE IF NOT EXISTS campaigns (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    status TEXT NOT NULL DEFAULT 'draft',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_campaigns_status ON campaigns(status);
+  CREATE INDEX IF NOT EXISTS idx_campaigns_updated_at ON campaigns(updated_at);
 `)
+
+// Migration: Add campaign_id column to existing posts table if it doesn't exist
+try {
+  const tableInfo = db.prepare('PRAGMA table_info(posts)').all() as { name: string }[]
+  const hasCampaignId = tableInfo.some((col) => col.name === 'campaign_id')
+  if (!hasCampaignId) {
+    db.exec('ALTER TABLE posts ADD COLUMN campaign_id TEXT')
+    console.log('Migration: Added campaign_id column to posts table')
+  }
+} catch {
+  // Column might already exist or table doesn't exist yet
+}
 
 console.log(`Database initialized at: ${DB_PATH}`)

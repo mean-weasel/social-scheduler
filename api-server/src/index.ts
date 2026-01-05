@@ -3,6 +3,7 @@ import cors from 'cors'
 import path from 'path'
 import os from 'os'
 import { postsRouter } from './routes/posts.js'
+import { campaignsRouter } from './routes/campaigns.js'
 import { importFromJson } from './storage.js'
 
 const app = express()
@@ -15,6 +16,7 @@ app.use(express.json())
 
 // Routes
 app.use('/api/posts', postsRouter)
+app.use('/api/campaigns', campaignsRouter)
 
 // Health check
 app.get('/api/health', (_req, res) => {

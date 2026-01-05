@@ -2,6 +2,17 @@
 
 export type Platform = 'twitter' | 'linkedin' | 'reddit'
 export type PostStatus = 'draft' | 'scheduled' | 'published' | 'failed' | 'archived'
+export type CampaignStatus = 'draft' | 'active' | 'completed' | 'archived'
+
+// Campaign interface
+export interface Campaign {
+  id: string
+  name: string
+  description?: string
+  status: CampaignStatus
+  createdAt: string
+  updatedAt: string
+}
 
 export interface TwitterContent {
   text: string
@@ -42,6 +53,7 @@ export interface Post {
   status: PostStatus
   platforms: Platform[]
   notes?: string  // User/MCP notes for this post
+  campaignId?: string  // Optional reference to a campaign
   content: {
     twitter?: TwitterContent
     linkedin?: LinkedInContent
@@ -119,4 +131,17 @@ export function isDue(post: Post): boolean {
     return false
   }
   return new Date(post.scheduledAt) <= new Date()
+}
+
+// Helper to create a new campaign
+export function createCampaign(overrides: Partial<Campaign> = {}): Campaign {
+  const now = new Date().toISOString()
+  return {
+    id: crypto.randomUUID(),
+    name: '',
+    status: 'draft',
+    createdAt: now,
+    updatedAt: now,
+    ...overrides,
+  }
 }

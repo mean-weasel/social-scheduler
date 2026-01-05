@@ -4,6 +4,17 @@ import fs from 'fs'
 // Type definitions (shared with web app and MCP server)
 export type Platform = 'twitter' | 'linkedin' | 'reddit'
 export type PostStatus = 'draft' | 'scheduled' | 'published' | 'failed' | 'archived'
+export type CampaignStatus = 'draft' | 'active' | 'completed' | 'archived'
+
+// Campaign interface
+export interface Campaign {
+  id: string
+  name: string
+  description?: string
+  status: CampaignStatus
+  createdAt: string
+  updatedAt: string
+}
 
 export interface TwitterContent {
   text: string
@@ -41,6 +52,7 @@ export interface Post {
   status: PostStatus
   platforms: Platform[]
   notes?: string
+  campaignId?: string
   content: {
     twitter?: TwitterContent
     linkedin?: LinkedInContent
@@ -60,8 +72,19 @@ interface PostRow {
   status: string
   platforms: string
   notes: string | null
+  campaign_id: string | null
   content: string
   publish_results: string | null
+}
+
+// Campaign database row type
+interface CampaignRow {
+  id: string
+  name: string
+  description: string | null
+  status: string
+  created_at: string
+  updated_at: string
 }
 
 // Convert database row to Post object
@@ -74,8 +97,21 @@ function rowToPost(row: PostRow): Post {
     status: row.status as PostStatus,
     platforms: JSON.parse(row.platforms),
     notes: row.notes || undefined,
+    campaignId: row.campaign_id || undefined,
     content: JSON.parse(row.content),
     publishResults: row.publish_results ? JSON.parse(row.publish_results) : undefined,
+  }
+}
+
+// Convert database row to Campaign object
+function rowToCampaign(row: CampaignRow): Campaign {
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description || undefined,
+    status: row.status as CampaignStatus,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
   }
 }
 
@@ -97,13 +133,14 @@ export function createPost(data: {
   scheduledAt?: string | null
   status?: PostStatus
   notes?: string
+  campaignId?: string
 }): Post {
   const id = generateId()
   const timestamp = now()
 
   const stmt = db.prepare(`
-    INSERT INTO posts (id, created_at, updated_at, scheduled_at, status, platforms, notes, content)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO posts (id, created_at, updated_at, scheduled_at, status, platforms, notes, campaign_id, content)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
 
   stmt.run(
@@ -114,6 +151,7 @@ export function createPost(data: {
     data.status || 'draft',
     JSON.stringify(data.platforms),
     data.notes || null,
+    data.campaignId || null,
     JSON.stringify(data.content)
   )
 
@@ -125,6 +163,7 @@ export function createPost(data: {
     status: data.status || 'draft',
     platforms: data.platforms,
     notes: data.notes,
+    campaignId: data.campaignId,
     content: data.content,
   }
 }
@@ -156,6 +195,7 @@ export function updatePost(
       status = ?,
       platforms = ?,
       notes = ?,
+      campaign_id = ?,
       content = ?,
       publish_results = ?
     WHERE id = ?
@@ -167,6 +207,7 @@ export function updatePost(
     updated.status,
     JSON.stringify(updated.platforms),
     updated.notes || null,
+    updated.campaignId || null,
     JSON.stringify(updated.content),
     updated.publishResults ? JSON.stringify(updated.publishResults) : null,
     id
@@ -262,4 +303,123 @@ export function importFromJson(jsonPath: string): number {
     console.error('Error importing from JSON:', error)
     return 0
   }
+}
+
+// ==================
+// Campaign Operations
+// ==================
+
+export function createCampaign(data: {
+  name: string
+  description?: string
+  status?: CampaignStatus
+}): Campaign {
+  const id = generateId()
+  const timestamp = now()
+
+  const stmt = db.prepare(`
+    INSERT INTO campaigns (id, name, description, status, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `)
+
+  stmt.run(id, data.name, data.description || null, data.status || 'draft', timestamp, timestamp)
+
+  return {
+    id,
+    name: data.name,
+    description: data.description,
+    status: data.status || 'draft',
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  }
+}
+
+export function getCampaign(id: string): Campaign | undefined {
+  const stmt = db.prepare('SELECT * FROM campaigns WHERE id = ?')
+  const row = stmt.get(id) as CampaignRow | undefined
+  return row ? rowToCampaign(row) : undefined
+}
+
+export function updateCampaign(
+  id: string,
+  updates: Partial<Omit<Campaign, 'id' | 'createdAt'>>
+): Campaign | undefined {
+  const existing = getCampaign(id)
+  if (!existing) return undefined
+
+  const timestamp = now()
+  const updated = {
+    ...existing,
+    ...updates,
+    updatedAt: timestamp,
+  }
+
+  const stmt = db.prepare(`
+    UPDATE campaigns SET
+      name = ?,
+      description = ?,
+      status = ?,
+      updated_at = ?
+    WHERE id = ?
+  `)
+
+  stmt.run(updated.name, updated.description || null, updated.status, timestamp, id)
+
+  return updated
+}
+
+export function deleteCampaign(id: string): boolean {
+  // First, remove campaign reference from all posts
+  const removeRefStmt = db.prepare('UPDATE posts SET campaign_id = NULL WHERE campaign_id = ?')
+  removeRefStmt.run(id)
+
+  // Then delete the campaign
+  const stmt = db.prepare('DELETE FROM campaigns WHERE id = ?')
+  const result = stmt.run(id)
+  return result.changes > 0
+}
+
+export function listCampaigns(options?: {
+  status?: CampaignStatus | 'all'
+  limit?: number
+}): Campaign[] {
+  let sql = 'SELECT * FROM campaigns WHERE 1=1'
+  const params: (string | number)[] = []
+
+  if (options?.status && options.status !== 'all') {
+    sql += ' AND status = ?'
+    params.push(options.status)
+  }
+
+  sql += ' ORDER BY updated_at DESC'
+
+  if (options?.limit && options.limit > 0) {
+    sql += ' LIMIT ?'
+    params.push(options.limit)
+  }
+
+  const stmt = db.prepare(sql)
+  const rows = stmt.all(...params) as CampaignRow[]
+  return rows.map(rowToCampaign)
+}
+
+export function getCampaignPosts(campaignId: string): Post[] {
+  const stmt = db.prepare('SELECT * FROM posts WHERE campaign_id = ? ORDER BY updated_at DESC')
+  const rows = stmt.all(campaignId) as PostRow[]
+  return rows.map(rowToPost)
+}
+
+export function addPostToCampaign(postId: string, campaignId: string): Post | undefined {
+  return updatePost(postId, { campaignId })
+}
+
+export function removePostFromCampaign(postId: string): Post | undefined {
+  const existing = getPost(postId)
+  if (!existing) return undefined
+
+  const timestamp = now()
+  const stmt = db.prepare('UPDATE posts SET campaign_id = NULL, updated_at = ? WHERE id = ?')
+  stmt.run(timestamp, postId)
+
+  return { ...existing, campaignId: undefined, updatedAt: timestamp }
 }
