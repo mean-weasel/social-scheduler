@@ -37,17 +37,6 @@ export interface RedditContent {
   launchedUrl?: string  // URL of the published Reddit post
 }
 
-// Legacy Reddit content for migration (multi-subreddit)
-export interface LegacyRedditContent {
-  subreddits: string[]  // Array of target subreddits (legacy)
-  title: string
-  body?: string
-  url?: string
-  flairId?: string
-  flairText?: string
-  launchedUrls?: Record<string, string>  // Map of subreddit to URL (legacy)
-}
-
 export interface PublishResult {
   success: boolean
   postId?: string
@@ -146,17 +135,4 @@ export function isDue(post: Post): boolean {
     return false
   }
   return new Date(post.scheduledAt) <= new Date()
-}
-
-// Helper to create a new campaign
-export function createCampaign(overrides: Partial<Campaign> = {}): Campaign {
-  const now = new Date().toISOString()
-  return {
-    id: crypto.randomUUID(),
-    name: '',
-    status: 'draft',
-    createdAt: now,
-    updatedAt: now,
-    ...overrides,
-  }
 }
