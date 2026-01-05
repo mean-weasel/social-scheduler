@@ -295,7 +295,28 @@ interface PostFromAPI {
   status: 'draft' | 'scheduled' | 'published' | 'archived'
   platforms: string[]
   notes?: string
-  content: Record<string, unknown>
+  content: {
+    twitter?: {
+      text: string
+      mediaUrls?: string[]
+      launchedUrl?: string
+    }
+    linkedin?: {
+      text: string
+      visibility: 'public' | 'connections'
+      mediaUrl?: string
+      launchedUrl?: string
+    }
+    reddit?: {
+      subreddits: string[]
+      title: string
+      body?: string
+      url?: string
+      flairId?: string
+      flairText?: string
+      launchedUrls?: Record<string, string>
+    }
+  }
 }
 
 /**
