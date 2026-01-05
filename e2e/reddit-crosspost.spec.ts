@@ -10,6 +10,11 @@ import {
   setSchedule,
   waitForNavigation,
   getAllPosts,
+  expandSubredditCard,
+  collapseSubredditCard,
+  fillSubredditTitle,
+  setSubredditSchedule,
+  removeSubredditViaCard,
 } from './helpers'
 
 test.describe('Reddit Cross-posting', () => {
@@ -160,8 +165,8 @@ test.describe('Reddit Cross-posting', () => {
       dayAfter.setDate(dayAfter.getDate() + 2)
       dayAfter.setHours(15, 0, 0, 0)
 
-      await page.locator('input[type="date"]').fill(dayAfter.toISOString().split('T')[0])
-      await page.locator('input[type="time"]').fill('15:00')
+      await page.locator('[data-testid="main-schedule-date"]').fill(dayAfter.toISOString().split('T')[0])
+      await page.locator('[data-testid="main-schedule-time"]').fill('15:00')
 
       await schedulePost(page)
       await waitForNavigation(page, '/')
@@ -174,12 +179,12 @@ test.describe('Reddit Cross-posting', () => {
       // The schedules should be different
       expect(updatedStartup.scheduledAt).not.toBe(updatedEntrepreneur.scheduledAt)
 
-      // Verify the UI shows correct times
+      // Verify the UI shows correct times in the subreddit cards
       await page.goto(`/edit/${updatedStartup.id}`)
-      await expect(page.locator('input[type="time"]')).toHaveValue('10:00')
+      await expect(page.locator('[data-testid="subreddit-time-startups"]')).toHaveValue('10:00')
 
       await page.goto(`/edit/${updatedEntrepreneur.id}`)
-      await expect(page.locator('input[type="time"]')).toHaveValue('15:00')
+      await expect(page.locator('[data-testid="subreddit-time-entrepreneur"]')).toHaveValue('15:00')
     })
 
     test('should allow different statuses for grouped posts', async ({ page }) => {
@@ -247,10 +252,9 @@ test.describe('Reddit Cross-posting', () => {
       // Edit just the startups post title
       await page.goto(`/edit/${startupPost.id}`)
 
-      // Change the Reddit title
-      const titleInput = page.locator('input[placeholder="Title for your Reddit post"]')
-      await titleInput.clear()
-      await titleInput.fill('Updated title for startups')
+      // Change the Reddit title via the subreddit card
+      await expandSubredditCard(page, 'startups')
+      await fillSubredditTitle(page, 'startups', 'Updated title for startups')
 
       await saveDraft(page)
       await waitForNavigation(page, '/')
@@ -314,8 +318,13 @@ test.describe('Reddit Cross-posting', () => {
 
       await fillRedditFields(page, {
         subreddits: ['startups', 'entrepreneur'],
-        title: 'Big announcement',
       })
+      // Set titles via cards
+      await expandSubredditCard(page, 'startups')
+      await fillSubredditTitle(page, 'startups', 'Big announcement')
+      await expandSubredditCard(page, 'entrepreneur')
+      await fillSubredditTitle(page, 'entrepreneur', 'Big announcement')
+
       await fillContent(page, 'We just launched!')
 
       await saveDraft(page)
@@ -336,6 +345,174 @@ test.describe('Reddit Cross-posting', () => {
 
       // Twitter post should not be in the group
       expect(twitterPosts[0].groupId).toBeFalsy()
+    })
+  })
+
+  test.describe('Per-Subreddit Collapsible Cards', () => {
+    test('should display collapsible card for each subreddit', async ({ page }) => {
+      await goToNewPost(page)
+      await togglePlatform(page, 'reddit')
+
+      // Add two subreddits
+      await fillRedditFields(page, { subreddits: ['startups', 'entrepreneur'] })
+
+      // Verify cards are visible
+      const startupsCard = page.locator('[data-testid="subreddit-card-startups"]')
+      const entrepreneurCard = page.locator('[data-testid="subreddit-card-entrepreneur"]')
+
+      await expect(startupsCard).toBeVisible()
+      await expect(entrepreneurCard).toBeVisible()
+
+      // Cards should show subreddit names
+      await expect(startupsCard.getByText('r/startups')).toBeVisible()
+      await expect(entrepreneurCard.getByText('r/entrepreneur')).toBeVisible()
+    })
+
+    test('should set unique titles per subreddit', async ({ page }) => {
+      await goToNewPost(page)
+      await togglePlatform(page, 'reddit')
+
+      await fillRedditFields(page, { subreddits: ['startups', 'entrepreneur'] })
+      await fillContent(page, 'Great content here')
+
+      // Expand first card and set title
+      await expandSubredditCard(page, 'startups')
+      await fillSubredditTitle(page, 'startups', 'Startup Title')
+
+      // Expand second card and set different title
+      await expandSubredditCard(page, 'entrepreneur')
+      await fillSubredditTitle(page, 'entrepreneur', 'Entrepreneur Title')
+
+      await saveDraft(page)
+      await waitForNavigation(page, '/')
+
+      // Verify database has different titles
+      const posts = await getAllPosts(page)
+      expect(posts.length).toBe(2)
+
+      const startupPost = posts.find(p => p.content.reddit?.subreddit === 'startups')!
+      const entrepreneurPost = posts.find(p => p.content.reddit?.subreddit === 'entrepreneur')!
+
+      expect(startupPost.content.reddit?.title).toBe('Startup Title')
+      expect(entrepreneurPost.content.reddit?.title).toBe('Entrepreneur Title')
+    })
+
+    test('should set unique schedules per subreddit via cards', async ({ page }) => {
+      await goToNewPost(page)
+      await togglePlatform(page, 'reddit')
+
+      await fillRedditFields(page, { subreddits: ['webdev', 'javascript'] })
+      await fillContent(page, 'Code tip')
+
+      // Expand first card and set schedule
+      await expandSubredditCard(page, 'webdev')
+      await fillSubredditTitle(page, 'webdev', 'Webdev Title')
+      const tomorrow = new Date()
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      tomorrow.setHours(10, 0, 0, 0)
+      await setSubredditSchedule(page, 'webdev', tomorrow)
+
+      // Expand second card and set different schedule
+      await expandSubredditCard(page, 'javascript')
+      await fillSubredditTitle(page, 'javascript', 'JS Title')
+      const dayAfter = new Date()
+      dayAfter.setDate(dayAfter.getDate() + 2)
+      dayAfter.setHours(14, 0, 0, 0)
+      await setSubredditSchedule(page, 'javascript', dayAfter)
+
+      await schedulePost(page)
+      await waitForNavigation(page, '/')
+
+      const posts = await getAllPosts(page)
+      const webdevPost = posts.find(p => p.content.reddit?.subreddit === 'webdev')!
+      const jsPost = posts.find(p => p.content.reddit?.subreddit === 'javascript')!
+
+      expect(webdevPost.scheduledAt).not.toBe(jsPost.scheduledAt)
+      expect(webdevPost.status).toBe('scheduled')
+      expect(jsPost.status).toBe('scheduled')
+    })
+
+    test('should show preview text when card is collapsed', async ({ page }) => {
+      await goToNewPost(page)
+      await togglePlatform(page, 'reddit')
+
+      await fillRedditFields(page, { subreddits: ['startups'] })
+
+      // Expand and set title
+      await expandSubredditCard(page, 'startups')
+      await fillSubredditTitle(page, 'startups', 'My Amazing Post')
+
+      // Collapse by clicking header again
+      await collapseSubredditCard(page, 'startups')
+
+      // Verify preview shows title
+      const card = page.locator('[data-testid="subreddit-card-startups"]')
+      await expect(card.getByText(/My Amazing Post/)).toBeVisible()
+    })
+
+    test('should expand/collapse cards independently', async ({ page }) => {
+      await goToNewPost(page)
+      await togglePlatform(page, 'reddit')
+
+      await fillRedditFields(page, { subreddits: ['webdev', 'javascript', 'programming'] })
+
+      // Expand webdev
+      await expandSubredditCard(page, 'webdev')
+      const webdevTitle = page.locator('[data-testid="subreddit-title-webdev"]')
+      await expect(webdevTitle).toBeVisible()
+
+      // javascript and programming should still be collapsed
+      const jsTitle = page.locator('[data-testid="subreddit-title-javascript"]')
+      const progTitle = page.locator('[data-testid="subreddit-title-programming"]')
+      await expect(jsTitle).not.toBeVisible()
+      await expect(progTitle).not.toBeVisible()
+
+      // Expand javascript (webdev stays expanded)
+      await expandSubredditCard(page, 'javascript')
+      await expect(webdevTitle).toBeVisible()
+      await expect(jsTitle).toBeVisible()
+      await expect(progTitle).not.toBeVisible()
+    })
+
+    test('should remove subreddit via card X button', async ({ page }) => {
+      await goToNewPost(page)
+      await togglePlatform(page, 'reddit')
+
+      await fillRedditFields(page, { subreddits: ['startups', 'entrepreneur'] })
+
+      // Verify both cards exist
+      await expect(page.locator('[data-testid="subreddit-card-startups"]')).toBeVisible()
+      await expect(page.locator('[data-testid="subreddit-card-entrepreneur"]')).toBeVisible()
+
+      // Remove startups via X button
+      await removeSubredditViaCard(page, 'startups')
+
+      // Verify only entrepreneur remains
+      await expect(page.locator('[data-testid="subreddit-card-startups"]')).not.toBeVisible()
+      await expect(page.locator('[data-testid="subreddit-card-entrepreneur"]')).toBeVisible()
+    })
+
+    test('should preserve title when editing existing post', async ({ page }) => {
+      // Create a post first
+      await goToNewPost(page)
+      await togglePlatform(page, 'reddit')
+
+      await fillRedditFields(page, { subreddits: ['webdev'] })
+      await expandSubredditCard(page, 'webdev')
+      await fillSubredditTitle(page, 'webdev', 'Original Title')
+      await fillContent(page, 'Test content')
+
+      await saveDraft(page)
+      await waitForNavigation(page, '/')
+
+      // Get the post and edit it
+      const posts = await getAllPosts(page)
+      expect(posts.length).toBe(1)
+      await page.goto(`/edit/${posts[0].id}`)
+
+      // Verify the title is loaded in the card
+      const titleInput = page.locator('[data-testid="subreddit-title-webdev"]')
+      await expect(titleInput).toHaveValue('Original Title')
     })
   })
 })

@@ -318,13 +318,12 @@ test.describe('Create Post', () => {
       // Add multiple subreddits
       await fillRedditFields(page, {
         subreddits: ['startups', 'SaaS', 'sideproject'],
-        title: 'Cross-posting to multiple subreddits',
       })
 
-      // Verify all subreddits are shown as tags (use exact match to avoid preview)
-      await expect(page.getByText('r/startups', { exact: true })).toBeVisible()
-      await expect(page.getByText('r/SaaS', { exact: true })).toBeVisible()
-      await expect(page.getByText('r/sideproject', { exact: true })).toBeVisible()
+      // Verify all subreddits are shown as collapsible cards
+      await expect(page.locator('[data-testid="subreddit-card-startups"]')).toBeVisible()
+      await expect(page.locator('[data-testid="subreddit-card-SaaS"]')).toBeVisible()
+      await expect(page.locator('[data-testid="subreddit-card-sideproject"]')).toBeVisible()
 
       // Verify count is shown
       await expect(page.getByText('(3)')).toBeVisible()
@@ -335,7 +334,7 @@ test.describe('Create Post', () => {
       await waitForNavigation(page, '/')
     })
 
-    test('should remove subreddits', async ({ page }) => {
+    test('should remove subreddits via card', async ({ page }) => {
       await goToNewPost(page)
 
       await togglePlatform(page, 'reddit')
@@ -343,26 +342,22 @@ test.describe('Create Post', () => {
       // Add subreddits
       await fillRedditFields(page, {
         subreddits: ['startups', 'SaaS'],
-        title: 'Test removing subreddits',
       })
 
-      // The tag container is in Reddit Settings section
-      const tagsContainer = page.locator('.flex.flex-wrap.gap-2')
-
-      // Verify both are visible as tags
-      await expect(tagsContainer.getByText('r/startups', { exact: true })).toBeVisible()
-      await expect(tagsContainer.getByText('r/SaaS', { exact: true })).toBeVisible()
+      // Verify both cards are visible
+      await expect(page.locator('[data-testid="subreddit-card-startups"]')).toBeVisible()
+      await expect(page.locator('[data-testid="subreddit-card-SaaS"]')).toBeVisible()
 
       // Count should be 2
       await expect(page.getByText('(2)')).toBeVisible()
 
-      // Remove one subreddit by clicking the X button on the tag
-      const startupTag = tagsContainer.locator('span', { hasText: 'r/startups' })
-      await startupTag.locator('button').click()
+      // Remove one subreddit by clicking the X button on the card
+      const startupCard = page.locator('[data-testid="subreddit-card-startups"]')
+      await startupCard.locator('button[aria-label="Remove subreddit"]').click()
 
-      // Verify it's removed from tags
-      await expect(tagsContainer.getByText('r/startups', { exact: true })).not.toBeVisible()
-      await expect(tagsContainer.getByText('r/SaaS', { exact: true })).toBeVisible()
+      // Verify it's removed
+      await expect(page.locator('[data-testid="subreddit-card-startups"]')).not.toBeVisible()
+      await expect(page.locator('[data-testid="subreddit-card-SaaS"]')).toBeVisible()
 
       // Count should be 1
       await expect(page.getByText('(1)')).toBeVisible()
@@ -375,7 +370,6 @@ test.describe('Create Post', () => {
 
       await fillRedditFields(page, {
         subreddits: ['startups', 'SaaS'],
-        title: 'Preview test',
       })
 
       // Check preview panel shows both subreddits
