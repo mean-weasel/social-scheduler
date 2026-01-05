@@ -9,7 +9,6 @@ import {
   waitForNavigation,
   clickPost,
   getAllPosts,
-  extractPostIdFromUrl,
 } from './helpers'
 
 test.describe('Published Links', () => {
