@@ -1158,12 +1158,12 @@ export function Editor() {
                 type="date"
                 value={post.scheduledAt ? format(new Date(post.scheduledAt), 'yyyy-MM-dd') : ''}
                 onChange={(e) =>
-                  setPost((prev) => ({
-                    ...prev,
-                    scheduledAt: e.target.value
-                      ? `${e.target.value}T${prev.scheduledAt ? format(new Date(prev.scheduledAt), 'HH:mm') : '12:00'}:00.000Z`
-                      : null,
-                  }))
+                  setPost((prev) => {
+                    if (!e.target.value) return { ...prev, scheduledAt: null }
+                    const timeStr = prev.scheduledAt ? format(new Date(prev.scheduledAt), 'HH:mm') : '12:00'
+                    const localDate = new Date(`${e.target.value}T${timeStr}:00`)
+                    return { ...prev, scheduledAt: localDate.toISOString() }
+                  })
                 }
                 className="bg-transparent border-none focus:outline-none flex-1"
               />
@@ -1179,12 +1179,12 @@ export function Editor() {
                 type="time"
                 value={post.scheduledAt ? format(new Date(post.scheduledAt), 'HH:mm') : ''}
                 onChange={(e) =>
-                  setPost((prev) => ({
-                    ...prev,
-                    scheduledAt: prev.scheduledAt
-                      ? `${format(new Date(prev.scheduledAt), 'yyyy-MM-dd')}T${e.target.value}:00.000Z`
-                      : null,
-                  }))
+                  setPost((prev) => {
+                    if (!prev.scheduledAt) return prev
+                    const dateStr = format(new Date(prev.scheduledAt), 'yyyy-MM-dd')
+                    const localDate = new Date(`${dateStr}T${e.target.value}:00`)
+                    return { ...prev, scheduledAt: localDate.toISOString() }
+                  })
                 }
                 className="bg-transparent border-none focus:outline-none flex-1"
               />
