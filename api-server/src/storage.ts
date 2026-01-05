@@ -286,6 +286,20 @@ export function clearAllPosts(): number {
   return result.changes
 }
 
+// Clear all campaigns (for testing)
+export function clearAllCampaigns(): number {
+  const stmt = db.prepare('DELETE FROM campaigns')
+  const result = stmt.run()
+  return result.changes
+}
+
+// Clear all data (for testing) - clears posts and campaigns
+export function clearAll(): { posts: number; campaigns: number } {
+  const postsDeleted = clearAllPosts()
+  const campaignsDeleted = clearAllCampaigns()
+  return { posts: postsDeleted, campaigns: campaignsDeleted }
+}
+
 // Migration: Import posts from JSON file
 export function importFromJson(jsonPath: string): number {
   if (!fs.existsSync(jsonPath)) {

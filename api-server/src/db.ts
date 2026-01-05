@@ -29,7 +29,7 @@ export const db: DatabaseType = new Database(DB_PATH)
 // Enable WAL mode for better concurrent access
 db.pragma('journal_mode = WAL')
 
-// Create tables
+// Create tables (without new columns - they'll be added via migration if needed)
 db.exec(`
   CREATE TABLE IF NOT EXISTS posts (
     id TEXT PRIMARY KEY,
@@ -40,17 +40,12 @@ db.exec(`
     platforms TEXT NOT NULL,
     notes TEXT,
     content TEXT NOT NULL,
-    publish_results TEXT,
-    campaign_id TEXT,
-    group_id TEXT,
-    group_type TEXT
+    publish_results TEXT
   );
 
   CREATE INDEX IF NOT EXISTS idx_posts_status ON posts(status);
   CREATE INDEX IF NOT EXISTS idx_posts_scheduled_at ON posts(scheduled_at);
   CREATE INDEX IF NOT EXISTS idx_posts_updated_at ON posts(updated_at);
-  CREATE INDEX IF NOT EXISTS idx_posts_campaign_id ON posts(campaign_id);
-  CREATE INDEX IF NOT EXISTS idx_posts_group_id ON posts(group_id);
 
   CREATE TABLE IF NOT EXISTS campaigns (
     id TEXT PRIMARY KEY,
@@ -84,6 +79,12 @@ try {
     db.exec('ALTER TABLE posts ADD COLUMN group_type TEXT')
     console.log('Migration: Added group_type column to posts table')
   }
+
+  // Create indexes on new columns after migration
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_posts_campaign_id ON posts(campaign_id);
+    CREATE INDEX IF NOT EXISTS idx_posts_group_id ON posts(group_id);
+  `)
 } catch {
   // Columns might already exist or table doesn't exist yet
 }

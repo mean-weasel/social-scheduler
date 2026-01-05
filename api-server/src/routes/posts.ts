@@ -7,18 +7,17 @@ import {
   archivePost,
   restorePost,
   listPosts,
-  clearAllPosts,
+  clearAll,
   Platform,
   PostStatus,
 } from '../storage.js'
 
 export const postsRouter = Router()
 
-// Reset database (clear all posts) - for testing and development
+// Reset database (clear all posts and campaigns) - for testing and development
 postsRouter.post('/reset', (req: Request, res: Response) => {
-
   try {
-    const deleted = clearAllPosts()
+    const deleted = clearAll()
     res.json({ success: true, deleted })
   } catch (error) {
     console.error('Error resetting database:', error)
@@ -62,7 +61,7 @@ postsRouter.get('/:id', (req: Request, res: Response) => {
 // Create post
 postsRouter.post('/', (req: Request, res: Response) => {
   try {
-    const { platforms, content, scheduledAt, status, notes } = req.body
+    const { platforms, content, scheduledAt, status, notes, campaignId, groupId, groupType } = req.body
 
     if (!platforms || !Array.isArray(platforms) || platforms.length === 0) {
       res.status(400).json({ error: 'platforms is required and must be a non-empty array' })
@@ -80,6 +79,9 @@ postsRouter.post('/', (req: Request, res: Response) => {
       scheduledAt: scheduledAt || null,
       status: status || 'draft',
       notes,
+      campaignId,
+      groupId,
+      groupType,
     })
 
     res.status(201).json({ post })

@@ -100,6 +100,24 @@ campaignsRouter.delete('/:id', (req: Request, res: Response) => {
   }
 })
 
+// Get posts for a campaign
+campaignsRouter.get('/:id/posts', (req: Request, res: Response) => {
+  try {
+    // Check if campaign exists
+    const campaign = getCampaign(req.params.id)
+    if (!campaign) {
+      res.status(404).json({ error: 'Campaign not found' })
+      return
+    }
+
+    const posts = getCampaignPosts(req.params.id)
+    res.json({ posts })
+  } catch (error) {
+    console.error('Error getting campaign posts:', error)
+    res.status(500).json({ error: 'Failed to get campaign posts' })
+  }
+})
+
 // Add post to campaign
 campaignsRouter.post('/:id/posts', (req: Request, res: Response) => {
   try {
