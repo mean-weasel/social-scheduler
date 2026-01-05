@@ -2,6 +2,17 @@
 
 export type Platform = 'twitter' | 'linkedin' | 'reddit'
 export type PostStatus = 'draft' | 'scheduled' | 'published' | 'failed' | 'archived'
+export type CampaignStatus = 'draft' | 'active' | 'completed' | 'archived'
+
+// Campaign interface
+export interface Campaign {
+  id: string
+  name: string
+  description?: string
+  status: CampaignStatus
+  createdAt: string
+  updatedAt: string
+}
 
 export interface TwitterContent {
   text: string
@@ -17,13 +28,13 @@ export interface LinkedInContent {
 }
 
 export interface RedditContent {
-  subreddits: string[]  // Array of target subreddits
+  subreddit: string     // Single target subreddit
   title: string
   body?: string
   url?: string
   flairId?: string
   flairText?: string
-  launchedUrls?: Record<string, string>  // Map of subreddit name to published post URL
+  launchedUrl?: string  // URL of the published Reddit post
 }
 
 export interface PublishResult {
@@ -34,6 +45,8 @@ export interface PublishResult {
   publishedAt?: string
 }
 
+export type GroupType = 'reddit-crosspost'
+
 export interface Post {
   id: string
   createdAt: string
@@ -42,6 +55,9 @@ export interface Post {
   status: PostStatus
   platforms: Platform[]
   notes?: string  // User/MCP notes for this post
+  campaignId?: string  // Optional reference to a campaign
+  groupId?: string     // Groups related posts (e.g., Reddit crossposts)
+  groupType?: GroupType  // Type of grouping
   content: {
     twitter?: TwitterContent
     linkedin?: LinkedInContent

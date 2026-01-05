@@ -139,39 +139,36 @@ test.describe('Published Links', () => {
   })
 
   test.describe('Reddit Launched URLs', () => {
-    test('should show one URL field per subreddit', async ({ page }) => {
+    test('should show URL field for Reddit post', async ({ page }) => {
       await goToNewPost(page)
       await togglePlatform(page, 'reddit')
 
-      // Add subreddits
+      // Add subreddit
       await fillRedditFields(page, {
-        subreddits: ['programming', 'webdev'],
+        subreddit: 'programming',
         title: 'Test Reddit post',
       })
 
       // Expand Published Links
       await page.getByRole('button', { name: /published links/i }).click()
 
-      // Should show one input per subreddit
-      await expect(page.getByPlaceholder('https://reddit.com/r/programming/...')).toBeVisible()
-      await expect(page.getByPlaceholder('https://reddit.com/r/webdev/...')).toBeVisible()
+      // Should show Reddit URL input field
+      await expect(page.getByPlaceholder('https://reddit.com/r/...')).toBeVisible()
     })
 
-    test('should save Reddit launched URLs per subreddit', async ({ page }) => {
+    test('should save Reddit launched URL', async ({ page }) => {
       await goToNewPost(page)
       await togglePlatform(page, 'reddit')
       await fillRedditFields(page, {
-        subreddits: ['javascript', 'typescript'],
-        title: 'TypeScript vs JavaScript',
+        subreddit: 'javascript',
+        title: 'JavaScript Tips',
       })
-      await fillContent(page, 'Comparing the two languages')
+      await fillContent(page, 'Some helpful tips')
 
-      // Expand Published Links and add URLs
+      // Expand Published Links and add URL
       await page.getByRole('button', { name: /published links/i }).click()
-      const jsUrl = 'https://reddit.com/r/javascript/comments/abc123'
-      const tsUrl = 'https://reddit.com/r/typescript/comments/def456'
-      await page.getByPlaceholder('https://reddit.com/r/javascript/...').fill(jsUrl)
-      await page.getByPlaceholder('https://reddit.com/r/typescript/...').fill(tsUrl)
+      const redditUrl = 'https://reddit.com/r/javascript/comments/abc123'
+      await page.getByPlaceholder('https://reddit.com/r/...').fill(redditUrl)
 
       // Save draft
       await saveDraft(page)
@@ -180,22 +177,21 @@ test.describe('Published Links', () => {
       // Verify in database
       const posts = await getAllPosts(page)
       expect(posts.length).toBe(1)
-      expect(posts[0].content.reddit?.launchedUrls?.javascript).toBe(jsUrl)
-      expect(posts[0].content.reddit?.launchedUrls?.typescript).toBe(tsUrl)
+      expect(posts[0].content.reddit?.launchedUrl).toBe(redditUrl)
     })
 
-    test('should persist Reddit launched URLs on reload', async ({ page }) => {
-      // Create post with launched URLs
+    test('should persist Reddit launched URL on reload', async ({ page }) => {
+      // Create post with launched URL
       await goToNewPost(page)
       await togglePlatform(page, 'reddit')
       await fillRedditFields(page, {
-        subreddits: ['reactjs'],
+        subreddit: 'reactjs',
         title: 'React tips',
       })
       await fillContent(page, 'Some React tips')
       await page.getByRole('button', { name: /published links/i }).click()
       const reactUrl = 'https://reddit.com/r/reactjs/comments/xyz789'
-      await page.getByPlaceholder('https://reddit.com/r/reactjs/...').fill(reactUrl)
+      await page.getByPlaceholder('https://reddit.com/r/...').fill(reactUrl)
       await saveDraft(page)
       await waitForNavigation(page, '/')
 
@@ -203,7 +199,7 @@ test.describe('Published Links', () => {
       await clickPost(page, 0)
 
       // Published Links should be expanded and URL should be present
-      await expect(page.getByPlaceholder('https://reddit.com/r/reactjs/...')).toHaveValue(reactUrl)
+      await expect(page.getByPlaceholder('https://reddit.com/r/...')).toHaveValue(reactUrl)
     })
   })
 

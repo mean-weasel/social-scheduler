@@ -354,3 +354,113 @@ export function extractPostIdFromUrl(url: string): string | null {
   return match ? match[1] : null
 }
 
+// ============================================
+// Campaign Helpers
+// ============================================
+
+interface CampaignFromAPI {
+  id: string
+  name: string
+  description?: string
+  status: 'draft' | 'active' | 'completed' | 'archived'
+  createdAt: string
+  updatedAt: string
+}
+
+/**
+ * Navigate to campaigns list
+ */
+export async function goToCampaigns(page: Page) {
+  await page.goto('/campaigns')
+  await expect(page.getByRole('heading', { name: /campaigns/i })).toBeVisible()
+}
+
+/**
+ * Navigate to create new campaign
+ */
+export async function goToNewCampaign(page: Page) {
+  await page.goto('/campaigns/new')
+  await expect(page.getByRole('heading', { name: /create campaign/i })).toBeVisible()
+}
+
+/**
+ * Fill in campaign name
+ */
+export async function fillCampaignName(page: Page, name: string) {
+  await page.getByPlaceholder(/campaign name/i).fill(name)
+}
+
+/**
+ * Fill in campaign description
+ */
+export async function fillCampaignDescription(page: Page, description: string) {
+  await page.getByPlaceholder(/describe your campaign/i).fill(description)
+}
+
+/**
+ * Create a campaign and save
+ */
+export async function createCampaign(page: Page, options: { name: string; description?: string }) {
+  await goToNewCampaign(page)
+  await fillCampaignName(page, options.name)
+  if (options.description) {
+    await fillCampaignDescription(page, options.description)
+  }
+  await page.getByRole('button', { name: /create campaign/i }).click()
+}
+
+/**
+ * Get all campaigns from the database via API
+ */
+export async function getAllCampaigns(page: Page): Promise<CampaignFromAPI[]> {
+  const response = await page.request.get(`${API_BASE}/campaigns`)
+  const data = await response.json()
+  return data.campaigns
+}
+
+/**
+ * Get campaign by ID from the database
+ */
+export async function getCampaignById(page: Page, id: string): Promise<CampaignFromAPI | null> {
+  const response = await page.request.get(`${API_BASE}/campaigns/${id}`)
+  if (!response.ok()) return null
+  const data = await response.json()
+  return data.campaign
+}
+
+/**
+ * Get posts for a specific campaign
+ */
+export async function getCampaignPosts(page: Page, campaignId: string): Promise<PostFromAPI[]> {
+  const response = await page.request.get(`${API_BASE}/campaigns/${campaignId}/posts`)
+  const data = await response.json()
+  return data.posts
+}
+
+/**
+ * Click on a campaign card to view it
+ */
+export async function clickCampaign(page: Page, index: number = 0) {
+  const cards = page.locator('a[href^="/campaigns/"]').filter({ hasNot: page.locator('a[href="/campaigns/new"]') })
+  await cards.nth(index).click()
+}
+
+/**
+ * Select a campaign in the editor dropdown
+ */
+export async function selectCampaignInEditor(page: Page, campaignName: string) {
+  // Click the campaign selector button
+  await page.getByRole('button', { name: /select campaign|no campaign/i }).click()
+  // Select the campaign from dropdown
+  await page.getByRole('option', { name: campaignName }).click()
+}
+
+/**
+ * Delete a campaign and confirm
+ */
+export async function deleteCampaign(page: Page) {
+  await page.getByRole('button', { name: /delete/i }).click()
+  await page.getByRole('alertdialog').waitFor()
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Delete' }).click()
+}
+

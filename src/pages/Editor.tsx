@@ -20,8 +20,10 @@ import {
   ChevronDown,
   ChevronUp,
   Link,
+  FolderOpen,
 } from 'lucide-react'
 import { usePostsStore } from '@/lib/storage'
+import { useCampaignsStore } from '@/lib/campaigns'
 import {
   Post,
   Platform,
@@ -64,6 +66,7 @@ export function Editor() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const { addPost, updatePost, deletePost, archivePost, restorePost, getPost } = usePostsStore()
+  const { campaigns, fetchCampaigns, initialized: campaignsInitialized } = useCampaignsStore()
 
   const isNew = !id
   const existingPost = id ? getPost(id) : undefined
@@ -71,6 +74,14 @@ export function Editor() {
   const [copied, setCopied] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false)
+  const [showCampaignDropdown, setShowCampaignDropdown] = useState(false)
+
+  // Fetch campaigns on mount
+  useEffect(() => {
+    if (!campaignsInitialized) {
+      fetchCampaigns()
+    }
+  }, [campaignsInitialized, fetchCampaigns])
 
   // Form state
   const [post, setPost] = useState<Post>(() => {
@@ -79,6 +90,11 @@ export function Editor() {
     const dateParam = searchParams.get('date')
     if (dateParam) {
       newPost.scheduledAt = `${dateParam}T12:00:00.000Z`
+    }
+    // Handle campaign from URL param
+    const campaignParam = searchParams.get('campaign')
+    if (campaignParam) {
+      newPost.campaignId = campaignParam
     }
     return newPost
   })
@@ -91,6 +107,7 @@ export function Editor() {
   const [showNotes, setShowNotes] = useState(false)
   const [showPublishedLinks, setShowPublishedLinks] = useState(false)
   const [newSubreddit, setNewSubreddit] = useState('')
+  const [subredditsInput, setSubredditsInput] = useState<string[]>([])  // Multi-subreddit UI input
 
   // Track if form has unsaved changes
   const initialContentRef = useRef('')
@@ -151,6 +168,10 @@ export function Editor() {
       // Load Reddit URL
       const loadedRedditUrl = existingPost.content.reddit?.url || ''
       setRedditUrl(loadedRedditUrl)
+      // Load subreddits (now singular in data, but we keep UI as array for future)
+      if (existingPost.content.reddit?.subreddit) {
+        setSubredditsInput([existingPost.content.reddit.subreddit])
+      }
       // Set initial content reference for dirty tracking
       initialContentRef.current = JSON.stringify({
         content: text,
@@ -168,7 +189,7 @@ export function Editor() {
       const hasLaunchedUrls =
         existingPost.content.twitter?.launchedUrl ||
         existingPost.content.linkedin?.launchedUrl ||
-        Object.keys(existingPost.content.reddit?.launchedUrls || {}).length > 0
+        existingPost.content.reddit?.launchedUrl
       if (hasLaunchedUrls) {
         setShowPublishedLinks(true)
       }
@@ -190,10 +211,47 @@ export function Editor() {
     setIsSaving(true)
     setIsDirty(false) // Clear dirty state before navigation
     try {
-      if (isNew) {
-        await addPost(postToSave)
+      // Handle Reddit posts with multiple subreddits
+      if (isNew && postToSave.platforms.includes('reddit') && subredditsInput.length > 1) {
+        // Create multiple posts, one per subreddit, with shared groupId
+        const groupId = crypto.randomUUID()
+        for (let i = 0; i < subredditsInput.length; i++) {
+          const subreddit = subredditsInput[i]
+          const postForSubreddit: Post = {
+            ...postToSave,
+            id: i === 0 ? postToSave.id : crypto.randomUUID(), // Keep original ID for first
+            groupId,
+            groupType: 'reddit-crosspost',
+            content: {
+              ...postToSave.content,
+              reddit: {
+                ...postToSave.content.reddit!,
+                subreddit,
+              },
+            },
+          }
+          await addPost(postForSubreddit)
+        }
+      } else if (isNew) {
+        // Single subreddit or non-Reddit post
+        const finalPost = { ...postToSave }
+        if (finalPost.platforms.includes('reddit') && subredditsInput.length === 1) {
+          finalPost.content.reddit = {
+            ...finalPost.content.reddit!,
+            subreddit: subredditsInput[0],
+          }
+        }
+        await addPost(finalPost)
       } else {
-        await updatePost(postToSave.id, postToSave)
+        // Updating existing post
+        const finalPost = { ...postToSave }
+        if (finalPost.platforms.includes('reddit') && subredditsInput.length >= 1) {
+          finalPost.content.reddit = {
+            ...finalPost.content.reddit!,
+            subreddit: subredditsInput[0],
+          }
+        }
+        await updatePost(finalPost.id, finalPost)
       }
       navigate('/')
     } catch (error) {
@@ -282,7 +340,7 @@ export function Editor() {
         } else if (platform === 'reddit') {
           updated.content.reddit = {
             ...updated.content.reddit,
-            subreddits: updated.content.reddit?.subreddits || [],
+            subreddit: updated.content.reddit?.subreddit || '',  // Will be set properly at save time
             title: updated.content.reddit?.title || '',
             body: content,
             ...(redditUrl && { url: redditUrl })
@@ -440,6 +498,63 @@ export function Editor() {
               </button>
             )
           })}
+        </div>
+
+        {/* Campaign selector */}
+        <div className="mb-4 md:mb-6 relative">
+          <button
+            onClick={() => setShowCampaignDropdown(!showCampaignDropdown)}
+            className={cn(
+              'flex items-center gap-2 px-4 py-2.5 rounded-xl border transition-all w-full',
+              post.campaignId
+                ? 'border-[hsl(var(--gold))]/30 bg-[hsl(var(--gold))]/5'
+                : 'border-border bg-card hover:border-[hsl(var(--gold))]/30'
+            )}
+          >
+            <FolderOpen className="w-4 h-4 text-[hsl(var(--gold-dark))]" />
+            <span className="text-sm font-medium flex-1 text-left truncate">
+              {post.campaignId
+                ? campaigns.find((c) => c.id === post.campaignId)?.name || 'Unknown Campaign'
+                : 'No Campaign'}
+            </span>
+            <ChevronDown className={cn('w-4 h-4 text-muted-foreground transition-transform', showCampaignDropdown && 'rotate-180')} />
+          </button>
+          {showCampaignDropdown && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setShowCampaignDropdown(false)} />
+              <div className="absolute top-full left-0 right-0 mt-1 z-20 bg-card border border-border rounded-xl shadow-lg py-1 max-h-[200px] overflow-y-auto">
+                <button
+                  onClick={() => {
+                    setPost((prev) => ({ ...prev, campaignId: undefined }))
+                    setShowCampaignDropdown(false)
+                  }}
+                  className={cn(
+                    'w-full flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-accent transition-colors text-left',
+                    !post.campaignId && 'bg-[hsl(var(--gold))]/10 text-[hsl(var(--gold-dark))]'
+                  )}
+                >
+                  <X className="w-4 h-4" />
+                  No Campaign
+                </button>
+                {campaigns.filter((c) => c.status !== 'archived').map((campaign) => (
+                  <button
+                    key={campaign.id}
+                    onClick={() => {
+                      setPost((prev) => ({ ...prev, campaignId: campaign.id }))
+                      setShowCampaignDropdown(false)
+                    }}
+                    className={cn(
+                      'w-full flex items-center gap-2 px-4 py-2.5 text-sm hover:bg-accent transition-colors text-left',
+                      post.campaignId === campaign.id && 'bg-[hsl(var(--gold))]/10 text-[hsl(var(--gold-dark))]'
+                    )}
+                  >
+                    <FolderOpen className="w-4 h-4" />
+                    <span className="truncate">{campaign.name}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
         {/* Notes section (collapsible) */}
@@ -764,8 +879,8 @@ export function Editor() {
             {/* Subreddits - multi-select tags */}
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                Subreddits {(post.content.reddit?.subreddits?.length || 0) > 0 && (
-                  <span className="text-reddit">({post.content.reddit?.subreddits?.length})</span>
+                Subreddits {subredditsInput.length > 0 && (
+                  <span className="text-reddit">({subredditsInput.length})</span>
                 )}
               </label>
               <div className="flex items-center gap-2 mb-2">
@@ -780,17 +895,8 @@ export function Editor() {
                     if ((e.key === 'Enter' || e.key === ',') && newSubreddit.trim()) {
                       e.preventDefault()
                       const sub = newSubreddit.trim().replace(/^r\//, '')
-                      if (sub && !post.content.reddit?.subreddits?.includes(sub)) {
-                        setPost((prev) => ({
-                          ...prev,
-                          content: {
-                            ...prev.content,
-                            reddit: {
-                              ...prev.content.reddit!,
-                              subreddits: [...(prev.content.reddit?.subreddits || []), sub],
-                            },
-                          },
-                        }))
+                      if (sub && !subredditsInput.includes(sub)) {
+                        setSubredditsInput((prev) => [...prev, sub])
                       }
                       setNewSubreddit('')
                     }
@@ -802,17 +908,8 @@ export function Editor() {
                   type="button"
                   onClick={() => {
                     const sub = newSubreddit.trim().replace(/^r\//, '')
-                    if (sub && !post.content.reddit?.subreddits?.includes(sub)) {
-                      setPost((prev) => ({
-                        ...prev,
-                        content: {
-                          ...prev.content,
-                          reddit: {
-                            ...prev.content.reddit!,
-                            subreddits: [...(prev.content.reddit?.subreddits || []), sub],
-                          },
-                        },
-                      }))
+                    if (sub && !subredditsInput.includes(sub)) {
+                      setSubredditsInput((prev) => [...prev, sub])
                     }
                     setNewSubreddit('')
                   }}
@@ -823,9 +920,9 @@ export function Editor() {
                 </button>
               </div>
               {/* Subreddit tags */}
-              {(post.content.reddit?.subreddits?.length || 0) > 0 && (
+              {subredditsInput.length > 0 && (
                 <div className="flex flex-wrap gap-2">
-                  {post.content.reddit?.subreddits?.map((sub) => (
+                  {subredditsInput.map((sub) => (
                     <span
                       key={sub}
                       className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-reddit/10 text-reddit text-sm font-medium"
@@ -833,18 +930,7 @@ export function Editor() {
                       r/{sub}
                       <button
                         type="button"
-                        onClick={() =>
-                          setPost((prev) => ({
-                            ...prev,
-                            content: {
-                              ...prev.content,
-                              reddit: {
-                                ...prev.content.reddit!,
-                                subreddits: prev.content.reddit?.subreddits?.filter((s) => s !== sub) || [],
-                              },
-                            },
-                          }))
-                        }
+                        onClick={() => setSubredditsInput((prev) => prev.filter((s) => s !== sub))}
                         className="p-0.5 rounded-full hover:bg-reddit/20 transition-colors"
                       >
                         <X className="w-3 h-3" />
@@ -928,7 +1014,7 @@ export function Editor() {
                 showPublishedLinks ||
                   post.content.twitter?.launchedUrl ||
                   post.content.linkedin?.launchedUrl ||
-                  Object.keys(post.content.reddit?.launchedUrls || {}).length > 0
+                  post.content.reddit?.launchedUrl
                   ? 'border-primary/30 bg-primary/5'
                   : 'border-border bg-card hover:border-primary/30'
               )}
@@ -940,7 +1026,7 @@ export function Editor() {
                   const count =
                     (post.content.twitter?.launchedUrl ? 1 : 0) +
                     (post.content.linkedin?.launchedUrl ? 1 : 0) +
-                    Object.values(post.content.reddit?.launchedUrls || {}).filter(Boolean).length
+                    (post.content.reddit?.launchedUrl ? 1 : 0)
                   return count > 0 ? (
                     <span className="text-xs text-primary">({count})</span>
                   ) : null
@@ -1013,23 +1099,25 @@ export function Editor() {
                   </div>
                 )}
 
-                {/* Reddit launched URLs (one per subreddit) */}
+                {/* Reddit launched URL (singular per post now) */}
                 {post.platforms.includes('reddit') &&
-                  (!post.content.reddit?.subreddits?.length ? (
+                  (!subredditsInput.length ? (
                     <p className="text-sm text-muted-foreground italic p-3 rounded-lg bg-card border border-border">
-                      Add subreddits above to track published links for each community.
+                      Add subreddits above to track published links.
                     </p>
-                  ) : null)}
-                {post.platforms.includes('reddit') &&
-                  post.content.reddit?.subreddits?.map((subreddit) => (
-                    <div key={subreddit} className="flex items-center gap-3 p-3 rounded-lg bg-card border border-border">
+                  ) : (
+                    <div className="flex items-center gap-3 p-3 rounded-lg bg-card border border-border">
                       <div className="flex items-center gap-2 min-w-[100px]">
                         <span className="w-2 h-2 rounded-full bg-reddit" />
-                        <span className="text-sm font-medium text-reddit">r/{subreddit}</span>
+                        <span className="text-sm font-medium text-reddit">
+                          {subredditsInput.length === 1
+                            ? `r/${subredditsInput[0]}`
+                            : `Reddit (${subredditsInput.length})`}
+                        </span>
                       </div>
                       <input
                         type="url"
-                        value={post.content.reddit?.launchedUrls?.[subreddit] || ''}
+                        value={post.content.reddit?.launchedUrl || ''}
                         onChange={(e) =>
                           setPost((prev) => ({
                             ...prev,
@@ -1037,17 +1125,14 @@ export function Editor() {
                               ...prev.content,
                               reddit: {
                                 ...prev.content.reddit,
-                                subreddits: prev.content.reddit?.subreddits || [],
+                                subreddit: prev.content.reddit?.subreddit || '',
                                 title: prev.content.reddit?.title || '',
-                                launchedUrls: {
-                                  ...prev.content.reddit?.launchedUrls,
-                                  [subreddit]: e.target.value,
-                                },
+                                launchedUrl: e.target.value,
                               },
                             },
                           }))
                         }
-                        placeholder={`https://reddit.com/r/${subreddit}/...`}
+                        placeholder="https://reddit.com/r/..."
                         className="flex-1 px-3 py-2 rounded-lg bg-background border border-border text-sm focus:outline-none focus:border-reddit"
                       />
                     </div>
@@ -1073,12 +1158,12 @@ export function Editor() {
                 type="date"
                 value={post.scheduledAt ? format(new Date(post.scheduledAt), 'yyyy-MM-dd') : ''}
                 onChange={(e) =>
-                  setPost((prev) => ({
-                    ...prev,
-                    scheduledAt: e.target.value
-                      ? `${e.target.value}T${prev.scheduledAt ? format(new Date(prev.scheduledAt), 'HH:mm') : '12:00'}:00.000Z`
-                      : null,
-                  }))
+                  setPost((prev) => {
+                    if (!e.target.value) return { ...prev, scheduledAt: null }
+                    const timeStr = prev.scheduledAt ? format(new Date(prev.scheduledAt), 'HH:mm') : '12:00'
+                    const localDate = new Date(`${e.target.value}T${timeStr}:00`)
+                    return { ...prev, scheduledAt: localDate.toISOString() }
+                  })
                 }
                 className="bg-transparent border-none focus:outline-none flex-1"
               />
@@ -1094,12 +1179,12 @@ export function Editor() {
                 type="time"
                 value={post.scheduledAt ? format(new Date(post.scheduledAt), 'HH:mm') : ''}
                 onChange={(e) =>
-                  setPost((prev) => ({
-                    ...prev,
-                    scheduledAt: prev.scheduledAt
-                      ? `${format(new Date(prev.scheduledAt), 'yyyy-MM-dd')}T${e.target.value}:00.000Z`
-                      : null,
-                  }))
+                  setPost((prev) => {
+                    if (!prev.scheduledAt) return prev
+                    const dateStr = format(new Date(prev.scheduledAt), 'yyyy-MM-dd')
+                    const localDate = new Date(`${dateStr}T${e.target.value}:00`)
+                    return { ...prev, scheduledAt: localDate.toISOString() }
+                  })
                 }
                 className="bg-transparent border-none focus:outline-none flex-1"
               />
@@ -1336,8 +1421,8 @@ export function Editor() {
                 <div className="bg-[#1A1A1B] border border-[#343536] rounded">
                   <div className="flex items-center gap-2 px-3 py-2 text-xs text-[#818384]">
                     <span className="font-bold text-[#D7DADC]">
-                      {post.content.reddit?.subreddits?.length
-                        ? post.content.reddit.subreddits.map(s => `r/${s}`).join(', ')
+                      {subredditsInput.length
+                        ? subredditsInput.map((s: string) => `r/${s}`).join(', ')
                         : 'r/subreddit'}
                     </span>
                     • Posted by u/yourname

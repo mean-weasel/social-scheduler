@@ -158,7 +158,7 @@ export const redditDraftFixture: Post = createBasePost({
   status: 'draft',
   content: {
     reddit: {
-      subreddits: ['programming'],
+      subreddit: 'programming',
       title: 'Built a social media scheduler with GitHub as the backend',
       body: 'Just finished building a social media scheduler that uses GitHub repos for storage and GitHub Actions for publishing. Would love to get some feedback from the community!\n\nFeatures:\n- Schedule posts to Twitter, LinkedIn, and Reddit\n- Calendar view for managing posts\n- Draft support',
     },
@@ -171,7 +171,7 @@ export const redditWithFlairFixture: Post = createBasePost({
   status: 'draft',
   content: {
     reddit: {
-      subreddits: ['SideProject'],
+      subreddit: 'SideProject',
       title: 'Show and Tell: My weekend project',
       body: 'Spent the weekend building something cool. Let me know what you think!',
       flairId: 'show-and-tell',
@@ -186,7 +186,7 @@ export const redditLinkPostFixture: Post = createBasePost({
   status: 'draft',
   content: {
     reddit: {
-      subreddits: ['webdev'],
+      subreddit: 'webdev',
       title: 'Great article on modern CSS techniques',
       url: 'https://example.com/css-article',
     },
@@ -200,7 +200,7 @@ export const redditScheduledFixture: Post = createBasePost({
   scheduledAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(), // In 3 days
   content: {
     reddit: {
-      subreddits: ['startups'],
+      subreddit: 'startups',
       title: 'Launching next week - would love early feedback',
       body: 'We\'re launching our product next week and would love to get some early adopters from this community.',
     },
@@ -214,7 +214,7 @@ export const redditPublishedFixture: Post = createBasePost({
   scheduledAt: new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString(), // 3 days ago
   content: {
     reddit: {
-      subreddits: ['learnprogramming'],
+      subreddit: 'learnprogramming',
       title: 'Tips for learning React in 2024',
       body: 'Here are my top recommendations for learning React effectively...',
     },
@@ -261,7 +261,7 @@ export const allPlatformsDraftFixture: Post = createBasePost({
       visibility: 'public',
     },
     reddit: {
-      subreddits: ['webdev'],
+      subreddit: 'webdev',
       title: '[Launch] Our new tool is live!',
       body: 'Hey r/webdev!\n\nWe just launched our new tool and would love to get your feedback. It\'s designed to help developers...',
     },
@@ -282,7 +282,7 @@ export const allPlatformsScheduledFixture: Post = createBasePost({
       visibility: 'public',
     },
     reddit: {
-      subreddits: ['SideProject'],
+      subreddit: 'SideProject',
       title: 'Launching on Product Hunt today!',
       body: 'After months of work, we\'re finally launching on Product Hunt...',
       flairText: 'Launch',
@@ -356,7 +356,7 @@ export function createLinkedInPost(
 }
 
 export function createRedditPost(
-  subreddits: string | string[],
+  subreddit: string,
   title: string,
   body: string,
   status: Post['status'] = 'draft'
@@ -365,7 +365,7 @@ export function createRedditPost(
     platforms: ['reddit'],
     status,
     content: {
-      reddit: { subreddits: Array.isArray(subreddits) ? subreddits : [subreddits], title, body },
+      reddit: { subreddit, title, body },
     },
   })
 }

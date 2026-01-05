@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom'
+import { useEffect } from 'react'
 import { format, formatDistanceToNow } from 'date-fns'
-import { Calendar, FileText, Clock, ChevronRight, Plus, Sparkles } from 'lucide-react'
+import { Calendar, FileText, Clock, ChevronRight, Plus, Sparkles, FolderOpen } from 'lucide-react'
 import { usePostsStore } from '@/lib/storage'
-import { Post, getPostPreviewText, PLATFORM_INFO } from '@/lib/posts'
+import { useCampaignsStore } from '@/lib/campaigns'
+import { Post, getPostPreviewText, PLATFORM_INFO, Campaign } from '@/lib/posts'
 import { cn } from '@/lib/utils'
 
 // Platform icon component
@@ -79,6 +81,61 @@ function PostCard({ post, showSchedule = false }: { post: Post; showSchedule?: b
   )
 }
 
+// Campaign status badge colors
+const CAMPAIGN_STATUS_STYLES = {
+  draft: 'bg-muted text-muted-foreground',
+  active: 'bg-green-500/10 text-green-600 dark:text-green-400',
+  completed: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+  archived: 'bg-gray-500/10 text-gray-500',
+}
+
+// Campaign card component
+function CampaignCard({ campaign }: { campaign: Campaign }) {
+  return (
+    <Link
+      to={`/campaigns/${campaign.id}`}
+      className={cn(
+        'block p-4 rounded-xl border border-border bg-card',
+        'hover:border-[hsl(var(--gold))]/50 hover:shadow-md',
+        'transition-all duration-200',
+        'group'
+      )}
+    >
+      {/* Campaign header */}
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <FolderOpen className="w-4 h-4 text-[hsl(var(--gold-dark))]" />
+          <h3 className="font-semibold text-sm truncate group-hover:text-[hsl(var(--gold-dark))] transition-colors">
+            {campaign.name || 'Untitled Campaign'}
+          </h3>
+        </div>
+        <span
+          className={cn(
+            'text-[10px] uppercase tracking-wider font-semibold px-2 py-0.5 rounded-full',
+            CAMPAIGN_STATUS_STYLES[campaign.status]
+          )}
+        >
+          {campaign.status}
+        </span>
+      </div>
+
+      {/* Description */}
+      {campaign.description && (
+        <p className="text-xs text-muted-foreground line-clamp-2 mb-3">
+          {campaign.description}
+        </p>
+      )}
+
+      {/* Meta info */}
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <Clock className="w-3.5 h-3.5" />
+        <span>Updated {formatDistanceToNow(new Date(campaign.updatedAt), { addSuffix: true })}</span>
+        <ChevronRight className="w-3.5 h-3.5 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+      </div>
+    </Link>
+  )
+}
+
 // Section component
 function Section({
   title,
@@ -144,6 +201,14 @@ function Section({
 
 export function Dashboard() {
   const allPosts = usePostsStore((state) => state.posts)
+  const { campaigns, fetchCampaigns, initialized: campaignsInitialized } = useCampaignsStore()
+
+  // Fetch campaigns on mount
+  useEffect(() => {
+    if (!campaignsInitialized) {
+      fetchCampaigns()
+    }
+  }, [campaignsInitialized, fetchCampaigns])
 
   // Exclude archived posts
   const activePosts = allPosts.filter((p) => p.status !== 'archived')
@@ -160,11 +225,18 @@ export function Dashboard() {
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
     .slice(0, 5)
 
+  // Recent campaigns (exclude archived, sorted by updated)
+  const recentCampaigns = campaigns
+    .filter((c) => c.status !== 'archived')
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+    .slice(0, 4)
+
   // Stats
   const stats = {
     scheduled: activePosts.filter((p) => p.status === 'scheduled').length,
     drafts: activePosts.filter((p) => p.status === 'draft').length,
     published: activePosts.filter((p) => p.status === 'published').length,
+    campaigns: campaigns.filter((c) => c.status !== 'archived').length,
   }
 
   const totalPosts = stats.scheduled + stats.drafts + stats.published
@@ -199,6 +271,15 @@ export function Dashboard() {
             </div>
             <div className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
               Published
+            </div>
+          </div>
+          <div className="w-px h-8 bg-border hidden sm:block" />
+          <div className="text-center hidden sm:block">
+            <div className="text-2xl font-display font-bold text-[hsl(var(--gold-dark))]">
+              {stats.campaigns}
+            </div>
+            <div className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
+              Campaigns
             </div>
           </div>
         </div>
@@ -275,6 +356,26 @@ export function Dashboard() {
               <PostCard key={post.id} post={post} />
             ))}
           </Section>
+
+          {/* Campaigns section - full width */}
+          <div className="lg:col-span-2">
+            <Section
+              title="Campaigns"
+              icon={FolderOpen}
+              viewAllLink="/campaigns"
+              viewAllLabel="View all campaigns"
+              isEmpty={recentCampaigns.length === 0}
+              emptyIcon={FolderOpen}
+              emptyTitle="No campaigns yet"
+              emptyDescription="Create a campaign to group related posts"
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {recentCampaigns.map((campaign) => (
+                  <CampaignCard key={campaign.id} campaign={campaign} />
+                ))}
+              </div>
+            </Section>
+          </div>
         </div>
       )}
     </div>
