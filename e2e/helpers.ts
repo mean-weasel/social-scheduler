@@ -283,3 +283,53 @@ export async function createTestPost(
   await expect(page).toHaveURL('/')
 }
 
+// ============================================
+// Database State Verification Helpers
+// ============================================
+
+interface PostFromAPI {
+  id: string
+  createdAt: string
+  updatedAt: string
+  scheduledAt: string | null
+  status: 'draft' | 'scheduled' | 'published' | 'archived'
+  platforms: string[]
+  notes?: string
+  content: Record<string, unknown>
+}
+
+/**
+ * Get all posts from the database via API
+ */
+export async function getAllPosts(page: Page): Promise<PostFromAPI[]> {
+  const response = await page.request.get(`${API_BASE}/posts`)
+  const data = await response.json()
+  return data.posts
+}
+
+/**
+ * Get the count of posts in the database
+ */
+export async function getPostCount(page: Page): Promise<number> {
+  const posts = await getAllPosts(page)
+  return posts.length
+}
+
+/**
+ * Get a specific post by ID from the database
+ */
+export async function getPostById(page: Page, id: string): Promise<PostFromAPI | null> {
+  const response = await page.request.get(`${API_BASE}/posts/${id}`)
+  if (!response.ok()) return null
+  const data = await response.json()
+  return data.post
+}
+
+/**
+ * Extract post ID from URL like /edit/abc-123
+ */
+export function extractPostIdFromUrl(url: string): string | null {
+  const match = url.match(/\/edit\/([a-f0-9-]+)/)
+  return match ? match[1] : null
+}
+

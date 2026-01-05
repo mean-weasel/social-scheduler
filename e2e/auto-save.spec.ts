@@ -1,0 +1,215 @@
+import { test, expect } from '@playwright/test'
+import {
+  enterDemoMode,
+  fillContent,
+  getPostCount,
+  getAllPosts,
+  extractPostIdFromUrl,
+} from './helpers'
+
+test.describe('Auto-save', () => {
+  test.beforeEach(async ({ page }) => {
+    await enterDemoMode(page)
+  })
+
+  test.describe.serial('New Post Auto-save', () => {
+    test('should auto-save new post after delay and update URL', async ({ page }) => {
+      // Start with empty database
+      expect(await getPostCount(page)).toBe(0)
+
+      // Go to new post page
+      await page.goto('/new')
+      await expect(page.getByRole('heading', { name: /create post/i })).toBeVisible()
+
+      // Select Twitter platform
+      await page.getByRole('button', { name: 'Twitter' }).click()
+
+      // Type content
+      await fillContent(page, 'Auto-save test content')
+
+      // Wait for auto-save (delay is 2 seconds, add buffer)
+      await page.waitForTimeout(3000)
+
+      // URL should have changed to /edit/:id
+      await expect(page).toHaveURL(/\/edit\/[a-f0-9-]+/)
+
+      // Database should have exactly 1 post
+      expect(await getPostCount(page)).toBe(1)
+
+      // Get the post and verify content
+      const posts = await getAllPosts(page)
+      expect(posts[0].status).toBe('draft')
+      expect(posts[0].platforms).toContain('twitter')
+    })
+
+    test('should not create duplicate posts on subsequent edits', async ({ page }) => {
+      // Start with empty database
+      expect(await getPostCount(page)).toBe(0)
+
+      // Go to new post page
+      await page.goto('/new')
+      await page.getByRole('button', { name: 'Twitter' }).click()
+      await fillContent(page, 'First content')
+
+      // Wait for first auto-save and URL change
+      await expect(page).toHaveURL(/\/edit\/[a-f0-9-]+/, { timeout: 5000 })
+
+      // Should have 1 post
+      expect(await getPostCount(page)).toBe(1)
+
+      // Get the ID from URL
+      const urlAfterFirstSave = page.url()
+      const postId = extractPostIdFromUrl(urlAfterFirstSave)
+      expect(postId).toBeTruthy()
+
+      // Continue editing - manually save to ensure update is persisted
+      const textarea = page.locator('textarea').first()
+      await textarea.press('End')
+      await textarea.type(' - updated')
+      await page.getByRole('button', { name: /save draft/i }).click()
+      await expect(page).toHaveURL('/')
+
+      // Should STILL have exactly 1 post (no duplicates)
+      expect(await getPostCount(page)).toBe(1)
+
+      // Verify the post was updated (has both original and appended text)
+      const posts = await getAllPosts(page)
+      expect(posts[0].id).toBe(postId)
+      expect(posts[0].content.twitter.text).toContain('First content')
+      expect(posts[0].content.twitter.text).toContain('updated')
+    })
+
+    test('should show auto-save indicator after save completes', async ({ page }) => {
+      await page.goto('/new')
+      await page.getByRole('button', { name: 'Twitter' }).click()
+
+      // Type content
+      await fillContent(page, 'Test for indicator')
+
+      // Wait for auto-save to complete and URL to change
+      await expect(page).toHaveURL(/\/edit\/[a-f0-9-]+/, { timeout: 5000 })
+
+      // Should show "Saved" indicator after auto-save completes
+      await expect(page.getByText(/saved/i)).toBeVisible({ timeout: 3000 })
+    })
+  })
+
+  test.describe.serial('Edit Post Auto-save', () => {
+    test('should auto-save changes to existing draft', async ({ page }) => {
+      // Create a draft manually via the UI first
+      await page.goto('/new')
+      await page.getByRole('button', { name: 'Twitter' }).click()
+      await fillContent(page, 'Original draft content')
+      await page.getByRole('button', { name: /save draft/i }).click()
+      await expect(page).toHaveURL('/')
+
+      // Should have 1 post
+      expect(await getPostCount(page)).toBe(1)
+      const originalPosts = await getAllPosts(page)
+      const postId = originalPosts[0].id
+
+      // Go to edit the post
+      await page.goto(`/edit/${postId}`)
+      await expect(page.getByRole('heading', { name: /edit post/i })).toBeVisible()
+
+      // Edit the content
+      await fillContent(page, 'Modified draft content via auto-save')
+
+      // Wait for auto-save
+      await page.waitForTimeout(3000)
+
+      // Should still have exactly 1 post
+      expect(await getPostCount(page)).toBe(1)
+
+      // Verify content was updated
+      const updatedPosts = await getAllPosts(page)
+      expect(updatedPosts[0].id).toBe(postId)
+      expect(updatedPosts[0].content.twitter).toMatchObject({ text: 'Modified draft content via auto-save' })
+    })
+
+    test('should auto-save platform changes', async ({ page }) => {
+      // Create a Twitter draft
+      await page.goto('/new')
+      await page.getByRole('button', { name: 'Twitter' }).click()
+      await fillContent(page, 'Multi-platform test')
+      await page.getByRole('button', { name: /save draft/i }).click()
+      await expect(page).toHaveURL('/')
+
+      const originalPosts = await getAllPosts(page)
+      const postId = originalPosts[0].id
+      expect(originalPosts[0].platforms).toEqual(['twitter'])
+
+      // Edit and add LinkedIn
+      await page.goto(`/edit/${postId}`)
+      await page.getByRole('button', { name: 'LinkedIn' }).click()
+
+      // Wait for auto-save
+      await page.waitForTimeout(3000)
+
+      // Verify platforms were updated
+      const updatedPosts = await getAllPosts(page)
+      expect(updatedPosts[0].platforms).toContain('twitter')
+      expect(updatedPosts[0].platforms).toContain('linkedin')
+    })
+  })
+
+  test.describe.serial('Auto-save Edge Cases', () => {
+    test('should not auto-save if no changes made', async ({ page }) => {
+      // Create a draft
+      await page.goto('/new')
+      await page.getByRole('button', { name: 'Twitter' }).click()
+      await fillContent(page, 'No changes test')
+      await page.getByRole('button', { name: /save draft/i }).click()
+      await expect(page).toHaveURL('/')
+
+      const originalPosts = await getAllPosts(page)
+      const postId = originalPosts[0].id
+      const originalUpdatedAt = originalPosts[0].updatedAt
+
+      // Go to edit but don't change anything
+      await page.goto(`/edit/${postId}`)
+      await expect(page.getByRole('heading', { name: /edit post/i })).toBeVisible()
+
+      // Wait longer than auto-save delay
+      await page.waitForTimeout(4000)
+
+      // updatedAt should not have changed (no unnecessary saves)
+      const currentPosts = await getAllPosts(page)
+      expect(currentPosts[0].updatedAt).toBe(originalUpdatedAt)
+    })
+
+    test('should auto-save scheduled post as scheduled (not convert to draft)', async ({ page }) => {
+      // Create a scheduled post
+      await page.goto('/new')
+      await page.getByRole('button', { name: 'Twitter' }).click()
+      await fillContent(page, 'Scheduled post')
+
+      // Set schedule for tomorrow
+      const tomorrow = new Date()
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      const dateStr = tomorrow.toISOString().split('T')[0]
+      await page.locator('input[type="date"]').fill(dateStr)
+      await page.locator('input[type="time"]').fill('12:00')
+
+      // Schedule the post
+      await page.getByRole('button', { name: /^schedule$/i }).click()
+      await expect(page).toHaveURL('/')
+
+      const originalPosts = await getAllPosts(page)
+      expect(originalPosts[0].status).toBe('scheduled')
+      const postId = originalPosts[0].id
+
+      // Edit the scheduled post
+      await page.goto(`/edit/${postId}`)
+      await fillContent(page, 'Updated scheduled post content')
+
+      // Wait for potential auto-save
+      await page.waitForTimeout(3000)
+
+      // Post should remain scheduled (not converted to draft)
+      const updatedPosts = await getAllPosts(page)
+      expect(updatedPosts[0].status).toBe('scheduled')
+      expect(updatedPosts[0].scheduledAt).toBeTruthy()
+    })
+  })
+})
