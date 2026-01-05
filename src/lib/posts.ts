@@ -28,13 +28,24 @@ export interface LinkedInContent {
 }
 
 export interface RedditContent {
-  subreddits: string[]  // Array of target subreddits
+  subreddit: string     // Single target subreddit
   title: string
   body?: string
   url?: string
   flairId?: string
   flairText?: string
-  launchedUrls?: Record<string, string>  // Map of subreddit name to published post URL
+  launchedUrl?: string  // URL of the published Reddit post
+}
+
+// Legacy Reddit content for migration (multi-subreddit)
+export interface LegacyRedditContent {
+  subreddits: string[]  // Array of target subreddits (legacy)
+  title: string
+  body?: string
+  url?: string
+  flairId?: string
+  flairText?: string
+  launchedUrls?: Record<string, string>  // Map of subreddit to URL (legacy)
 }
 
 export interface PublishResult {
@@ -45,6 +56,8 @@ export interface PublishResult {
   publishedAt?: string
 }
 
+export type GroupType = 'reddit-crosspost'
+
 export interface Post {
   id: string
   createdAt: string
@@ -54,6 +67,8 @@ export interface Post {
   platforms: Platform[]
   notes?: string  // User/MCP notes for this post
   campaignId?: string  // Optional reference to a campaign
+  groupId?: string     // Groups related posts (e.g., Reddit crossposts)
+  groupType?: GroupType  // Type of grouping
   content: {
     twitter?: TwitterContent
     linkedin?: LinkedInContent

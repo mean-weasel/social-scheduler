@@ -28,13 +28,16 @@ export interface LinkedInContent {
 }
 
 export interface RedditContent {
-  subreddits: string[]
+  subreddit: string     // Single target subreddit
   title: string
   body?: string
   url?: string
   flairId?: string
   flairText?: string
+  launchedUrl?: string  // URL of the published Reddit post
 }
+
+export type GroupType = 'reddit-crosspost'
 
 export interface PublishResult {
   success: boolean
@@ -53,6 +56,8 @@ export interface Post {
   platforms: Platform[]
   notes?: string
   campaignId?: string
+  groupId?: string       // Groups related posts (e.g., Reddit crossposts)
+  groupType?: GroupType  // Type of grouping
   content: {
     twitter?: TwitterContent
     linkedin?: LinkedInContent
@@ -73,6 +78,8 @@ interface PostRow {
   platforms: string
   notes: string | null
   campaign_id: string | null
+  group_id: string | null
+  group_type: string | null
   content: string
   publish_results: string | null
 }
@@ -98,6 +105,8 @@ function rowToPost(row: PostRow): Post {
     platforms: JSON.parse(row.platforms),
     notes: row.notes || undefined,
     campaignId: row.campaign_id || undefined,
+    groupId: row.group_id || undefined,
+    groupType: row.group_type as GroupType | undefined,
     content: JSON.parse(row.content),
     publishResults: row.publish_results ? JSON.parse(row.publish_results) : undefined,
   }
@@ -134,13 +143,15 @@ export function createPost(data: {
   status?: PostStatus
   notes?: string
   campaignId?: string
+  groupId?: string
+  groupType?: GroupType
 }): Post {
   const id = generateId()
   const timestamp = now()
 
   const stmt = db.prepare(`
-    INSERT INTO posts (id, created_at, updated_at, scheduled_at, status, platforms, notes, campaign_id, content)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO posts (id, created_at, updated_at, scheduled_at, status, platforms, notes, campaign_id, group_id, group_type, content)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
 
   stmt.run(
@@ -152,6 +163,8 @@ export function createPost(data: {
     JSON.stringify(data.platforms),
     data.notes || null,
     data.campaignId || null,
+    data.groupId || null,
+    data.groupType || null,
     JSON.stringify(data.content)
   )
 
@@ -164,6 +177,8 @@ export function createPost(data: {
     platforms: data.platforms,
     notes: data.notes,
     campaignId: data.campaignId,
+    groupId: data.groupId,
+    groupType: data.groupType,
     content: data.content,
   }
 }
@@ -196,6 +211,8 @@ export function updatePost(
       platforms = ?,
       notes = ?,
       campaign_id = ?,
+      group_id = ?,
+      group_type = ?,
       content = ?,
       publish_results = ?
     WHERE id = ?
@@ -208,6 +225,8 @@ export function updatePost(
     JSON.stringify(updated.platforms),
     updated.notes || null,
     updated.campaignId || null,
+    updated.groupId || null,
+    updated.groupType || null,
     JSON.stringify(updated.content),
     updated.publishResults ? JSON.stringify(updated.publishResults) : null,
     id
