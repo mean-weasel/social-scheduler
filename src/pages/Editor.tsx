@@ -1109,8 +1109,8 @@ export function Editor() {
                               Schedule (optional)
                             </label>
                             <div className="flex items-center gap-2">
-                              <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-background border border-border flex-1">
-                                <Calendar className="w-4 h-4 text-muted-foreground" />
+                              <div className="relative flex items-center gap-1.5 px-3 py-2 rounded-lg bg-background border border-border flex-1">
+                                <Calendar className="w-4 h-4 text-muted-foreground pointer-events-none" />
                                 <input
                                   type="date"
                                   value={schedule ? format(new Date(schedule), 'yyyy-MM-dd') : ''}
@@ -1126,11 +1126,15 @@ export function Editor() {
                                     updateSubredditSchedule(sub, localDate.toISOString())
                                   }}
                                   data-testid={`subreddit-date-${sub}`}
-                                  className="bg-transparent border-none focus:outline-none text-sm flex-1"
+                                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                  style={{ WebkitAppearance: 'none' }}
                                 />
+                                <span className="text-sm flex-1">
+                                  {schedule ? format(new Date(schedule), 'MMM d, yyyy') : 'Date'}
+                                </span>
                               </div>
-                              <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-background border border-border">
-                                <Clock className="w-4 h-4 text-muted-foreground" />
+                              <div className="relative flex items-center gap-1.5 px-3 py-2 rounded-lg bg-background border border-border">
+                                <Clock className="w-4 h-4 text-muted-foreground pointer-events-none" />
                                 <input
                                   type="time"
                                   value={schedule ? format(new Date(schedule), 'HH:mm') : ''}
@@ -1142,8 +1146,12 @@ export function Editor() {
                                     updateSubredditSchedule(sub, localDate.toISOString())
                                   }}
                                   data-testid={`subreddit-time-${sub}`}
-                                  className="bg-transparent border-none focus:outline-none text-sm w-[80px]"
+                                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                                  style={{ WebkitAppearance: 'none' }}
                                 />
+                                <span className="text-sm w-[60px]">
+                                  {schedule ? format(new Date(schedule), 'h:mm a') : 'Time'}
+                                </span>
                               </div>
                             </div>
                             <p className="text-xs text-muted-foreground mt-1.5">
@@ -1344,8 +1352,8 @@ export function Editor() {
             <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
               Schedule Date
             </label>
-            <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-card border border-border cursor-pointer hover:border-border transition-colors">
-              <Calendar className="w-4 h-4 text-muted-foreground" />
+            <div className="relative flex items-center gap-2 px-4 py-2.5 rounded-lg bg-card border border-border hover:border-border transition-colors">
+              <Calendar className="w-4 h-4 text-muted-foreground pointer-events-none" />
               <input
                 type="date"
                 data-testid="main-schedule-date"
@@ -1358,30 +1366,43 @@ export function Editor() {
                     return { ...prev, scheduledAt: localDate.toISOString() }
                   })
                 }
-                className="bg-transparent border-none focus:outline-none flex-1"
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                style={{ WebkitAppearance: 'none' }}
               />
+              <span className="flex-1 text-foreground">
+                {post.scheduledAt ? format(new Date(post.scheduledAt), 'MMM d, yyyy') : 'Select date'}
+              </span>
             </div>
           </div>
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
               Time
             </label>
-            <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-card border border-border cursor-pointer hover:border-border transition-colors">
-              <Clock className="w-4 h-4 text-muted-foreground" />
+            <div className="relative flex items-center gap-2 px-4 py-2.5 rounded-lg bg-card border border-border hover:border-border transition-colors">
+              <Clock className="w-4 h-4 text-muted-foreground pointer-events-none" />
               <input
                 type="time"
                 data-testid="main-schedule-time"
                 value={post.scheduledAt ? format(new Date(post.scheduledAt), 'HH:mm') : ''}
                 onChange={(e) =>
                   setPost((prev) => {
-                    if (!prev.scheduledAt) return prev
+                    if (!prev.scheduledAt) {
+                      // If no date set, use today's date
+                      const today = format(new Date(), 'yyyy-MM-dd')
+                      const localDate = new Date(`${today}T${e.target.value}:00`)
+                      return { ...prev, scheduledAt: localDate.toISOString() }
+                    }
                     const dateStr = format(new Date(prev.scheduledAt), 'yyyy-MM-dd')
                     const localDate = new Date(`${dateStr}T${e.target.value}:00`)
                     return { ...prev, scheduledAt: localDate.toISOString() }
                   })
                 }
-                className="bg-transparent border-none focus:outline-none flex-1"
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                style={{ WebkitAppearance: 'none' }}
               />
+              <span className="flex-1 text-foreground">
+                {post.scheduledAt ? format(new Date(post.scheduledAt), 'h:mm a') : 'Select time'}
+              </span>
             </div>
           </div>
         </div>

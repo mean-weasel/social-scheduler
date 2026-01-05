@@ -149,6 +149,21 @@
 input[type="date"],
 input[type="time"] {
   color-scheme: light dark;
+  /* iOS Safari fix: ensure inputs are tappable */
+  min-height: 44px;
+  -webkit-appearance: none;
+  appearance: none;
+  position: relative;
+}
+
+/* iOS Safari: make the entire input area tappable */
+@supports (-webkit-touch-callout: none) {
+  input[type="date"],
+  input[type="time"] {
+    /* On iOS, the input needs to cover the full tap area */
+    min-width: 100%;
+    padding-right: 2rem;
+  }
 }
 
 input[type="date"]::-webkit-calendar-picker-indicator,
@@ -156,6 +171,15 @@ input[type="time"]::-webkit-calendar-picker-indicator {
   cursor: pointer;
   opacity: 0.6;
   filter: invert(0);
+  /* iOS Safari fix: make picker indicator larger and easier to tap */
+  padding: 0.5rem;
+  margin: 0;
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2rem;
+  height: 2rem;
 }
 
 .dark input[type="date"]::-webkit-calendar-picker-indicator,
