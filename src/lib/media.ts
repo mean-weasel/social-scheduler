@@ -4,8 +4,8 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
 // File type and size limits (must match backend)
 const ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
 const ALLOWED_VIDEO_EXTENSIONS = ['.mp4', '.mov', '.webm']
-const MAX_IMAGE_SIZE = 10 * 1024 * 1024 // 10MB
-const MAX_VIDEO_SIZE = 100 * 1024 * 1024 // 100MB
+export const MAX_IMAGE_SIZE = 10 * 1024 * 1024 // 10MB
+export const MAX_VIDEO_SIZE = 100 * 1024 * 1024 // 100MB
 
 // Accept string for file inputs
 export const ACCEPT_MEDIA = 'image/jpeg,image/png,image/gif,image/webp,video/mp4,video/quicktime,video/webm'
