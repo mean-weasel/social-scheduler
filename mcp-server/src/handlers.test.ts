@@ -435,7 +435,8 @@ describe('Tool Handlers', () => {
       })
 
       it('should return error when subreddits is undefined', async () => {
-        const result = await handleCreateRedditCrossposts({ subreddits: undefined as any })
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const result = await handleCreateRedditCrossposts({ subreddits: undefined as unknown as any[] })
         expect(result.isError).toBe(true)
         expect(result.content[0].text).toContain('At least one subreddit is required')
       })
