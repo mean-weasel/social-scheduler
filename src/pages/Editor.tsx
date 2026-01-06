@@ -34,6 +34,8 @@ import {
 import { cn } from '@/lib/utils'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { AutoSaveIndicator } from '@/components/ui/AutoSaveIndicator'
+import { MediaUpload } from '@/components/ui/MediaUpload'
+import { getMediaUrl } from '@/lib/media'
 import { useAutoSave } from '@/hooks/useAutoSave'
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
@@ -110,7 +112,6 @@ export function Editor() {
   const [linkedInMediaUrl, setLinkedInMediaUrl] = useState('')
   const [redditUrl, setRedditUrl] = useState('')
   const [showMediaInput, setShowMediaInput] = useState(false)
-  const [newMediaUrl, setNewMediaUrl] = useState('')
   const [showNotes, setShowNotes] = useState(false)
   const [showPublishedLinks, setShowPublishedLinks] = useState(false)
   const [newSubreddit, setNewSubreddit] = useState('')
@@ -811,68 +812,12 @@ export function Editor() {
                   <span className="w-2 h-2 rounded-full bg-twitter" />
                   Twitter (up to 4 images or 1 video)
                 </div>
-
-                {/* Existing media with previews */}
-                {mediaUrls.length > 0 && (
-                  <div className="grid grid-cols-2 gap-2 mb-3">
-                    {mediaUrls.map((url, idx) => (
-                      <div key={idx} className="relative group">
-                        <div className="aspect-video rounded-lg overflow-hidden bg-muted">
-                          <img
-                            src={url}
-                            alt={`Media ${idx + 1}`}
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement
-                              target.style.display = 'none'
-                              target.nextElementSibling?.classList.remove('hidden')
-                            }}
-                          />
-                          <div className="hidden w-full h-full flex items-center justify-center text-muted-foreground">
-                            <Image className="w-8 h-8" />
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => setMediaUrls(mediaUrls.filter((_, i) => i !== idx))}
-                          className="absolute top-1 right-1 p-1.5 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Add new Twitter media */}
-                {mediaUrls.length < 4 && (
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={newMediaUrl}
-                      onChange={(e) => setNewMediaUrl(e.target.value)}
-                      placeholder="https://res.cloudinary.com/..."
-                      className="flex-1 px-3 py-2 rounded-lg bg-background border border-border text-sm focus:outline-none focus:border-twitter"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && newMediaUrl.trim()) {
-                          setMediaUrls([...mediaUrls, newMediaUrl.trim()])
-                          setNewMediaUrl('')
-                        }
-                      }}
-                    />
-                    <button
-                      onClick={() => {
-                        if (newMediaUrl.trim()) {
-                          setMediaUrls([...mediaUrls, newMediaUrl.trim()])
-                          setNewMediaUrl('')
-                        }
-                      }}
-                      disabled={!newMediaUrl.trim()}
-                      className="p-2 rounded-lg bg-twitter text-white hover:bg-twitter/90 disabled:opacity-50 transition-colors"
-                    >
-                      <Plus className="w-4 h-4" />
-                    </button>
-                  </div>
-                )}
+                <MediaUpload
+                  platform="twitter"
+                  maxFiles={4}
+                  existingMedia={mediaUrls}
+                  onMediaChange={setMediaUrls}
+                />
               </div>
             )}
 
@@ -883,44 +828,12 @@ export function Editor() {
                   <span className="w-2 h-2 rounded-full bg-linkedin" />
                   LinkedIn (1 image or video)
                 </div>
-
-                {/* LinkedIn media preview */}
-                {linkedInMediaUrl && (
-                  <div className="relative group mb-3">
-                    <div className="aspect-video rounded-lg overflow-hidden bg-muted max-w-xs">
-                      <img
-                        src={linkedInMediaUrl}
-                        alt="LinkedIn media"
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement
-                          target.style.display = 'none'
-                          target.nextElementSibling?.classList.remove('hidden')
-                        }}
-                      />
-                      <div className="hidden w-full h-full flex items-center justify-center text-muted-foreground">
-                        <Image className="w-8 h-8" />
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => setLinkedInMediaUrl('')}
-                      className="absolute top-1 right-1 p-1.5 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </div>
-                )}
-
-                {/* Add LinkedIn media */}
-                {!linkedInMediaUrl && (
-                  <input
-                    type="text"
-                    value={linkedInMediaUrl}
-                    onChange={(e) => setLinkedInMediaUrl(e.target.value)}
-                    placeholder="https://res.cloudinary.com/..."
-                    className="w-full px-3 py-2 rounded-lg bg-background border border-border text-sm focus:outline-none focus:border-linkedin"
-                  />
-                )}
+                <MediaUpload
+                  platform="linkedin"
+                  maxFiles={1}
+                  existingMedia={linkedInMediaUrl ? [linkedInMediaUrl] : []}
+                  onMediaChange={(media) => setLinkedInMediaUrl(media[0] || '')}
+                />
               </div>
             )}
           </div>
@@ -1582,7 +1495,7 @@ export function Editor() {
                           )}
                         >
                           <img
-                            src={url}
+                            src={getMediaUrl(url)}
                             alt={`Media ${idx + 1}`}
                             className="w-full h-full object-cover"
                             onError={(e) => {
@@ -1621,7 +1534,7 @@ export function Editor() {
                   {linkedInMediaUrl && (
                     <div className="mt-3 rounded-lg overflow-hidden bg-gray-100">
                       <img
-                        src={linkedInMediaUrl}
+                        src={getMediaUrl(linkedInMediaUrl)}
                         alt="LinkedIn media"
                         className="w-full h-40 object-cover"
                         onError={(e) => {
