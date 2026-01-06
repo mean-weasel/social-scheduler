@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 import {
   resetDatabase,
   goToNewPost,
-  togglePlatform,
+  selectPlatform,
   fillContent,
   schedulePost,
   saveDraft,
@@ -18,7 +18,7 @@ test.describe('Scheduling', () => {
   test.describe('Date Input', () => {
     test('should be visible and clickable', async ({ page }) => {
       await goToNewPost(page)
-      await togglePlatform(page, 'twitter')
+      await selectPlatform(page, 'twitter')
 
       const dateInput = page.locator('input[type="date"]')
       await expect(dateInput).toBeVisible()
@@ -31,7 +31,7 @@ test.describe('Scheduling', () => {
 
     test('should accept date via keyboard input', async ({ page }) => {
       await goToNewPost(page)
-      await togglePlatform(page, 'twitter')
+      await selectPlatform(page, 'twitter')
 
       const dateInput = page.locator('input[type="date"]')
 
@@ -46,7 +46,7 @@ test.describe('Scheduling', () => {
 
     test('should persist date after page navigation', async ({ page }) => {
       await goToNewPost(page)
-      await togglePlatform(page, 'twitter')
+      await selectPlatform(page, 'twitter')
       await fillContent(page, 'Testing date persistence')
 
       const dateInput = page.locator('input[type="date"]')
@@ -70,7 +70,7 @@ test.describe('Scheduling', () => {
   test.describe('Time Input', () => {
     test('should be visible and clickable', async ({ page }) => {
       await goToNewPost(page)
-      await togglePlatform(page, 'twitter')
+      await selectPlatform(page, 'twitter')
 
       const timeInput = page.locator('input[type="time"]')
       await expect(timeInput).toBeVisible()
@@ -83,7 +83,7 @@ test.describe('Scheduling', () => {
 
     test('should accept time via keyboard input', async ({ page }) => {
       await goToNewPost(page)
-      await togglePlatform(page, 'twitter')
+      await selectPlatform(page, 'twitter')
 
       // First set a date (time depends on date being set)
       const dateInput = page.locator('input[type="date"]')
@@ -98,7 +98,7 @@ test.describe('Scheduling', () => {
 
     test('should persist time after page navigation', async ({ page }) => {
       await goToNewPost(page)
-      await togglePlatform(page, 'twitter')
+      await selectPlatform(page, 'twitter')
       await fillContent(page, 'Testing time persistence')
 
       // Set date and time
@@ -127,7 +127,7 @@ test.describe('Scheduling', () => {
   test.describe('Scheduling Flow', () => {
     test('should schedule post with date and time', async ({ page }) => {
       await goToNewPost(page)
-      await togglePlatform(page, 'twitter')
+      await selectPlatform(page, 'twitter')
       await fillContent(page, 'Scheduled post test')
 
       // Set schedule
@@ -153,7 +153,7 @@ test.describe('Scheduling', () => {
 
     test('should show error when scheduling without date', async ({ page }) => {
       await goToNewPost(page)
-      await togglePlatform(page, 'twitter')
+      await selectPlatform(page, 'twitter')
       await fillContent(page, 'Missing date test')
 
       // Try to schedule without setting date
@@ -166,7 +166,7 @@ test.describe('Scheduling', () => {
     test('should reschedule existing post', async ({ page }) => {
       // Create scheduled post
       await goToNewPost(page)
-      await togglePlatform(page, 'twitter')
+      await selectPlatform(page, 'twitter')
       await fillContent(page, 'Post to reschedule')
 
       const dateInput = page.locator('input[type="date"]')
@@ -209,7 +209,7 @@ test.describe('Scheduling', () => {
     test('should clear schedule and save as draft', async ({ page }) => {
       // Create scheduled post
       await goToNewPost(page)
-      await togglePlatform(page, 'twitter')
+      await selectPlatform(page, 'twitter')
       await fillContent(page, 'Scheduled then draft')
 
       const dateInput = page.locator('input[type="date"]')
@@ -236,7 +236,7 @@ test.describe('Scheduling', () => {
   test.describe('Calendar Icon Visibility', () => {
     test('date input should have visible picker indicator', async ({ page }) => {
       await goToNewPost(page)
-      await togglePlatform(page, 'twitter')
+      await selectPlatform(page, 'twitter')
 
       const dateInput = page.locator('input[type="date"]')
 
@@ -253,7 +253,7 @@ test.describe('Scheduling', () => {
 
     test('time input should have visible picker indicator', async ({ page }) => {
       await goToNewPost(page)
-      await togglePlatform(page, 'twitter')
+      await selectPlatform(page, 'twitter')
 
       const timeInput = page.locator('input[type="time"]')
 

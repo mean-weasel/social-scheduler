@@ -3,6 +3,7 @@ import os from 'os'
 import fs from 'fs'
 import crypto from 'crypto'
 import type { Post } from './storage.js'
+import { isTwitterContent, isLinkedInContent } from './storage.js'
 
 // Storage configuration
 const isTest = process.env.CI === 'true' || process.env.NODE_ENV === 'test'
@@ -157,8 +158,8 @@ export function extractFilenamesFromPost(post: Post): string[] {
   const filenames: string[] = []
 
   // Twitter media URLs
-  if (post.content.twitter?.mediaUrls) {
-    for (const url of post.content.twitter.mediaUrls) {
+  if (post.platform === 'twitter' && isTwitterContent(post.content) && post.content.mediaUrls) {
+    for (const url of post.content.mediaUrls) {
       // Only extract if it's a local filename (not a full URL)
       if (!url.startsWith('http://') && !url.startsWith('https://')) {
         filenames.push(url)
@@ -167,8 +168,8 @@ export function extractFilenamesFromPost(post: Post): string[] {
   }
 
   // LinkedIn media URL
-  if (post.content.linkedin?.mediaUrl) {
-    const url = post.content.linkedin.mediaUrl
+  if (post.platform === 'linkedin' && isLinkedInContent(post.content) && post.content.mediaUrl) {
+    const url = post.content.mediaUrl
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       filenames.push(url)
     }

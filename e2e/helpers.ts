@@ -366,38 +366,71 @@ export async function createTestPost(
 // Database State Verification Helpers
 // ============================================
 
+interface TwitterContentAPI {
+  text: string
+  mediaUrls?: string[]
+  launchedUrl?: string
+}
+
+interface LinkedInContentAPI {
+  text: string
+  visibility: 'public' | 'connections'
+  mediaUrl?: string
+  launchedUrl?: string
+}
+
+interface RedditContentAPI {
+  subreddit: string
+  title: string
+  body?: string
+  url?: string
+  flairId?: string
+  flairText?: string
+  launchedUrl?: string
+}
+
+type PlatformContentAPI = TwitterContentAPI | LinkedInContentAPI | RedditContentAPI
+
+// Type guards for content types
+export function getTwitterContent(post: PostFromAPI): TwitterContentAPI | undefined {
+  if (post.platform === 'twitter') {
+    return post.content as TwitterContentAPI
+  }
+  return undefined
+}
+
+export function getLinkedInContent(post: PostFromAPI): LinkedInContentAPI | undefined {
+  if (post.platform === 'linkedin') {
+    return post.content as LinkedInContentAPI
+  }
+  return undefined
+}
+
+export function getRedditContent(post: PostFromAPI): RedditContentAPI | undefined {
+  if (post.platform === 'reddit') {
+    return post.content as RedditContentAPI
+  }
+  return undefined
+}
+
 interface PostFromAPI {
   id: string
   createdAt: string
   updatedAt: string
   scheduledAt: string | null
   status: 'draft' | 'scheduled' | 'published' | 'archived'
-  platforms: string[]
+  platform: 'twitter' | 'linkedin' | 'reddit'
   notes?: string
   campaignId?: string
   groupId?: string
   groupType?: 'reddit-crosspost'
-  content: {
-    twitter?: {
-      text: string
-      mediaUrls?: string[]
-      launchedUrl?: string
-    }
-    linkedin?: {
-      text: string
-      visibility: 'public' | 'connections'
-      mediaUrl?: string
-      launchedUrl?: string
-    }
-    reddit?: {
-      subreddit: string
-      title: string
-      body?: string
-      url?: string
-      flairId?: string
-      flairText?: string
-      launchedUrl?: string
-    }
+  content: PlatformContentAPI
+  publishResult?: {
+    success: boolean
+    postId?: string
+    postUrl?: string
+    publishedAt?: string
+    error?: string
   }
 }
 

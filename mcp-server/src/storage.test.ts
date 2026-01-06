@@ -34,8 +34,8 @@ describe('Storage Layer', () => {
       it('should create a post and return it', async () => {
         const mockPost = {
           id: 'post-123',
-          platforms: ['twitter'],
-          content: { twitter: { text: 'Hello world' } },
+          platform: 'twitter',
+          content: { text: 'Hello world' },
           status: 'draft',
           createdAt: '2024-01-01T00:00:00Z',
           updatedAt: '2024-01-01T00:00:00Z',
@@ -48,8 +48,8 @@ describe('Storage Layer', () => {
         })
 
         const result = await createPost({
-          platforms: ['twitter'],
-          content: { twitter: { text: 'Hello world' } },
+          platform: 'twitter',
+          content: { text: 'Hello world' },
         })
 
         expect(result).toEqual(mockPost)
@@ -69,15 +69,15 @@ describe('Storage Layer', () => {
         })
 
         await expect(
-          createPost({ platforms: ['twitter'], content: {} })
+          createPost({ platform: 'twitter', content: { text: '' } })
         ).rejects.toThrow('Failed to create post: Bad Request')
       })
 
       it('should include campaignId, groupId, groupType when provided', async () => {
         const mockPost = {
           id: 'post-123',
-          platforms: ['reddit'],
-          content: { reddit: { subreddit: 'test', title: 'Test' } },
+          platform: 'reddit',
+          content: { subreddit: 'test', title: 'Test' },
           status: 'draft',
           campaignId: 'campaign-1',
           groupId: 'group-1',
@@ -93,8 +93,8 @@ describe('Storage Layer', () => {
         })
 
         await createPost({
-          platforms: ['reddit'],
-          content: { reddit: { subreddit: 'test', title: 'Test' } },
+          platform: 'reddit',
+          content: { subreddit: 'test', title: 'Test' },
           campaignId: 'campaign-1',
           groupId: 'group-1',
           groupType: 'reddit-crosspost',
@@ -109,7 +109,7 @@ describe('Storage Layer', () => {
 
     describe('getPost', () => {
       it('should return post when found', async () => {
-        const mockPost = { id: 'post-123', platforms: ['twitter'] }
+        const mockPost = { id: 'post-123', platform: 'twitter' }
 
         mockFetch.mockResolvedValueOnce({
           ok: true,

@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 import {
   enterDemoMode,
   goToNewPost,
-  togglePlatform,
+  selectPlatform,
   fillContent,
   fillNotes,
   fillRedditFields,
@@ -23,7 +23,7 @@ test.describe('Create Post', () => {
       await goToNewPost(page)
 
       // Select Twitter platform
-      await togglePlatform(page, 'twitter')
+      await selectPlatform(page, 'twitter')
 
       // Fill in content
       await fillContent(page, 'This is a test tweet from Playwright E2E tests!')
@@ -41,7 +41,7 @@ test.describe('Create Post', () => {
     test('should create a Twitter scheduled post', async ({ page }) => {
       await goToNewPost(page)
 
-      await togglePlatform(page, 'twitter')
+      await selectPlatform(page, 'twitter')
       await fillContent(page, 'Scheduled tweet for tomorrow!')
 
       // Set schedule for tomorrow
@@ -59,7 +59,7 @@ test.describe('Create Post', () => {
     test('should show character count warning when approaching limit', async ({ page }) => {
       await goToNewPost(page)
 
-      await togglePlatform(page, 'twitter')
+      await selectPlatform(page, 'twitter')
 
       // Fill with content near the limit
       const longText = 'A'.repeat(270)
@@ -72,7 +72,7 @@ test.describe('Create Post', () => {
     test('should show error when exceeding character limit', async ({ page }) => {
       await goToNewPost(page)
 
-      await togglePlatform(page, 'twitter')
+      await selectPlatform(page, 'twitter')
 
       // Fill with content over the limit
       const overLimitText = 'A'.repeat(290)
@@ -87,7 +87,7 @@ test.describe('Create Post', () => {
     test('should create a LinkedIn draft post with public visibility', async ({ page }) => {
       await goToNewPost(page)
 
-      await togglePlatform(page, 'linkedin')
+      await selectPlatform(page, 'linkedin')
       await fillContent(page, 'Professional update from E2E tests!\n\nKey points:\n- Testing is important\n- Automation saves time')
 
       // Verify LinkedIn settings panel is visible
@@ -103,7 +103,7 @@ test.describe('Create Post', () => {
     test('should create a LinkedIn post with connections-only visibility', async ({ page }) => {
       await goToNewPost(page)
 
-      await togglePlatform(page, 'linkedin')
+      await selectPlatform(page, 'linkedin')
       await fillContent(page, 'A more personal update for my network.')
 
       // Set visibility to connections only
@@ -116,7 +116,7 @@ test.describe('Create Post', () => {
     test('should create a LinkedIn scheduled post', async ({ page }) => {
       await goToNewPost(page)
 
-      await togglePlatform(page, 'linkedin')
+      await selectPlatform(page, 'linkedin')
       await fillContent(page, 'Scheduled LinkedIn post for next week!')
 
       const nextWeek = new Date()
@@ -133,7 +133,7 @@ test.describe('Create Post', () => {
     test('should create a Reddit draft post', async ({ page }) => {
       await goToNewPost(page)
 
-      await togglePlatform(page, 'reddit')
+      await selectPlatform(page, 'reddit')
 
       // Verify Reddit settings panel is visible
       await expect(page.getByText('Reddit Settings')).toBeVisible()
@@ -153,7 +153,7 @@ test.describe('Create Post', () => {
     test('should create a Reddit post with flair', async ({ page }) => {
       await goToNewPost(page)
 
-      await togglePlatform(page, 'reddit')
+      await selectPlatform(page, 'reddit')
 
       await fillRedditFields(page, {
         subreddit: 'SideProject',
@@ -170,7 +170,7 @@ test.describe('Create Post', () => {
     test('should create a Reddit scheduled post', async ({ page }) => {
       await goToNewPost(page)
 
-      await togglePlatform(page, 'reddit')
+      await selectPlatform(page, 'reddit')
 
       await fillRedditFields(page, {
         subreddit: 'startups',
@@ -191,7 +191,7 @@ test.describe('Create Post', () => {
     test('should show title character count', async ({ page }) => {
       await goToNewPost(page)
 
-      await togglePlatform(page, 'reddit')
+      await selectPlatform(page, 'reddit')
 
       await fillRedditFields(page, {
         subreddit: 'test',
@@ -203,71 +203,26 @@ test.describe('Create Post', () => {
     })
   })
 
-  test.describe('Multi-platform Posts', () => {
-    test('should create a Twitter + LinkedIn draft post', async ({ page }) => {
-      await goToNewPost(page)
-
-      // Select both platforms
-      await togglePlatform(page, 'twitter')
-      await togglePlatform(page, 'linkedin')
-
-      await fillContent(page, 'Cross-platform post for Twitter and LinkedIn!')
-
-      // Both platform indicators should be visible
-      await expect(page.getByText('/ 280')).toBeVisible()
-      await expect(page.getByText('LinkedIn Settings')).toBeVisible()
-
-      await saveDraft(page)
-      await waitForNavigation(page, '/')
-    })
-
-    test('should create a post for all three platforms', async ({ page }) => {
-      await goToNewPost(page)
-
-      // Select all platforms
-      await togglePlatform(page, 'twitter')
-      await togglePlatform(page, 'linkedin')
-      await togglePlatform(page, 'reddit')
-
-      // Fill in content that works for all
-      await fillContent(page, 'Exciting announcement across all platforms!')
-
-      // Fill in Reddit-specific fields
-      await fillRedditFields(page, {
-        subreddit: 'webdev',
-        title: 'Multi-platform post test',
-      })
-
-      // All platform previews should be visible (in the preview panel)
-      const previewPanel = page.locator('.border-l.border-border')
-      await expect(previewPanel.getByText('Twitter / X')).toBeVisible()
-      await expect(previewPanel.getByText('LinkedIn').first()).toBeVisible()
-      await expect(previewPanel.getByText('Reddit').first()).toBeVisible()
-
-      await saveDraft(page)
-      await waitForNavigation(page, '/')
-    })
-
-    test('should toggle platforms on and off', async ({ page }) => {
+  test.describe('Platform Switching', () => {
+    test('should switch between platforms', async ({ page }) => {
       await goToNewPost(page)
 
       const previewPanel = page.locator('.border-l.border-border')
 
       // Select Twitter
-      await togglePlatform(page, 'twitter')
+      await selectPlatform(page, 'twitter')
       await expect(previewPanel.getByText('Twitter / X')).toBeVisible()
 
-      // Add LinkedIn
-      await togglePlatform(page, 'linkedin')
+      // Switch to LinkedIn
+      await selectPlatform(page, 'linkedin')
       await expect(previewPanel.getByText('LinkedIn').first()).toBeVisible()
-
-      // Remove Twitter
-      await togglePlatform(page, 'twitter')
       // Twitter preview should be hidden
       await expect(previewPanel.getByText('Twitter / X')).not.toBeVisible()
 
-      // LinkedIn should still be visible
-      await expect(previewPanel.getByText('LinkedIn').first()).toBeVisible()
+      // Switch to Reddit
+      await selectPlatform(page, 'reddit')
+      await expect(previewPanel.getByText('Reddit').first()).toBeVisible()
+      await expect(previewPanel.getByText('LinkedIn').first()).not.toBeVisible()
     })
   })
 
@@ -275,7 +230,7 @@ test.describe('Create Post', () => {
     test('should add notes to a post', async ({ page }) => {
       await goToNewPost(page)
 
-      await togglePlatform(page, 'twitter')
+      await selectPlatform(page, 'twitter')
       await fillContent(page, 'Post with notes attached')
 
       // Add notes
@@ -293,7 +248,7 @@ test.describe('Create Post', () => {
     test('should collapse and expand notes section', async ({ page }) => {
       await goToNewPost(page)
 
-      await togglePlatform(page, 'twitter')
+      await selectPlatform(page, 'twitter')
 
       // Notes section should be collapsed by default
       const notesTextarea = page.getByPlaceholder(/add notes about this post/i)
@@ -313,7 +268,7 @@ test.describe('Create Post', () => {
     test('should add multiple subreddits', async ({ page }) => {
       await goToNewPost(page)
 
-      await togglePlatform(page, 'reddit')
+      await selectPlatform(page, 'reddit')
 
       // Add multiple subreddits
       await fillRedditFields(page, {
@@ -337,7 +292,7 @@ test.describe('Create Post', () => {
     test('should remove subreddits via card', async ({ page }) => {
       await goToNewPost(page)
 
-      await togglePlatform(page, 'reddit')
+      await selectPlatform(page, 'reddit')
 
       // Add subreddits
       await fillRedditFields(page, {
@@ -366,7 +321,7 @@ test.describe('Create Post', () => {
     test('should show subreddits in preview', async ({ page }) => {
       await goToNewPost(page)
 
-      await togglePlatform(page, 'reddit')
+      await selectPlatform(page, 'reddit')
 
       await fillRedditFields(page, {
         subreddits: ['startups', 'SaaS'],
@@ -380,21 +335,10 @@ test.describe('Create Post', () => {
   })
 
   test.describe('Validation', () => {
-    test('should disable schedule button when no platforms selected', async ({ page }) => {
-      await goToNewPost(page)
-
-      // Don't select any platform
-      await fillContent(page, 'Some content')
-
-      // Schedule button should be disabled
-      const scheduleBtn = page.getByRole('button', { name: /^schedule$/i })
-      await expect(scheduleBtn).toBeDisabled()
-    })
-
     test('should show preview as user types', async ({ page }) => {
       await goToNewPost(page)
 
-      await togglePlatform(page, 'twitter')
+      await selectPlatform(page, 'twitter')
 
       const testText = 'Testing live preview functionality!'
       await fillContent(page, testText)
@@ -407,7 +351,7 @@ test.describe('Create Post', () => {
     test('should require date for scheduling', async ({ page }) => {
       await goToNewPost(page)
 
-      await togglePlatform(page, 'twitter')
+      await selectPlatform(page, 'twitter')
       await fillContent(page, 'Test content')
 
       // Try to schedule without date

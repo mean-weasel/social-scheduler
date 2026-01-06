@@ -223,20 +223,17 @@ function PostCard({ post, index }: { post: Post; index: number }) {
       style={{ animationDelay: `${index * 30}ms` }}
     >
       <div className="flex items-start gap-3 md:gap-4">
-        {/* Platform indicators */}
+        {/* Platform indicator */}
         <div className="flex flex-col gap-1.5 pt-1">
-          {post.platforms.map((platform) => (
-            <span
-              key={platform}
-              className={cn(
-                'w-2.5 h-2.5 rounded-full',
-                platform === 'twitter' && 'bg-twitter shadow-[0_0_8px_rgba(29,161,242,0.4)]',
-                platform === 'linkedin' && 'bg-linkedin shadow-[0_0_8px_rgba(10,102,194,0.4)]',
-                platform === 'reddit' && 'bg-reddit shadow-[0_0_8px_rgba(255,69,0,0.4)]'
-              )}
-              title={PLATFORM_INFO[platform].name}
-            />
-          ))}
+          <span
+            className={cn(
+              'w-2.5 h-2.5 rounded-full',
+              post.platform === 'twitter' && 'bg-twitter shadow-[0_0_8px_rgba(29,161,242,0.4)]',
+              post.platform === 'linkedin' && 'bg-linkedin shadow-[0_0_8px_rgba(10,102,194,0.4)]',
+              post.platform === 'reddit' && 'bg-reddit shadow-[0_0_8px_rgba(255,69,0,0.4)]'
+            )}
+            title={PLATFORM_INFO[post.platform].name}
+          />
         </div>
 
         {/* Content */}
@@ -260,14 +257,11 @@ function PostCard({ post, index }: { post: Post; index: number }) {
             )}
 
             {/* Published time */}
-            {post.status === 'published' && post.publishResults && (
+            {post.status === 'published' && post.publishResult && (
               <span className="flex items-center gap-1.5">
                 <Clock className="w-3.5 h-3.5" />
-                {Object.values(post.publishResults).find((r) => r.publishedAt)?.publishedAt
-                  ? format(
-                      new Date(Object.values(post.publishResults).find((r) => r.publishedAt)!.publishedAt!),
-                      'MMM d, h:mm a'
-                    )
+                {post.publishResult.publishedAt
+                  ? format(new Date(post.publishResult.publishedAt), 'MMM d, h:mm a')
                   : 'Published'}
               </span>
             )}
@@ -279,9 +273,9 @@ function PostCard({ post, index }: { post: Post; index: number }) {
               </span>
             )}
 
-            {/* Platforms */}
+            {/* Platform */}
             <span className="hidden sm:flex items-center gap-1.5">
-              {post.platforms.map((p) => PLATFORM_INFO[p].name.split(' ')[0]).join(', ')}
+              {PLATFORM_INFO[post.platform].name.split(' ')[0]}
             </span>
           </div>
         </div>
@@ -412,9 +406,9 @@ function CalendarView({
                         key={post.id}
                         className={cn(
                           'flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium truncate',
-                          post.platforms[0] === 'twitter' && 'bg-twitter/10 text-twitter',
-                          post.platforms[0] === 'linkedin' && 'bg-linkedin/10 text-linkedin',
-                          post.platforms[0] === 'reddit' && 'bg-reddit/10 text-reddit'
+                          post.platform === 'twitter' && 'bg-twitter/10 text-twitter',
+                          post.platform === 'linkedin' && 'bg-linkedin/10 text-linkedin',
+                          post.platform === 'reddit' && 'bg-reddit/10 text-reddit'
                         )}
                         onClick={(e) => {
                           e.preventDefault()

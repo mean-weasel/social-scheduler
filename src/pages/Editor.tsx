@@ -30,6 +30,11 @@ import {
   createPost,
   CHAR_LIMITS,
   PLATFORM_INFO,
+  LinkedInContent,
+  RedditContent,
+  isTwitterContent,
+  isLinkedInContent,
+  isRedditContent,
 } from '@/lib/posts'
 import { cn } from '@/lib/utils'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
@@ -169,18 +174,18 @@ export function Editor() {
 
   // Update dirty state when content changes
   useEffect(() => {
-    const currentContent = JSON.stringify({ content, mediaUrls, linkedInMediaUrl, redditUrl, platforms: post.platforms, notes: post.notes })
+    const currentContent = JSON.stringify({ content, mediaUrls, linkedInMediaUrl, redditUrl, platform: post.platform, notes: post.notes })
     if (initialContentRef.current && currentContent !== initialContentRef.current) {
       setIsDirty(true)
     }
-  }, [content, mediaUrls, linkedInMediaUrl, redditUrl, post.platforms, post.notes])
+  }, [content, mediaUrls, linkedInMediaUrl, redditUrl, post.platform, post.notes])
 
   // Warn about unsaved changes on browser close/refresh
   useUnsavedChanges({ isDirty })
 
   // Auto-save (only for drafts or new posts)
   // Disable auto-save for new posts with multiple subreddits (those need explicit save to create multiple posts)
-  const hasMultipleSubreddits = post.platforms.includes('reddit') && subredditsInput.length > 1
+  const hasMultipleSubreddits = post.platform === 'reddit' && subredditsInput.length > 1
   const { status: autoSaveStatus } = useAutoSave({
     data: { post, content, mediaUrls, linkedInMediaUrl, redditUrl },
     onSave: async () => {
@@ -208,29 +213,23 @@ export function Editor() {
   useEffect(() => {
     if (existingPost) {
       setPost(existingPost)
-      // Set content from the first available platform
-      const text =
-        existingPost.content.twitter?.text ||
-        existingPost.content.linkedin?.text ||
-        existingPost.content.reddit?.body ||
-        ''
-      setContent(text)
-      // Load mediaUrls from Twitter content
-      const loadedMediaUrls = existingPost.content.twitter?.mediaUrls || []
-      setMediaUrls(loadedMediaUrls)
-      // Load LinkedIn media URL
-      const loadedLinkedInMedia = existingPost.content.linkedin?.mediaUrl || ''
-      setLinkedInMediaUrl(loadedLinkedInMedia)
-      // Load Reddit URL
-      const loadedRedditUrl = existingPost.content.reddit?.url || ''
-      setRedditUrl(loadedRedditUrl)
-      // Load subreddits and titles (singular in data model)
-      if (existingPost.content.reddit?.subreddit) {
-        const subreddit = existingPost.content.reddit.subreddit
+      // Set content based on platform type
+      let text = ''
+      if (isTwitterContent(existingPost.content)) {
+        text = existingPost.content.text
+        setMediaUrls(existingPost.content.mediaUrls || [])
+      } else if (isLinkedInContent(existingPost.content)) {
+        text = existingPost.content.text
+        setLinkedInMediaUrl(existingPost.content.mediaUrl || '')
+      } else if (isRedditContent(existingPost.content)) {
+        text = existingPost.content.body || ''
+        setRedditUrl(existingPost.content.url || '')
+        // Load subreddits and titles (singular in data model)
+        const subreddit = existingPost.content.subreddit
         setSubredditsInput([subreddit])
         // Initialize title for this subreddit
-        if (existingPost.content.reddit.title) {
-          setSubredditTitles({ [subreddit]: existingPost.content.reddit.title })
+        if (existingPost.content.title) {
+          setSubredditTitles({ [subreddit]: existingPost.content.title })
         }
         // Initialize schedule for this subreddit from post.scheduledAt
         if (existingPost.scheduledAt) {
@@ -239,13 +238,17 @@ export function Editor() {
         // Auto-expand the card when editing
         setExpandedSubreddits({ [subreddit]: true })
       }
+      setContent(text)
       // Set initial content reference for dirty tracking
+      const loadedMediaUrls = isTwitterContent(existingPost.content) ? existingPost.content.mediaUrls || [] : []
+      const loadedLinkedInMedia = isLinkedInContent(existingPost.content) ? existingPost.content.mediaUrl || '' : ''
+      const loadedRedditUrl = isRedditContent(existingPost.content) ? existingPost.content.url || '' : ''
       initialContentRef.current = JSON.stringify({
         content: text,
         mediaUrls: loadedMediaUrls,
         linkedInMediaUrl: loadedLinkedInMedia,
         redditUrl: loadedRedditUrl,
-        platforms: existingPost.platforms,
+        platform: existingPost.platform,
         notes: existingPost.notes || '',
       })
       // Expand notes if they exist
@@ -254,9 +257,9 @@ export function Editor() {
       }
       // Expand published links if any exist
       const hasLaunchedUrls =
-        existingPost.content.twitter?.launchedUrl ||
-        existingPost.content.linkedin?.launchedUrl ||
-        existingPost.content.reddit?.launchedUrl
+        (isTwitterContent(existingPost.content) && existingPost.content.launchedUrl) ||
+        (isLinkedInContent(existingPost.content) && existingPost.content.launchedUrl) ||
+        (isRedditContent(existingPost.content) && existingPost.content.launchedUrl)
       if (hasLaunchedUrls) {
         setShowPublishedLinks(true)
       }
@@ -267,7 +270,7 @@ export function Editor() {
         mediaUrls: [],
         linkedInMediaUrl: '',
         redditUrl: '',
-        platforms: [],
+        platform: 'twitter',
         notes: '',
       })
     }
@@ -278,71 +281,53 @@ export function Editor() {
     setIsSaving(true)
     setIsDirty(false) // Clear dirty state before navigation
     try {
-      // Handle Reddit posts with multiple subreddits
-      if (isNew && postToSave.platforms.includes('reddit') && subredditsInput.length > 1) {
+      // Handle Reddit posts with multiple subreddits (cross-posting)
+      if (isNew && postToSave.platform === 'reddit' && subredditsInput.length > 1) {
         // Create multiple posts, one per subreddit, with shared groupId
         const groupId = crypto.randomUUID()
-        const hasOtherPlatforms = postToSave.platforms.some(p => p !== 'reddit')
+        const redditContent = postToSave.content as { subreddit: string; title: string; body?: string; url?: string; flairText?: string }
 
-        // If there are other platforms (Twitter, LinkedIn), create a separate post for them
-        if (hasOtherPlatforms) {
-          const otherPlatforms = postToSave.platforms.filter(p => p !== 'reddit') as Platform[]
-          const otherPlatformPost: Post = {
-            ...postToSave,
-            platforms: otherPlatforms,
-            content: {
-              twitter: postToSave.content.twitter,
-              linkedin: postToSave.content.linkedin,
-              // No reddit content for this post
-            },
-          }
-          await addPost(otherPlatformPost)
-        }
-
-        // Create separate Reddit posts for each subreddit
-        for (let i = 0; i < subredditsInput.length; i++) {
-          const subreddit = subredditsInput[i]
+        for (const subreddit of subredditsInput) {
           // Use per-subreddit schedule and title if set, otherwise fall back to defaults
           const subredditScheduledAt = subredditSchedules[subreddit] || postToSave.scheduledAt
           const subredditTitle = subredditTitles[subreddit] || ''
           const postForSubreddit: Post = {
             ...postToSave,
             id: crypto.randomUUID(),
-            platforms: ['reddit'],
             groupId,
             groupType: 'reddit-crosspost',
             scheduledAt: subredditScheduledAt,
             content: {
-              reddit: {
-                ...postToSave.content.reddit!,
-                subreddit,
-                title: subredditTitle,
-              },
+              ...redditContent,
+              subreddit,
+              title: subredditTitle,
             },
           }
           await addPost(postForSubreddit)
         }
       } else if (isNew) {
-        // Single subreddit or non-Reddit post
+        // Single post
         const finalPost = { ...postToSave }
-        if (finalPost.platforms.includes('reddit') && subredditsInput.length === 1) {
+        if (finalPost.platform === 'reddit' && subredditsInput.length === 1) {
           const subreddit = subredditsInput[0]
-          finalPost.content.reddit = {
-            ...finalPost.content.reddit!,
+          const redditContent = finalPost.content as { subreddit: string; title: string; body?: string; url?: string; flairText?: string }
+          finalPost.content = {
+            ...redditContent,
             subreddit,
-            title: subredditTitles[subreddit] || finalPost.content.reddit?.title || '',
+            title: subredditTitles[subreddit] || redditContent.title || '',
           }
         }
         await addPost(finalPost)
       } else {
         // Updating existing post
         const finalPost = { ...postToSave }
-        if (finalPost.platforms.includes('reddit') && subredditsInput.length >= 1) {
+        if (finalPost.platform === 'reddit' && subredditsInput.length >= 1) {
           const subreddit = subredditsInput[0]
-          finalPost.content.reddit = {
-            ...finalPost.content.reddit!,
+          const redditContent = finalPost.content as { subreddit: string; title: string; body?: string; url?: string; flairText?: string }
+          finalPost.content = {
+            ...redditContent,
             subreddit,
-            title: subredditTitles[subreddit] || finalPost.content.reddit?.title || '',
+            title: subredditTitles[subreddit] || redditContent.title || '',
           }
         }
         await updatePost(finalPost.id, finalPost)
@@ -403,45 +388,54 @@ export function Editor() {
     }
   }
 
-  // Toggle platform
-  const togglePlatform = (platform: Platform) => {
+  // Set platform (single selection)
+  const setPlatform = (platform: Platform) => {
     setPost((prev) => ({
       ...prev,
-      platforms: prev.platforms.includes(platform)
-        ? prev.platforms.filter((p) => p !== platform)
-        : [...prev.platforms, platform],
+      platform,
     }))
+    // Reset subreddit inputs when switching away from Reddit
+    if (platform !== 'reddit') {
+      setSubredditsInput([])
+      setSubredditTitles({})
+      setSubredditSchedules({})
+      setExpandedSubreddits({})
+    }
   }
 
-  // Update content for all selected platforms
+  // Update content for the selected platform
   useEffect(() => {
     setPost((prev) => {
-      const updated = { ...prev, content: { ...prev.content } }
-      for (const platform of prev.platforms) {
-        if (platform === 'twitter') {
-          updated.content.twitter = {
-            ...prev.content.twitter,
-            text: content,
-            ...(mediaUrls.length > 0 && { mediaUrls })
-          }
-        } else if (platform === 'linkedin') {
-          updated.content.linkedin = {
-            ...prev.content.linkedin,
-            text: content,
-            visibility: prev.content.linkedin?.visibility || 'public',
-            ...(linkedInMediaUrl && { mediaUrl: linkedInMediaUrl })
-          }
-        } else if (platform === 'reddit') {
-          updated.content.reddit = {
-            ...updated.content.reddit,
-            subreddit: updated.content.reddit?.subreddit || '',  // Will be set properly at save time
-            title: updated.content.reddit?.title || '',
-            body: content,
-            ...(redditUrl && { url: redditUrl })
-          }
+      let newContent = prev.content
+      const platform = prev.platform
+
+      if (platform === 'twitter') {
+        const existingContent = prev.content as { launchedUrl?: string }
+        newContent = {
+          text: content,
+          ...(mediaUrls.length > 0 && { mediaUrls }),
+          ...(existingContent?.launchedUrl && { launchedUrl: existingContent.launchedUrl })
+        }
+      } else if (platform === 'linkedin') {
+        const existingContent = prev.content as { visibility?: 'public' | 'connections'; launchedUrl?: string }
+        newContent = {
+          text: content,
+          visibility: existingContent?.visibility || 'public',
+          ...(linkedInMediaUrl && { mediaUrl: linkedInMediaUrl }),
+          ...(existingContent?.launchedUrl && { launchedUrl: existingContent.launchedUrl })
+        }
+      } else if (platform === 'reddit') {
+        const existingContent = prev.content as { subreddit?: string; title?: string; launchedUrl?: string }
+        newContent = {
+          subreddit: existingContent?.subreddit || '',  // Will be set properly at save time
+          title: existingContent?.title || '',
+          body: content,
+          ...(redditUrl && { url: redditUrl }),
+          ...(existingContent?.launchedUrl && { launchedUrl: existingContent.launchedUrl })
         }
       }
-      return updated
+
+      return { ...prev, content: newContent }
     })
   }, [content, mediaUrls, linkedInMediaUrl, redditUrl])
 
@@ -457,7 +451,7 @@ export function Editor() {
     // Check if scheduling is valid:
     // - For Reddit with multiple subreddits: each subreddit must have its own schedule
     // - Otherwise: main post.scheduledAt must be set
-    const isRedditMulti = post.platforms.includes('reddit') && subredditsInput.length > 1
+    const isRedditMulti = post.platform === 'reddit' && subredditsInput.length > 1
     const allSubredditsHaveSchedule = isRedditMulti &&
       subredditsInput.every(sub => subredditSchedules[sub])
 
@@ -472,10 +466,6 @@ export function Editor() {
 
   // Publish Now - schedules for immediate publishing (reminder)
   const handlePublishNow = () => {
-    if (post.platforms.length === 0) {
-      toast.error('Please select at least one platform')
-      return
-    }
     if (!content.trim()) {
       toast.error('Please add some content')
       return
@@ -515,15 +505,9 @@ export function Editor() {
     const toSave = {
       ...post,
       status: 'published' as const,
-      publishResults: {
-        ...post.publishResults,
-        ...post.platforms.reduce((acc, platform) => ({
-          ...acc,
-          [platform]: {
-            success: true,
-            publishedAt: new Date().toISOString(),
-          },
-        }), {}),
+      publishResult: {
+        success: true,
+        publishedAt: new Date().toISOString(),
       },
     }
     handleSave(toSave)
@@ -572,15 +556,15 @@ export function Editor() {
           <div className="h-1 w-16 bg-gradient-to-r from-[hsl(var(--gold))] to-transparent mt-2 rounded-full" />
         </div>
 
-        {/* Platform selector */}
+        {/* Platform selector (single selection) */}
         <div className="flex flex-wrap gap-2 mb-4 md:mb-6">
           {(['twitter', 'linkedin', 'reddit'] as Platform[]).map((platform) => {
-            const isActive = post.platforms.includes(platform)
+            const isActive = post.platform === platform
             const info = PLATFORM_INFO[platform]
             return (
               <button
                 key={platform}
-                onClick={() => togglePlatform(platform)}
+                onClick={() => setPlatform(platform)}
                 className={cn(
                   'flex items-center gap-2 px-3 md:px-4 py-2.5 md:py-3 rounded-xl border-2 transition-all',
                   'font-medium text-sm min-h-[44px]', // 44px minimum touch target
@@ -728,12 +712,13 @@ export function Editor() {
           />
           <div className="flex items-center justify-between mt-3">
             <div className="flex gap-4">
-              {post.platforms.map((platform) => {
+              {(() => {
+                const platform = post.platform
                 const limit = CHAR_LIMITS[platform]
                 const len = content.length
                 const pct = (len / limit) * 100
                 return (
-                  <div key={platform} className="flex items-center gap-2 text-xs">
+                  <div className="flex items-center gap-2 text-xs">
                     <span
                       className={cn(
                         'w-1.5 h-1.5 rounded-full',
@@ -753,7 +738,7 @@ export function Editor() {
                     <span className="text-muted-foreground">/ {limit}</span>
                   </div>
                 )
-              })}
+              })()}
             </div>
             <div className="flex gap-1">
               <button
@@ -790,7 +775,7 @@ export function Editor() {
         </div>
 
         {/* Media URLs section */}
-        {showMediaInput && (post.platforms.includes('twitter') || post.platforms.includes('linkedin')) && (
+        {showMediaInput && (post.platform === 'twitter' || post.platform === 'linkedin') && (
           <div className="mb-6 p-4 rounded-xl border border-border bg-accent/30 animate-slide-up">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2 text-foreground text-xs font-medium">
@@ -806,7 +791,7 @@ export function Editor() {
             </div>
 
             {/* Twitter Media */}
-            {post.platforms.includes('twitter') && (
+            {post.platform === 'twitter' && (
               <div className="mb-4">
                 <div className="flex items-center gap-2 text-twitter text-xs font-medium mb-2">
                   <span className="w-2 h-2 rounded-full bg-twitter" />
@@ -822,7 +807,7 @@ export function Editor() {
             )}
 
             {/* LinkedIn Media */}
-            {post.platforms.includes('linkedin') && (
+            {post.platform === 'linkedin' && (
               <div>
                 <div className="flex items-center gap-2 text-linkedin text-xs font-medium mb-2">
                   <span className="w-2 h-2 rounded-full bg-linkedin" />
@@ -840,7 +825,7 @@ export function Editor() {
         )}
 
         {/* LinkedIn-specific fields */}
-        {post.platforms.includes('linkedin') && (
+        {post.platform === 'linkedin' && (
           <div className="mb-6 p-4 rounded-xl border border-linkedin/30 bg-linkedin-soft/30 animate-slide-up">
             <div className="flex items-center gap-2 text-linkedin text-xs font-medium mb-3">
               <span className="w-2 h-2 rounded-full bg-linkedin" />
@@ -859,17 +844,14 @@ export function Editor() {
                       setPost((prev) => ({
                         ...prev,
                         content: {
-                          ...prev.content,
-                          linkedin: {
-                            ...prev.content.linkedin!,
-                            visibility: vis,
-                          },
+                          ...(prev.content as LinkedInContent),
+                          visibility: vis,
                         },
                       }))
                     }
                     className={cn(
                       'flex-1 px-4 py-2.5 rounded-lg border text-sm font-medium transition-all',
-                      post.content.linkedin?.visibility === vis
+                      isLinkedInContent(post.content) && post.content.visibility === vis
                         ? 'border-linkedin bg-linkedin/10 text-linkedin'
                         : 'border-border bg-background text-muted-foreground hover:border-linkedin/50'
                     )}
@@ -883,7 +865,7 @@ export function Editor() {
         )}
 
         {/* Reddit-specific fields */}
-        {post.platforms.includes('reddit') && (
+        {post.platform === 'reddit' && (
           <div className="mb-6 p-4 rounded-xl border border-reddit/30 bg-reddit-soft/30 space-y-4 animate-slide-up">
             <div className="flex items-center gap-2 text-reddit text-xs font-medium mb-1">
               <span className="w-2 h-2 rounded-full bg-reddit" />
@@ -1099,13 +1081,13 @@ export function Editor() {
               </label>
               <input
                 type="text"
-                value={post.content.reddit?.flairText || ''}
+                value={(isRedditContent(post.content) && post.content.flairText) || ''}
                 onChange={(e) =>
                   setPost((prev) => ({
                     ...prev,
                     content: {
-                      ...prev.content,
-                      reddit: { ...prev.content.reddit!, flairText: e.target.value },
+                      ...(prev.content as RedditContent),
+                      flairText: e.target.value,
                     },
                   }))
                 }
@@ -1132,16 +1114,16 @@ export function Editor() {
         )}
 
         {/* Published Links section (collapsible) */}
-        {post.platforms.length > 0 && (
+        {true /* platform is always set */ && (
           <div className="mb-4 md:mb-6">
             <button
               onClick={() => setShowPublishedLinks(!showPublishedLinks)}
               className={cn(
                 'w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all',
                 showPublishedLinks ||
-                  post.content.twitter?.launchedUrl ||
-                  post.content.linkedin?.launchedUrl ||
-                  post.content.reddit?.launchedUrl
+                  (isTwitterContent(post.content) && post.content.launchedUrl) ||
+                  (isLinkedInContent(post.content) && post.content.launchedUrl) ||
+                  (isRedditContent(post.content) && post.content.launchedUrl)
                   ? 'border-primary/30 bg-primary/5'
                   : 'border-border bg-card hover:border-primary/30'
               )}
@@ -1150,12 +1132,12 @@ export function Editor() {
                 <Link className="w-4 h-4 text-primary" />
                 <span>Published Links</span>
                 {(() => {
-                  const count =
-                    (post.content.twitter?.launchedUrl ? 1 : 0) +
-                    (post.content.linkedin?.launchedUrl ? 1 : 0) +
-                    (post.content.reddit?.launchedUrl ? 1 : 0)
-                  return count > 0 ? (
-                    <span className="text-xs text-primary">({count})</span>
+                  const hasLaunchedUrl =
+                    (isTwitterContent(post.content) && post.content.launchedUrl) ||
+                    (isLinkedInContent(post.content) && post.content.launchedUrl) ||
+                    (isRedditContent(post.content) && post.content.launchedUrl)
+                  return hasLaunchedUrl ? (
+                    <span className="text-xs text-primary">(1)</span>
                   ) : null
                 })()}
               </div>
@@ -1168,7 +1150,7 @@ export function Editor() {
             {showPublishedLinks && (
               <div className="mt-2 space-y-3 animate-slide-up">
                 {/* Twitter launched URL */}
-                {post.platforms.includes('twitter') && (
+                {post.platform === 'twitter' && (
                   <div className="flex items-center gap-3 p-3 rounded-lg bg-card border border-border">
                     <div className="flex items-center gap-2 min-w-[100px]">
                       <span className="w-2 h-2 rounded-full bg-twitter" />
@@ -1176,17 +1158,13 @@ export function Editor() {
                     </div>
                     <input
                       type="url"
-                      value={post.content.twitter?.launchedUrl || ''}
+                      value={(isTwitterContent(post.content) && post.content.launchedUrl) || ''}
                       onChange={(e) =>
                         setPost((prev) => ({
                           ...prev,
                           content: {
-                            ...prev.content,
-                            twitter: {
-                              ...prev.content.twitter,
-                              text: prev.content.twitter?.text || '',
-                              launchedUrl: e.target.value,
-                            },
+                            ...(prev.content as { text: string }),
+                            launchedUrl: e.target.value,
                           },
                         }))
                       }
@@ -1197,7 +1175,7 @@ export function Editor() {
                 )}
 
                 {/* LinkedIn launched URL */}
-                {post.platforms.includes('linkedin') && (
+                {post.platform === 'linkedin' && (
                   <div className="flex items-center gap-3 p-3 rounded-lg bg-card border border-border">
                     <div className="flex items-center gap-2 min-w-[100px]">
                       <span className="w-2 h-2 rounded-full bg-linkedin" />
@@ -1205,18 +1183,13 @@ export function Editor() {
                     </div>
                     <input
                       type="url"
-                      value={post.content.linkedin?.launchedUrl || ''}
+                      value={(isLinkedInContent(post.content) && post.content.launchedUrl) || ''}
                       onChange={(e) =>
                         setPost((prev) => ({
                           ...prev,
                           content: {
-                            ...prev.content,
-                            linkedin: {
-                              ...prev.content.linkedin,
-                              text: prev.content.linkedin?.text || '',
-                              visibility: prev.content.linkedin?.visibility || 'public',
-                              launchedUrl: e.target.value,
-                            },
+                            ...(prev.content as LinkedInContent),
+                            launchedUrl: e.target.value,
                           },
                         }))
                       }
@@ -1227,7 +1200,7 @@ export function Editor() {
                 )}
 
                 {/* Reddit launched URL (singular per post now) */}
-                {post.platforms.includes('reddit') &&
+                {post.platform === 'reddit' &&
                   (!subredditsInput.length ? (
                     <p className="text-sm text-muted-foreground italic p-3 rounded-lg bg-card border border-border">
                       Add subreddits above to track published links.
@@ -1244,18 +1217,13 @@ export function Editor() {
                       </div>
                       <input
                         type="url"
-                        value={post.content.reddit?.launchedUrl || ''}
+                        value={(isRedditContent(post.content) && post.content.launchedUrl) || ''}
                         onChange={(e) =>
                           setPost((prev) => ({
                             ...prev,
                             content: {
-                              ...prev.content,
-                              reddit: {
-                                ...prev.content.reddit,
-                                subreddit: prev.content.reddit?.subreddit || '',
-                                title: prev.content.reddit?.title || '',
-                                launchedUrl: e.target.value,
-                              },
+                              ...(prev.content as RedditContent),
+                              launchedUrl: e.target.value,
                             },
                           }))
                         }
@@ -1423,7 +1391,7 @@ export function Editor() {
           </button>
           <button
             onClick={handleSchedule}
-            disabled={isSaving || post.platforms.length === 0}
+            disabled={isSaving || false /* platform is always set */}
             title="Schedule Post (⌘↵)"
             className={cn(
               'flex items-center gap-2 px-3 md:px-4 py-2.5 rounded-lg min-h-[44px]',
@@ -1439,7 +1407,7 @@ export function Editor() {
           </button>
           <button
             onClick={handlePublishNow}
-            disabled={isSaving || post.platforms.length === 0}
+            disabled={isSaving || false /* platform is always set */}
             className={cn(
               'flex items-center gap-2 px-3 md:px-4 py-2.5 rounded-lg min-h-[44px]',
               'text-muted-foreground',
@@ -1457,7 +1425,7 @@ export function Editor() {
           {!isNew && post.status !== 'published' && (
             <button
               onClick={handleMarkAsPosted}
-              disabled={isSaving || post.platforms.length === 0}
+              disabled={isSaving || false /* platform is always set */}
               className={cn(
                 'flex items-center gap-2 px-3 md:px-4 py-2.5 rounded-lg min-h-[44px]',
                 'bg-green-500/10 text-green-600 dark:text-green-400',
@@ -1483,13 +1451,13 @@ export function Editor() {
           </h3>
         </div>
 
-        {post.platforms.length === 0 ? (
+        {false /* platform is always set */ ? (
           <p className="text-sm text-muted-foreground text-center py-12">
             Select a platform to see preview
           </p>
         ) : (
           <div className="space-y-4">
-            {post.platforms.includes('twitter') && (
+            {post.platform === 'twitter' && (
               <div className="animate-slide-up" style={{ animationDelay: '100ms' }}>
                 <div className="flex items-center gap-2 text-twitter text-xs font-medium mb-2">
                   <span className="w-2 h-2 rounded-full bg-twitter" />
@@ -1541,7 +1509,7 @@ export function Editor() {
               </div>
             )}
 
-            {post.platforms.includes('linkedin') && (
+            {post.platform === 'linkedin' && (
               <div className="animate-slide-up" style={{ animationDelay: '200ms' }}>
                 <div className="flex items-center gap-2 text-linkedin text-xs font-medium mb-2">
                   <span className="w-2 h-2 rounded-full bg-linkedin" />
@@ -1575,7 +1543,7 @@ export function Editor() {
               </div>
             )}
 
-            {post.platforms.includes('reddit') && (
+            {post.platform === 'reddit' && (
               <div className="animate-slide-up" style={{ animationDelay: '300ms' }}>
                 <div className="flex items-center gap-2 text-reddit text-xs font-medium mb-2">
                   <span className="w-2 h-2 rounded-full bg-reddit" />
@@ -1591,7 +1559,7 @@ export function Editor() {
                     • Posted by u/yourname
                   </div>
                   <div className="px-3 text-lg font-medium text-[#D7DADC]">
-                    {post.content.reddit?.title || 'Your post title'}
+                    {(isRedditContent(post.content) && post.content.title) || 'Your post title'}
                   </div>
                   {redditUrl && (
                     <div className="px-3 py-2 text-xs text-[#4FBCFF] truncate">

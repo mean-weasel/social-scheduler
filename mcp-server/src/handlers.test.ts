@@ -200,15 +200,13 @@ async function handleCreateRedditCrossposts(args: {
 
   for (const sub of args.subreddits) {
     const post = await storage.createPost({
-      platforms: ['reddit'] as storage.Platform[],
+      platform: 'reddit' as storage.Platform,
       content: {
-        reddit: {
-          subreddit: sub.subreddit,
-          title: sub.title,
-          body: sub.body,
-          url: sub.url,
-          flairText: sub.flairText,
-        },
+        subreddit: sub.subreddit,
+        title: sub.title,
+        body: sub.body,
+        url: sub.url,
+        flairText: sub.flairText,
       },
       scheduledAt: sub.scheduledAt || args.defaultScheduledAt || null,
       status: args.status || 'draft',
@@ -459,8 +457,8 @@ describe('Tool Handlers', () => {
 
       it('should create posts for each subreddit with shared groupId', async () => {
         const mockPosts = [
-          { id: 'p1', content: { reddit: { subreddit: 'startups', title: 'Test' } } },
-          { id: 'p2', content: { reddit: { subreddit: 'SaaS', title: 'Test' } } },
+          { id: 'p1', platform: 'reddit', content: { subreddit: 'startups', title: 'Test' } },
+          { id: 'p2', platform: 'reddit', content: { subreddit: 'SaaS', title: 'Test' } },
         ]
         vi.mocked(storage.createPost)
           .mockResolvedValueOnce(mockPosts[0] as storage.Post)
@@ -551,9 +549,10 @@ describe('Tool Handlers', () => {
         })
 
         const call = vi.mocked(storage.createPost).mock.calls[0][0]
-        expect(call.content.reddit?.body).toBe('Post body')
-        expect(call.content.reddit?.url).toBe('https://example.com')
-        expect(call.content.reddit?.flairText).toBe('Discussion')
+        const content = call.content as { body?: string; url?: string; flairText?: string }
+        expect(content.body).toBe('Post body')
+        expect(content.url).toBe('https://example.com')
+        expect(content.flairText).toBe('Discussion')
       })
     })
   })

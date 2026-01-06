@@ -47,48 +47,18 @@ const server = new Server(
 const TOOLS = [
   {
     name: 'create_post',
-    description: 'Create a new social media post draft or scheduled post',
+    description: 'Create a new social media post draft or scheduled post for a single platform',
     inputSchema: {
       type: 'object' as const,
       properties: {
-        platforms: {
-          type: 'array',
-          items: { type: 'string', enum: ['twitter', 'linkedin', 'reddit'] },
-          description: 'Platforms to post to',
+        platform: {
+          type: 'string',
+          enum: ['twitter', 'linkedin', 'reddit'],
+          description: 'Target platform for the post',
         },
         content: {
           type: 'object',
-          properties: {
-            twitter: {
-              type: 'object',
-              properties: {
-                text: { type: 'string', description: 'Tweet text (max 280 chars)' },
-                mediaUrls: { type: 'array', items: { type: 'string' }, description: 'Media URLs (up to 4)' },
-              },
-              required: ['text'],
-            },
-            linkedin: {
-              type: 'object',
-              properties: {
-                text: { type: 'string', description: 'LinkedIn post text' },
-                visibility: { type: 'string', enum: ['public', 'connections'], description: 'Post visibility' },
-                mediaUrl: { type: 'string', description: 'Single media URL' },
-              },
-              required: ['text'],
-            },
-            reddit: {
-              type: 'object',
-              properties: {
-                subreddit: { type: 'string', description: 'Target subreddit name (without r/)' },
-                title: { type: 'string', description: 'Post title (max 300 chars)' },
-                body: { type: 'string', description: 'Post body text' },
-                url: { type: 'string', description: 'Link URL for link posts' },
-                flairText: { type: 'string', description: 'Flair text' },
-              },
-              required: ['subreddit', 'title'],
-            },
-          },
-          description: 'Content for each platform',
+          description: 'Content for the post. Structure depends on platform: twitter={text, mediaUrls?}, linkedin={text, visibility?, mediaUrl?}, reddit={subreddit, title, body?, url?, flairText?}',
         },
         scheduledAt: {
           type: 'string',
@@ -117,7 +87,7 @@ const TOOLS = [
           description: 'Type of grouping (optional)',
         },
       },
-      required: ['platforms'],
+      required: ['platform', 'content'],
     },
   },
   {
@@ -138,14 +108,14 @@ const TOOLS = [
       type: 'object' as const,
       properties: {
         id: { type: 'string', description: 'Post ID to update' },
-        platforms: {
-          type: 'array',
-          items: { type: 'string', enum: ['twitter', 'linkedin', 'reddit'] },
-          description: 'Platforms to post to',
+        platform: {
+          type: 'string',
+          enum: ['twitter', 'linkedin', 'reddit'],
+          description: 'Target platform for the post',
         },
         content: {
           type: 'object',
-          description: 'Updated content for each platform',
+          description: 'Updated content for the platform',
         },
         scheduledAt: {
           type: 'string',
@@ -405,8 +375,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   try {
     switch (name) {
       case 'create_post': {
-        const { platforms, content, scheduledAt, status, notes, campaignId, groupId, groupType } = args as {
-          platforms: Platform[]
+        const { platform, content, scheduledAt, status, notes, campaignId, groupId, groupType } = args as {
+          platform: Platform
           content: Post['content']
           scheduledAt?: string
           status?: 'draft' | 'scheduled'
@@ -416,16 +386,24 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           groupType?: GroupType
         }
 
-        if (!platforms || platforms.length === 0) {
+        const validPlatforms = ['twitter', 'linkedin', 'reddit']
+        if (!platform || !validPlatforms.includes(platform)) {
           return {
-            content: [{ type: 'text', text: 'Error: At least one platform is required' }],
+            content: [{ type: 'text', text: 'Error: platform is required and must be one of: twitter, linkedin, reddit' }],
+            isError: true,
+          }
+        }
+
+        if (!content || typeof content !== 'object') {
+          return {
+            content: [{ type: 'text', text: 'Error: content is required' }],
             isError: true,
           }
         }
 
         const post = await createPost({
-          platforms,
-          content: content || {},
+          platform,
+          content,
           scheduledAt: scheduledAt || null,
           status: status || 'draft',
           notes,
@@ -773,15 +751,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
         for (const sub of subreddits) {
           const post = await createPost({
-            platforms: ['reddit'] as Platform[],
+            platform: 'reddit',
             content: {
-              reddit: {
-                subreddit: sub.subreddit,
-                title: sub.title,
-                body: sub.body,
-                url: sub.url,
-                flairText: sub.flairText,
-              },
+              subreddit: sub.subreddit,
+              title: sub.title,
+              body: sub.body,
+              url: sub.url,
+              flairText: sub.flairText,
             },
             scheduledAt: sub.scheduledAt || defaultScheduledAt || null,
             status: status || 'draft',

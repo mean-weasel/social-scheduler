@@ -47,32 +47,29 @@ export interface PublishResult {
   publishedAt?: string
 }
 
+// Platform-specific content type based on selected platform
+export type PlatformContent = TwitterContent | LinkedInContent | RedditContent
+
 export interface Post {
   id: string
   createdAt: string
   updatedAt: string
   scheduledAt: string | null
   status: PostStatus
-  platforms: Platform[]
+  platform: Platform
   notes?: string
   campaignId?: string
   groupId?: string
   groupType?: GroupType
-  content: {
-    twitter?: TwitterContent
-    linkedin?: LinkedInContent
-    reddit?: RedditContent
-  }
-  publishResults?: {
-    [K in Platform]?: PublishResult
-  }
+  content: PlatformContent
+  publishResult?: PublishResult
 }
 
 // CRUD Operations - all async via API
 
 export async function createPost(data: {
-  platforms: Platform[]
-  content: Post['content']
+  platform: Platform
+  content: PlatformContent
   scheduledAt?: string | null
   status?: PostStatus
   notes?: string

@@ -47,25 +47,22 @@ export interface PublishResult {
 
 export type GroupType = 'reddit-crosspost'
 
+// Platform-specific content type based on selected platform
+export type PlatformContent = TwitterContent | LinkedInContent | RedditContent
+
 export interface Post {
   id: string
   createdAt: string
   updatedAt: string
   scheduledAt: string | null
   status: PostStatus
-  platforms: Platform[]
+  platform: Platform
   notes?: string  // User/MCP notes for this post
   campaignId?: string  // Optional reference to a campaign
   groupId?: string     // Groups related posts (e.g., Reddit crossposts)
   groupType?: GroupType  // Type of grouping
-  content: {
-    twitter?: TwitterContent
-    linkedin?: LinkedInContent
-    reddit?: RedditContent
-  }
-  publishResults?: {
-    [K in Platform]?: PublishResult
-  }
+  content: PlatformContent
+  publishResult?: PublishResult
 }
 
 // Character limits per platform
@@ -97,34 +94,59 @@ export const PLATFORM_INFO: Record<Platform, { name: string; label: string; colo
   },
 }
 
+// Type guards for platform content
+export function isTwitterContent(content: PlatformContent): content is TwitterContent {
+  return 'text' in content && !('visibility' in content) && !('subreddit' in content)
+}
+
+export function isLinkedInContent(content: PlatformContent): content is LinkedInContent {
+  return 'text' in content && 'visibility' in content
+}
+
+export function isRedditContent(content: PlatformContent): content is RedditContent {
+  return 'subreddit' in content && 'title' in content
+}
+
 // Helper to create a new post
 export function createPost(overrides: Partial<Post> = {}): Post {
   const now = new Date().toISOString()
+  const platform = overrides.platform || 'twitter'
+  const defaultContent = getDefaultContent(platform)
   return {
     id: crypto.randomUUID(),
     createdAt: now,
     updatedAt: now,
     scheduledAt: null,
     status: 'draft',
-    platforms: [],
-    content: {},
+    platform,
+    content: defaultContent,
     ...overrides,
+  }
+}
+
+// Get default content for a platform
+export function getDefaultContent(platform: Platform): PlatformContent {
+  switch (platform) {
+    case 'twitter':
+      return { text: '' }
+    case 'linkedin':
+      return { text: '', visibility: 'public' }
+    case 'reddit':
+      return { subreddit: '', title: '', body: '' }
   }
 }
 
 // Get the main text content for display
 export function getPostPreviewText(post: Post): string {
-  if (post.content.twitter?.text) {
-    return post.content.twitter.text
+  const content = post.content
+  if (isTwitterContent(content)) {
+    return content.text
   }
-  if (post.content.linkedin?.text) {
-    return post.content.linkedin.text
+  if (isLinkedInContent(content)) {
+    return content.text
   }
-  if (post.content.reddit?.body) {
-    return post.content.reddit.body
-  }
-  if (post.content.reddit?.title) {
-    return post.content.reddit.title
+  if (isRedditContent(content)) {
+    return content.body || content.title
   }
   return ''
 }
