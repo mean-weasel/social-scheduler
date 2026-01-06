@@ -19,12 +19,14 @@ export interface Campaign {
 export interface TwitterContent {
   text: string
   mediaUrls?: string[]
+  launchedUrl?: string  // URL of the published tweet
 }
 
 export interface LinkedInContent {
   text: string
   visibility: 'public' | 'connections'
   mediaUrl?: string
+  launchedUrl?: string  // URL of the published LinkedIn post
 }
 
 export interface RedditContent {
@@ -61,6 +63,20 @@ export function isLinkedInContent(content: PlatformContent): content is LinkedIn
 
 export function isRedditContent(content: PlatformContent): content is RedditContent {
   return 'subreddit' in content && 'title' in content
+}
+
+// Valid status transitions
+const VALID_STATUS_TRANSITIONS: Record<PostStatus, PostStatus[]> = {
+  draft: ['scheduled', 'archived'],
+  scheduled: ['draft', 'published', 'failed', 'archived'],
+  published: ['archived'],
+  failed: ['draft', 'scheduled', 'archived'],
+  archived: ['draft'],
+}
+
+export function isValidStatusTransition(from: PostStatus, to: PostStatus): boolean {
+  if (from === to) return true // No change is always valid
+  return VALID_STATUS_TRANSITIONS[from]?.includes(to) ?? false
 }
 
 export interface Post {
@@ -334,8 +350,8 @@ export function importFromJson(jsonPath: string): number {
     let imported = 0
 
     const insertStmt = db.prepare(`
-      INSERT OR IGNORE INTO posts (id, created_at, updated_at, scheduled_at, status, platform, notes, content, publish_result)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT OR IGNORE INTO posts (id, created_at, updated_at, scheduled_at, status, platform, notes, content, publish_result, campaign_id, group_id, group_type)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
 
     for (const post of posts) {
@@ -348,7 +364,10 @@ export function importFromJson(jsonPath: string): number {
         post.platform,
         post.notes || null,
         JSON.stringify(post.content),
-        post.publishResult ? JSON.stringify(post.publishResult) : null
+        post.publishResult ? JSON.stringify(post.publishResult) : null,
+        post.campaignId || null,
+        post.groupId || null,
+        post.groupType || null
       )
       if (result.changes > 0) imported++
     }
@@ -464,13 +483,20 @@ export function getCampaignPosts(campaignId: string): Post[] {
   return rows.map(rowToPost)
 }
 
-export function addPostToCampaign(postId: string, campaignId: string): Post | undefined {
+export function addPostToCampaign(campaignId: string, postId: string): Post | undefined {
+  // Verify campaign exists
+  const campaign = getCampaign(campaignId)
+  if (!campaign) return undefined
+
   return updatePost(postId, { campaignId })
 }
 
-export function removePostFromCampaign(postId: string): Post | undefined {
+export function removePostFromCampaign(campaignId: string, postId: string): Post | undefined {
   const existing = getPost(postId)
   if (!existing) return undefined
+
+  // Verify post belongs to the specified campaign
+  if (existing.campaignId !== campaignId) return undefined
 
   const timestamp = now()
   const stmt = db.prepare('UPDATE posts SET campaign_id = NULL, updated_at = ? WHERE id = ?')

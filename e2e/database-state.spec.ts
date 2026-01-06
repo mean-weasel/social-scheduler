@@ -12,6 +12,7 @@ import {
   deletePost,
   filterByStatus,
   getPostCards,
+  switchPlatformWithConfirm,
 } from './helpers'
 
 /**
@@ -131,9 +132,9 @@ test.describe('Database State Verification', () => {
       const postId = posts[0].id
       expect(posts[0].platform).toBe('twitter')
 
-      // Edit and switch platform
+      // Edit and switch platform (with confirmation dialog)
       await page.goto(`/edit/${postId}`)
-      await page.getByRole('button', { name: 'LinkedIn' }).click() // Switch to LinkedIn
+      await switchPlatformWithConfirm(page, 'linkedin')
       await page.getByRole('button', { name: /save draft/i }).click()
       await expect(page).toHaveURL('/')
 

@@ -37,7 +37,6 @@ export function MediaUpload({
   const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const platformColor = platform === 'twitter' ? 'twitter' : 'linkedin'
   const canAddMore = existingMedia.length < maxFiles && !uploading && !disabled
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -184,7 +183,9 @@ export function MediaUpload({
           className={cn(
             'border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all duration-200',
             isDragging
-              ? `border-${platformColor} bg-${platformColor}/5`
+              ? platform === 'twitter'
+                ? 'border-twitter bg-twitter/5'
+                : 'border-linkedin bg-linkedin/5'
               : 'border-border hover:border-muted-foreground/50',
             disabled && 'opacity-50 cursor-not-allowed'
           )}
@@ -200,7 +201,11 @@ export function MediaUpload({
           <Upload
             className={cn(
               'w-8 h-8 mx-auto mb-2',
-              isDragging ? `text-${platformColor}` : 'text-muted-foreground'
+              isDragging
+                ? platform === 'twitter'
+                  ? 'text-twitter'
+                  : 'text-linkedin'
+                : 'text-muted-foreground'
             )}
           />
           <p className="text-sm font-medium">

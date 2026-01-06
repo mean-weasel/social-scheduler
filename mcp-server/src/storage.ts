@@ -21,12 +21,14 @@ export interface Campaign {
 export interface TwitterContent {
   text: string
   mediaUrls?: string[]
+  launchedUrl?: string  // URL of the published tweet
 }
 
 export interface LinkedInContent {
   text: string
   visibility: 'public' | 'connections'
   mediaUrl?: string
+  launchedUrl?: string  // URL of the published LinkedIn post
 }
 
 export interface RedditContent {

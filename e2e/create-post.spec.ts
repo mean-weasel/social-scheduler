@@ -354,15 +354,12 @@ test.describe('Create Post', () => {
       await selectPlatform(page, 'twitter')
       await fillContent(page, 'Test content')
 
-      // Try to schedule without date
-      page.on('dialog', async (dialog) => {
-        expect(dialog.message()).toContain('date')
-        await dialog.accept()
-      })
+      // Schedule button should be disabled without a date
+      const scheduleButton = page.getByRole('button', { name: /^schedule$/i })
+      await expect(scheduleButton).toBeDisabled()
+      await expect(scheduleButton).toHaveAttribute('title', 'Select a date and time to schedule')
 
-      await schedulePost(page)
-
-      // Should still be on the editor page (not navigated)
+      // Should still be on the editor page
       await expect(page.getByRole('heading', { name: /create post/i })).toBeVisible()
     })
   })

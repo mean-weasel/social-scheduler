@@ -81,6 +81,8 @@ export function Editor() {
   const [copied, setCopied] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showArchiveConfirm, setShowArchiveConfirm] = useState(false)
+  const [showPlatformSwitchConfirm, setShowPlatformSwitchConfirm] = useState(false)
+  const [pendingPlatform, setPendingPlatform] = useState<Platform | null>(null)
   const [showCampaignDropdown, setShowCampaignDropdown] = useState(false)
 
   // Fetch posts on mount if not initialized (needed for direct navigation to /edit/:id)
@@ -186,6 +188,12 @@ export function Editor() {
   // Auto-save (only for drafts or new posts)
   // Disable auto-save for new posts with multiple subreddits (those need explicit save to create multiple posts)
   const hasMultipleSubreddits = post.platform === 'reddit' && subredditsInput.length > 1
+
+  // Check if scheduling is valid (used to disable Schedule button)
+  // For Reddit with multiple subreddits: each subreddit must have a schedule OR a fallback main schedule
+  const canSchedule = hasMultipleSubreddits
+    ? subredditsInput.every(sub => subredditSchedules[sub]) || !!post.scheduledAt
+    : !!post.scheduledAt
   const { status: autoSaveStatus } = useAutoSave({
     data: { post, content, mediaUrls, linkedInMediaUrl, redditUrl },
     onSave: async () => {
@@ -390,6 +398,26 @@ export function Editor() {
 
   // Set platform (single selection)
   const setPlatform = (platform: Platform) => {
+    // Check if there's content that would be lost
+    const hasContent = content.trim().length > 0 ||
+      mediaUrls.length > 0 ||
+      linkedInMediaUrl ||
+      redditUrl ||
+      subredditsInput.length > 0
+
+    if (hasContent && platform !== post.platform) {
+      // Show confirmation dialog
+      setPendingPlatform(platform)
+      setShowPlatformSwitchConfirm(true)
+      return
+    }
+
+    // No content to lose, switch immediately
+    executePlatformSwitch(platform)
+  }
+
+  // Execute the actual platform switch
+  const executePlatformSwitch = (platform: Platform) => {
     setPost((prev) => ({
       ...prev,
       platform,
@@ -401,6 +429,16 @@ export function Editor() {
       setSubredditSchedules({})
       setExpandedSubreddits({})
     }
+    // Reset pending platform
+    setPendingPlatform(null)
+  }
+
+  // Confirm platform switch (called from dialog)
+  const confirmPlatformSwitch = () => {
+    if (pendingPlatform) {
+      executePlatformSwitch(pendingPlatform)
+    }
+    setShowPlatformSwitchConfirm(false)
   }
 
   // Update content for the selected platform
@@ -1391,14 +1429,14 @@ export function Editor() {
           </button>
           <button
             onClick={handleSchedule}
-            disabled={isSaving || false /* platform is always set */}
-            title="Schedule Post (⌘↵)"
+            disabled={isSaving || !canSchedule}
+            title={canSchedule ? "Schedule Post (⌘↵)" : "Select a date and time to schedule"}
             className={cn(
               'flex items-center gap-2 px-3 md:px-4 py-2.5 rounded-lg min-h-[44px]',
               'bg-gradient-to-r from-twitter to-[#0d8bd9] text-white',
               'font-medium text-sm',
               'hover:opacity-90 transition-opacity',
-              'disabled:opacity-50',
+              'disabled:opacity-50 disabled:cursor-not-allowed',
               'flex-shrink-0'
             )}
           >
@@ -1590,6 +1628,20 @@ export function Editor() {
         title="Archive this post?"
         description="The post will be moved to your archive. You can restore it later or delete it permanently."
         confirmText="Archive"
+        cancelText="Cancel"
+      />
+
+      {/* Platform switch confirmation dialog */}
+      <ConfirmDialog
+        open={showPlatformSwitchConfirm}
+        onConfirm={confirmPlatformSwitch}
+        onCancel={() => {
+          setShowPlatformSwitchConfirm(false)
+          setPendingPlatform(null)
+        }}
+        title="Switch platform?"
+        description="Switching platforms will reset some content. Your text will be preserved, but platform-specific settings will be cleared."
+        confirmText="Switch"
         cancelText="Cancel"
       />
     </div>

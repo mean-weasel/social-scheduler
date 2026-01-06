@@ -5,6 +5,7 @@ import {
   getPostCount,
   getAllPosts,
   extractPostIdFromUrl,
+  switchPlatformWithConfirm,
 } from './helpers'
 
 test.describe('Auto-save', () => {
@@ -139,9 +140,9 @@ test.describe('Auto-save', () => {
       const postId = originalPosts[0].id
       expect(originalPosts[0].platform).toBe('twitter')
 
-      // Edit and switch to LinkedIn
+      // Edit and switch to LinkedIn (with confirmation dialog)
       await page.goto(`/edit/${postId}`)
-      await page.getByRole('button', { name: 'LinkedIn' }).click()
+      await switchPlatformWithConfirm(page, 'linkedin')
 
       // Wait for auto-save
       await page.waitForTimeout(3000)
