@@ -1451,12 +1451,7 @@ export function Editor() {
           </h3>
         </div>
 
-        {false /* platform is always set */ ? (
-          <p className="text-sm text-muted-foreground text-center py-12">
-            Select a platform to see preview
-          </p>
-        ) : (
-          <div className="space-y-4">
+        <div className="space-y-4">
             {post.platform === 'twitter' && (
               <div className="animate-slide-up" style={{ animationDelay: '100ms' }}>
                 <div className="flex items-center gap-2 text-twitter text-xs font-medium mb-2">
@@ -1573,7 +1568,6 @@ export function Editor() {
               </div>
             )}
           </div>
-        )}
       </div>
 
       {/* Delete confirmation dialog */}

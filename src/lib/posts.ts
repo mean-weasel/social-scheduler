@@ -125,7 +125,7 @@ export function createPost(overrides: Partial<Post> = {}): Post {
 }
 
 // Get default content for a platform
-export function getDefaultContent(platform: Platform): PlatformContent {
+function getDefaultContent(platform: Platform): PlatformContent {
   switch (platform) {
     case 'twitter':
       return { text: '' }
