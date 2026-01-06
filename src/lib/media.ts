@@ -2,10 +2,10 @@
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
 
 // File type and size limits (must match backend)
-export const ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
-export const ALLOWED_VIDEO_EXTENSIONS = ['.mp4', '.mov', '.webm']
-export const MAX_IMAGE_SIZE = 10 * 1024 * 1024 // 10MB
-export const MAX_VIDEO_SIZE = 100 * 1024 * 1024 // 100MB
+const ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
+const ALLOWED_VIDEO_EXTENSIONS = ['.mp4', '.mov', '.webm']
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024 // 10MB
+const MAX_VIDEO_SIZE = 100 * 1024 * 1024 // 100MB
 
 // Accept string for file inputs
 export const ACCEPT_MEDIA = 'image/jpeg,image/png,image/gif,image/webp,video/mp4,video/quicktime,video/webm'
@@ -30,22 +30,6 @@ function getFileExtension(filename: string): string {
   const lastDot = filename.lastIndexOf('.')
   if (lastDot === -1) return ''
   return filename.slice(lastDot).toLowerCase()
-}
-
-/**
- * Check if a file is an image based on its extension or MIME type
- */
-export function isImageFile(file: File): boolean {
-  const ext = getFileExtension(file.name)
-  return ALLOWED_IMAGE_EXTENSIONS.includes(ext) || file.type.startsWith('image/')
-}
-
-/**
- * Check if a file is a video based on its extension or MIME type
- */
-export function isVideoFile(file: File): boolean {
-  const ext = getFileExtension(file.name)
-  return ALLOWED_VIDEO_EXTENSIONS.includes(ext) || file.type.startsWith('video/')
 }
 
 /**
@@ -179,13 +163,4 @@ export async function deleteMedia(filename: string): Promise<boolean> {
  */
 export function getMediaUrl(filename: string): string {
   return `${API_BASE}/media/${filename}`
-}
-
-/**
- * Format file size for display
- */
-export function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
