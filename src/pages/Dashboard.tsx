@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useEffect } from 'react'
 import { format, formatDistanceToNow } from 'date-fns'
-import { Calendar, FileText, Clock, ChevronRight, Plus, Sparkles, FolderOpen } from 'lucide-react'
+import { Calendar, FileText, Clock, ChevronRight, Plus, Sparkles, FolderOpen, CheckCircle } from 'lucide-react'
 import { usePostsStore } from '@/lib/storage'
 import { useCampaignsStore } from '@/lib/campaigns'
 import { Post, getPostPreviewText, PLATFORM_INFO, Campaign } from '@/lib/posts'
@@ -222,6 +222,12 @@ export function Dashboard() {
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
     .slice(0, 5)
 
+  // Recently published (sorted by last updated)
+  const recentlyPublished = allPosts
+    .filter((p) => p.status === 'published')
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+    .slice(0, 5)
+
   // Recent campaigns (exclude archived, sorted by updated)
   const recentCampaigns = campaigns
     .filter((c) => c.status !== 'archived')
@@ -320,8 +326,8 @@ export function Dashboard() {
           </Link>
         </div>
       ) : (
-        /* Two-column layout on desktop, stacked on mobile */
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        /* Three-column layout on xl screens, two on lg, stacked on mobile */
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
           {/* Upcoming section */}
           <Section
             title="Upcoming"
@@ -354,8 +360,24 @@ export function Dashboard() {
             ))}
           </Section>
 
+          {/* Published section */}
+          <Section
+            title="Published"
+            icon={CheckCircle}
+            viewAllLink="/posts?status=published"
+            viewAllLabel="View all published"
+            isEmpty={recentlyPublished.length === 0}
+            emptyIcon={CheckCircle}
+            emptyTitle="No published posts"
+            emptyDescription="Mark posts as published to see them here"
+          >
+            {recentlyPublished.map((post) => (
+              <PostCard key={post.id} post={post} />
+            ))}
+          </Section>
+
           {/* Campaigns section - full width */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 xl:col-span-3">
             <Section
               title="Campaigns"
               icon={FolderOpen}

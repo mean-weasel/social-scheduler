@@ -128,16 +128,9 @@ campaignsRouter.post('/:id/posts', (req: Request, res: Response) => {
       return
     }
 
-    // Check if campaign exists
-    const campaign = getCampaign(req.params.id)
-    if (!campaign) {
-      res.status(404).json({ error: 'Campaign not found' })
-      return
-    }
-
-    const post = addPostToCampaign(postId, req.params.id)
+    const post = addPostToCampaign(req.params.id, postId)
     if (!post) {
-      res.status(404).json({ error: 'Post not found' })
+      res.status(404).json({ error: 'Campaign or post not found' })
       return
     }
 
@@ -151,9 +144,9 @@ campaignsRouter.post('/:id/posts', (req: Request, res: Response) => {
 // Remove post from campaign
 campaignsRouter.delete('/:id/posts/:postId', (req: Request, res: Response) => {
   try {
-    const post = removePostFromCampaign(req.params.postId)
+    const post = removePostFromCampaign(req.params.id, req.params.postId)
     if (!post) {
-      res.status(404).json({ error: 'Post not found' })
+      res.status(404).json({ error: 'Post not found or not in this campaign' })
       return
     }
     res.json({ post })

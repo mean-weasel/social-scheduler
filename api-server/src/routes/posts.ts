@@ -10,6 +10,7 @@ import {
   clearAll,
   Platform,
   PostStatus,
+  isValidStatusTransition,
 } from '../storage.js'
 import { deletePostMedia } from '../media.js'
 
@@ -98,6 +99,21 @@ postsRouter.post('/', (req: Request, res: Response) => {
 // Update post
 postsRouter.patch('/:id', (req: Request, res: Response) => {
   try {
+    // Validate status transition if status is being changed
+    if (req.body.status) {
+      const existing = getPost(req.params.id)
+      if (!existing) {
+        res.status(404).json({ error: 'Post not found' })
+        return
+      }
+      if (!isValidStatusTransition(existing.status, req.body.status)) {
+        res.status(400).json({
+          error: `Invalid status transition from '${existing.status}' to '${req.body.status}'`
+        })
+        return
+      }
+    }
+
     const post = updatePost(req.params.id, req.body)
     if (!post) {
       res.status(404).json({ error: 'Post not found' })

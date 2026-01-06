@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday } from 'date-fns'
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, isBefore, startOfDay } from 'date-fns'
 import {
   Clock,
   Edit2,
@@ -14,6 +14,8 @@ import {
   ChevronLeft,
   ChevronRight,
   LayoutGrid,
+  Search,
+  X,
 } from 'lucide-react'
 import { usePostsStore } from '@/lib/storage'
 import { Post, PostStatus, getPostPreviewText, PLATFORM_INFO } from '@/lib/posts'
@@ -35,12 +37,23 @@ export function Posts() {
   const [filter, setFilter] = useState<FilterStatus>('all')
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [currentDate, setCurrentDate] = useState(new Date())
+  const [searchQuery, setSearchQuery] = useState('')
 
   // Filter posts - 'all' excludes archived posts
-  const filteredPosts =
+  const statusFilteredPosts =
     filter === 'all'
       ? allPosts.filter((p) => p.status !== 'archived')
       : allPosts.filter((p) => p.status === filter)
+
+  // Apply search filter
+  const filteredPosts = searchQuery.trim()
+    ? statusFilteredPosts.filter((p) => {
+        const query = searchQuery.toLowerCase()
+        const content = getPostPreviewText(p).toLowerCase()
+        const notes = (p.notes || '').toLowerCase()
+        return content.includes(query) || notes.includes(query)
+      })
+    : statusFilteredPosts
 
   // Sort by most recent first
   const sortedPosts = [...filteredPosts].sort(
@@ -114,6 +127,39 @@ export function Posts() {
 
       {viewMode === 'list' ? (
         <>
+          {/* Search bar */}
+          <div className="mb-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search posts by content or notes..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className={cn(
+                  'w-full pl-10 pr-10 py-2.5 rounded-lg',
+                  'bg-card border border-border',
+                  'text-sm placeholder:text-muted-foreground',
+                  'focus:outline-none focus:ring-2 focus:ring-[hsl(var(--gold))]/50 focus:border-[hsl(var(--gold))]',
+                  'transition-all'
+                )}
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+            {searchQuery && (
+              <p className="text-xs text-muted-foreground mt-2">
+                Found {filteredPosts.length} {filteredPosts.length === 1 ? 'post' : 'posts'} matching "{searchQuery}"
+              </p>
+            )}
+          </div>
+
           {/* Filter tabs - horizontally scrollable on mobile */}
           <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0 mb-4 md:mb-6">
             <div className="flex gap-1 p-1 bg-card border border-border rounded-xl min-w-max md:min-w-0">
@@ -378,19 +424,19 @@ function CalendarView({
               const dayPosts = postsByDate[dateKey] || []
               const isCurrentMonth = isSameMonth(day, currentDate)
               const isCurrentDay = isToday(day)
+              const isPastDate = isBefore(startOfDay(day), startOfDay(new Date())) && !isCurrentDay
 
-              return (
-                <Link
-                  key={dateKey}
-                  to={`/new?date=${dateKey}`}
-                  className={cn(
-                    'min-h-[80px] md:min-h-[100px] p-1.5 md:p-2 border-r border-b border-border',
-                    'flex flex-col gap-1 cursor-pointer transition-colors',
-                    'hover:bg-accent/50',
-                    !isCurrentMonth && 'opacity-30',
-                    isCurrentDay && 'bg-[hsl(var(--gold))]/10'
-                  )}
-                >
+              const cellClassName = cn(
+                'min-h-[80px] md:min-h-[100px] p-1.5 md:p-2 border-r border-b border-border',
+                'flex flex-col gap-1 transition-colors',
+                !isPastDate && 'cursor-pointer hover:bg-accent/50',
+                isPastDate && 'cursor-default',
+                !isCurrentMonth && 'opacity-30',
+                isCurrentDay && 'bg-[hsl(var(--gold))]/10'
+              )
+
+              const cellContent = (
+                <>
                   <span
                     className={cn(
                       'text-sm font-medium text-muted-foreground',
@@ -412,6 +458,7 @@ function CalendarView({
                         )}
                         onClick={(e) => {
                           e.preventDefault()
+                          e.stopPropagation()
                           window.location.href = `/edit/${post.id}`
                         }}
                       >
@@ -423,6 +470,21 @@ function CalendarView({
                       <span className="text-[10px] text-muted-foreground">+{dayPosts.length - 3} more</span>
                     )}
                   </div>
+                </>
+              )
+
+              // For past dates, render a div instead of a Link
+              if (isPastDate) {
+                return (
+                  <div key={dateKey} className={cellClassName}>
+                    {cellContent}
+                  </div>
+                )
+              }
+
+              return (
+                <Link key={dateKey} to={`/new?date=${dateKey}`} className={cellClassName}>
+                  {cellContent}
                 </Link>
               )
             })}
