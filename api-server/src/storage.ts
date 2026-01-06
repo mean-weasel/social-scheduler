@@ -47,25 +47,35 @@ export interface PublishResult {
   publishedAt?: string
 }
 
+// Platform-specific content type based on selected platform
+export type PlatformContent = TwitterContent | LinkedInContent | RedditContent
+
+// Type guards for content types
+export function isTwitterContent(content: PlatformContent): content is TwitterContent {
+  return 'text' in content && !('visibility' in content) && !('subreddit' in content)
+}
+
+export function isLinkedInContent(content: PlatformContent): content is LinkedInContent {
+  return 'text' in content && 'visibility' in content
+}
+
+export function isRedditContent(content: PlatformContent): content is RedditContent {
+  return 'subreddit' in content && 'title' in content
+}
+
 export interface Post {
   id: string
   createdAt: string
   updatedAt: string
   scheduledAt: string | null
   status: PostStatus
-  platforms: Platform[]
+  platform: Platform
   notes?: string
   campaignId?: string
   groupId?: string       // Groups related posts (e.g., Reddit crossposts)
   groupType?: GroupType  // Type of grouping
-  content: {
-    twitter?: TwitterContent
-    linkedin?: LinkedInContent
-    reddit?: RedditContent
-  }
-  publishResults?: {
-    [K in Platform]?: PublishResult
-  }
+  content: PlatformContent
+  publishResult?: PublishResult
 }
 
 // Database row type
@@ -75,13 +85,13 @@ interface PostRow {
   updated_at: string
   scheduled_at: string | null
   status: string
-  platforms: string
+  platform: string
   notes: string | null
   campaign_id: string | null
   group_id: string | null
   group_type: string | null
   content: string
-  publish_results: string | null
+  publish_result: string | null
 }
 
 // Campaign database row type
@@ -102,13 +112,13 @@ function rowToPost(row: PostRow): Post {
     updatedAt: row.updated_at,
     scheduledAt: row.scheduled_at,
     status: row.status as PostStatus,
-    platforms: JSON.parse(row.platforms),
+    platform: row.platform as Platform,
     notes: row.notes || undefined,
     campaignId: row.campaign_id || undefined,
     groupId: row.group_id || undefined,
     groupType: row.group_type as GroupType | undefined,
     content: JSON.parse(row.content),
-    publishResults: row.publish_results ? JSON.parse(row.publish_results) : undefined,
+    publishResult: row.publish_result ? JSON.parse(row.publish_result) : undefined,
   }
 }
 
@@ -137,8 +147,8 @@ export function now(): string {
 // CRUD Operations
 
 export function createPost(data: {
-  platforms: Platform[]
-  content: Post['content']
+  platform: Platform
+  content: PlatformContent
   scheduledAt?: string | null
   status?: PostStatus
   notes?: string
@@ -150,7 +160,7 @@ export function createPost(data: {
   const timestamp = now()
 
   const stmt = db.prepare(`
-    INSERT INTO posts (id, created_at, updated_at, scheduled_at, status, platforms, notes, campaign_id, group_id, group_type, content)
+    INSERT INTO posts (id, created_at, updated_at, scheduled_at, status, platform, notes, campaign_id, group_id, group_type, content)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
 
@@ -160,7 +170,7 @@ export function createPost(data: {
     timestamp,
     data.scheduledAt || null,
     data.status || 'draft',
-    JSON.stringify(data.platforms),
+    data.platform,
     data.notes || null,
     data.campaignId || null,
     data.groupId || null,
@@ -174,7 +184,7 @@ export function createPost(data: {
     updatedAt: timestamp,
     scheduledAt: data.scheduledAt || null,
     status: data.status || 'draft',
-    platforms: data.platforms,
+    platform: data.platform,
     notes: data.notes,
     campaignId: data.campaignId,
     groupId: data.groupId,
@@ -208,13 +218,13 @@ export function updatePost(
       updated_at = ?,
       scheduled_at = ?,
       status = ?,
-      platforms = ?,
+      platform = ?,
       notes = ?,
       campaign_id = ?,
       group_id = ?,
       group_type = ?,
       content = ?,
-      publish_results = ?
+      publish_result = ?
     WHERE id = ?
   `)
 
@@ -222,13 +232,13 @@ export function updatePost(
     timestamp,
     updated.scheduledAt,
     updated.status,
-    JSON.stringify(updated.platforms),
+    updated.platform,
     updated.notes || null,
     updated.campaignId || null,
     updated.groupId || null,
     updated.groupType || null,
     JSON.stringify(updated.content),
-    updated.publishResults ? JSON.stringify(updated.publishResults) : null,
+    updated.publishResult ? JSON.stringify(updated.publishResult) : null,
     id
   )
 
@@ -265,8 +275,8 @@ export function listPosts(options?: {
   }
 
   if (options?.platform) {
-    sql += ' AND platforms LIKE ?'
-    params.push(`%"${options.platform}"%`)
+    sql += ' AND platform = ?'
+    params.push(options.platform)
   }
 
   if (options?.campaignId) {
@@ -324,7 +334,7 @@ export function importFromJson(jsonPath: string): number {
     let imported = 0
 
     const insertStmt = db.prepare(`
-      INSERT OR IGNORE INTO posts (id, created_at, updated_at, scheduled_at, status, platforms, notes, content, publish_results)
+      INSERT OR IGNORE INTO posts (id, created_at, updated_at, scheduled_at, status, platform, notes, content, publish_result)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `)
 
@@ -335,10 +345,10 @@ export function importFromJson(jsonPath: string): number {
         post.updatedAt,
         post.scheduledAt || null,
         post.status,
-        JSON.stringify(post.platforms),
+        post.platform,
         post.notes || null,
         JSON.stringify(post.content),
-        post.publishResults ? JSON.stringify(post.publishResults) : null
+        post.publishResult ? JSON.stringify(post.publishResult) : null
       )
       if (result.changes > 0) imported++
     }

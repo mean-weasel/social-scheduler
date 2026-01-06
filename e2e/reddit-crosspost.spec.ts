@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 import {
   resetDatabase,
   goToNewPost,
-  togglePlatform,
+  selectPlatform,
   fillContent,
   fillRedditFields,
   saveDraft,
@@ -17,6 +17,15 @@ import {
   removeSubredditViaCard,
 } from './helpers'
 
+// Type guard to access Reddit content fields
+function getRedditContent(post: { content: unknown }): { subreddit: string; title: string; body?: string; launchedUrl?: string } | undefined {
+  const content = post.content as { subreddit?: string; title?: string; body?: string; launchedUrl?: string }
+  if (content && typeof content.subreddit === 'string') {
+    return content as { subreddit: string; title: string; body?: string; launchedUrl?: string }
+  }
+  return undefined
+}
+
 test.describe('Reddit Cross-posting', () => {
   test.beforeEach(async ({ page }) => {
     await resetDatabase(page)
@@ -25,7 +34,7 @@ test.describe('Reddit Cross-posting', () => {
   test.describe('Multiple Subreddit Post Creation', () => {
     test('should create separate posts for each subreddit', async ({ page }) => {
       await goToNewPost(page)
-      await togglePlatform(page, 'reddit')
+      await selectPlatform(page, 'reddit')
 
       // Add 3 subreddits
       await fillRedditFields(page, {
@@ -42,19 +51,19 @@ test.describe('Reddit Cross-posting', () => {
       expect(posts.length).toBe(3)
 
       // Verify each post has a different subreddit
-      const subreddits = posts.map(p => p.content.reddit?.subreddit).sort()
+      const subreddits = posts.map(p => getRedditContent(p)?.subreddit).sort()
       expect(subreddits).toEqual(['SaaS', 'sideproject', 'startups'])
 
       // Verify all posts have the same content
       for (const post of posts) {
-        expect(post.content.reddit?.title).toBe('Launching my new product')
-        expect(post.content.reddit?.body).toContain('Check out what I built!')
+        expect(getRedditContent(post)?.title).toBe('Launching my new product')
+        expect(getRedditContent(post)?.body).toContain('Check out what I built!')
       }
     })
 
     test('should link posts with shared groupId', async ({ page }) => {
       await goToNewPost(page)
-      await togglePlatform(page, 'reddit')
+      await selectPlatform(page, 'reddit')
 
       await fillRedditFields(page, {
         subreddits: ['webdev', 'programming'],
@@ -80,7 +89,7 @@ test.describe('Reddit Cross-posting', () => {
 
     test('should create single post for single subreddit (no groupId)', async ({ page }) => {
       await goToNewPost(page)
-      await togglePlatform(page, 'reddit')
+      await selectPlatform(page, 'reddit')
 
       await fillRedditFields(page, {
         subreddits: ['webdev'],
@@ -97,14 +106,14 @@ test.describe('Reddit Cross-posting', () => {
       // Single post should NOT have groupId
       expect(posts[0].groupId).toBeFalsy()
       expect(posts[0].groupType).toBeFalsy()
-      expect(posts[0].content.reddit?.subreddit).toBe('webdev')
+      expect(getRedditContent(posts[0])?.subreddit).toBe('webdev')
     })
   })
 
   test.describe('Independent Scheduling', () => {
     test('should schedule all subreddit posts with same initial time', async ({ page }) => {
       await goToNewPost(page)
-      await togglePlatform(page, 'reddit')
+      await selectPlatform(page, 'reddit')
 
       await fillRedditFields(page, {
         subreddits: ['startups', 'entrepreneur'],
@@ -136,7 +145,7 @@ test.describe('Reddit Cross-posting', () => {
     test('should allow editing individual subreddit post schedule', async ({ page }) => {
       // Create cross-posts
       await goToNewPost(page)
-      await togglePlatform(page, 'reddit')
+      await selectPlatform(page, 'reddit')
 
       await fillRedditFields(page, {
         subreddits: ['startups', 'entrepreneur'],
@@ -155,7 +164,7 @@ test.describe('Reddit Cross-posting', () => {
       // Get the posts
       let posts = await getAllPosts(page)
       expect(posts.length).toBe(2)
-      const entrepreneurPost = posts.find(p => p.content.reddit?.subreddit === 'entrepreneur')!
+      const entrepreneurPost = posts.find(p => getRedditContent(p)?.subreddit === 'entrepreneur')!
 
       // Edit the entrepreneur post to a different time
       await page.goto(`/edit/${entrepreneurPost.id}`)
@@ -173,8 +182,8 @@ test.describe('Reddit Cross-posting', () => {
 
       // Verify the posts now have different schedules
       posts = await getAllPosts(page)
-      const updatedStartup = posts.find(p => p.content.reddit?.subreddit === 'startups')!
-      const updatedEntrepreneur = posts.find(p => p.content.reddit?.subreddit === 'entrepreneur')!
+      const updatedStartup = posts.find(p => getRedditContent(p)?.subreddit === 'startups')!
+      const updatedEntrepreneur = posts.find(p => getRedditContent(p)?.subreddit === 'entrepreneur')!
 
       // The schedules should be different
       expect(updatedStartup.scheduledAt).not.toBe(updatedEntrepreneur.scheduledAt)
@@ -190,7 +199,7 @@ test.describe('Reddit Cross-posting', () => {
     test('should allow different statuses for grouped posts', async ({ page }) => {
       // Create cross-posts as drafts
       await goToNewPost(page)
-      await togglePlatform(page, 'reddit')
+      await selectPlatform(page, 'reddit')
 
       await fillRedditFields(page, {
         subreddits: ['webdev', 'javascript'],
@@ -209,7 +218,7 @@ test.describe('Reddit Cross-posting', () => {
       expect(posts[1].status).toBe('draft')
 
       // Schedule only the webdev post
-      const webdevPost = posts.find(p => p.content.reddit?.subreddit === 'webdev')!
+      const webdevPost = posts.find(p => getRedditContent(p)?.subreddit === 'webdev')!
       await page.goto(`/edit/${webdevPost.id}`)
 
       const tomorrow = new Date()
@@ -220,8 +229,8 @@ test.describe('Reddit Cross-posting', () => {
 
       // Verify different statuses
       posts = await getAllPosts(page)
-      const updatedWebdev = posts.find(p => p.content.reddit?.subreddit === 'webdev')!
-      const updatedJs = posts.find(p => p.content.reddit?.subreddit === 'javascript')!
+      const updatedWebdev = posts.find(p => getRedditContent(p)?.subreddit === 'webdev')!
+      const updatedJs = posts.find(p => getRedditContent(p)?.subreddit === 'javascript')!
 
       expect(updatedWebdev.status).toBe('scheduled')
       expect(updatedJs.status).toBe('draft')
@@ -235,7 +244,7 @@ test.describe('Reddit Cross-posting', () => {
     test('should allow editing individual post content independently', async ({ page }) => {
       // Create cross-posts
       await goToNewPost(page)
-      await togglePlatform(page, 'reddit')
+      await selectPlatform(page, 'reddit')
 
       await fillRedditFields(page, {
         subreddits: ['startups', 'smallbusiness'],
@@ -247,7 +256,7 @@ test.describe('Reddit Cross-posting', () => {
       await waitForNavigation(page, '/')
 
       let posts = await getAllPosts(page)
-      const startupPost = posts.find(p => p.content.reddit?.subreddit === 'startups')!
+      const startupPost = posts.find(p => getRedditContent(p)?.subreddit === 'startups')!
 
       // Edit just the startups post title
       await page.goto(`/edit/${startupPost.id}`)
@@ -261,17 +270,17 @@ test.describe('Reddit Cross-posting', () => {
 
       // Verify only the startups post was updated
       posts = await getAllPosts(page)
-      const updatedStartup = posts.find(p => p.content.reddit?.subreddit === 'startups')!
-      const smallbizPost = posts.find(p => p.content.reddit?.subreddit === 'smallbusiness')!
+      const updatedStartup = posts.find(p => getRedditContent(p)?.subreddit === 'startups')!
+      const smallbizPost = posts.find(p => getRedditContent(p)?.subreddit === 'smallbusiness')!
 
-      expect(updatedStartup.content.reddit?.title).toBe('Updated title for startups')
-      expect(smallbizPost.content.reddit?.title).toBe('Original title')
+      expect(getRedditContent(updatedStartup)?.title).toBe('Updated title for startups')
+      expect(getRedditContent(smallbizPost)?.title).toBe('Original title')
     })
 
     test('should track launchedUrl independently per subreddit', async ({ page }) => {
       // Create cross-posts
       await goToNewPost(page)
-      await togglePlatform(page, 'reddit')
+      await selectPlatform(page, 'reddit')
 
       await fillRedditFields(page, {
         subreddits: ['webdev', 'programming'],
@@ -283,7 +292,7 @@ test.describe('Reddit Cross-posting', () => {
       await waitForNavigation(page, '/')
 
       let posts = await getAllPosts(page)
-      const webdevPost = posts.find(p => p.content.reddit?.subreddit === 'webdev')!
+      const webdevPost = posts.find(p => getRedditContent(p)?.subreddit === 'webdev')!
 
       // Add launchedUrl to just the webdev post
       await page.goto(`/edit/${webdevPost.id}`)
@@ -300,58 +309,18 @@ test.describe('Reddit Cross-posting', () => {
 
       // Verify only webdev post has launchedUrl
       posts = await getAllPosts(page)
-      const updatedWebdev = posts.find(p => p.content.reddit?.subreddit === 'webdev')!
-      const programmingPost = posts.find(p => p.content.reddit?.subreddit === 'programming')!
+      const updatedWebdev = posts.find(p => getRedditContent(p)?.subreddit === 'webdev')!
+      const programmingPost = posts.find(p => getRedditContent(p)?.subreddit === 'programming')!
 
-      expect(updatedWebdev.content.reddit?.launchedUrl).toBe('https://reddit.com/r/webdev/comments/abc123')
-      expect(programmingPost.content.reddit?.launchedUrl).toBeFalsy()
-    })
-  })
-
-  test.describe('Edge Cases', () => {
-    test('should handle mixed platform post with multiple subreddits', async ({ page }) => {
-      await goToNewPost(page)
-
-      // Select Twitter AND Reddit
-      await togglePlatform(page, 'twitter')
-      await togglePlatform(page, 'reddit')
-
-      await fillRedditFields(page, {
-        subreddits: ['startups', 'entrepreneur'],
-      })
-      // Set titles via cards
-      await expandSubredditCard(page, 'startups')
-      await fillSubredditTitle(page, 'startups', 'Big announcement')
-      await expandSubredditCard(page, 'entrepreneur')
-      await fillSubredditTitle(page, 'entrepreneur', 'Big announcement')
-
-      await fillContent(page, 'We just launched!')
-
-      await saveDraft(page)
-      await waitForNavigation(page, '/')
-
-      // Should create 3 posts: 1 Twitter + 2 Reddit
-      const posts = await getAllPosts(page)
-      expect(posts.length).toBe(3)
-
-      const twitterPosts = posts.filter(p => p.platforms.includes('twitter'))
-      const redditPosts = posts.filter(p => p.platforms.includes('reddit'))
-
-      expect(twitterPosts.length).toBe(1)
-      expect(redditPosts.length).toBe(2)
-
-      // Reddit posts should be grouped
-      expect(redditPosts[0].groupId).toBe(redditPosts[1].groupId)
-
-      // Twitter post should not be in the group
-      expect(twitterPosts[0].groupId).toBeFalsy()
+      expect(getRedditContent(updatedWebdev)?.launchedUrl).toBe('https://reddit.com/r/webdev/comments/abc123')
+      expect(getRedditContent(programmingPost)?.launchedUrl).toBeFalsy()
     })
   })
 
   test.describe('Per-Subreddit Collapsible Cards', () => {
     test('should display collapsible card for each subreddit', async ({ page }) => {
       await goToNewPost(page)
-      await togglePlatform(page, 'reddit')
+      await selectPlatform(page, 'reddit')
 
       // Add two subreddits
       await fillRedditFields(page, { subreddits: ['startups', 'entrepreneur'] })
@@ -370,7 +339,7 @@ test.describe('Reddit Cross-posting', () => {
 
     test('should set unique titles per subreddit', async ({ page }) => {
       await goToNewPost(page)
-      await togglePlatform(page, 'reddit')
+      await selectPlatform(page, 'reddit')
 
       await fillRedditFields(page, { subreddits: ['startups', 'entrepreneur'] })
       await fillContent(page, 'Great content here')
@@ -390,16 +359,16 @@ test.describe('Reddit Cross-posting', () => {
       const posts = await getAllPosts(page)
       expect(posts.length).toBe(2)
 
-      const startupPost = posts.find(p => p.content.reddit?.subreddit === 'startups')!
-      const entrepreneurPost = posts.find(p => p.content.reddit?.subreddit === 'entrepreneur')!
+      const startupPost = posts.find(p => getRedditContent(p)?.subreddit === 'startups')!
+      const entrepreneurPost = posts.find(p => getRedditContent(p)?.subreddit === 'entrepreneur')!
 
-      expect(startupPost.content.reddit?.title).toBe('Startup Title')
-      expect(entrepreneurPost.content.reddit?.title).toBe('Entrepreneur Title')
+      expect(getRedditContent(startupPost)?.title).toBe('Startup Title')
+      expect(getRedditContent(entrepreneurPost)?.title).toBe('Entrepreneur Title')
     })
 
     test('should set unique schedules per subreddit via cards', async ({ page }) => {
       await goToNewPost(page)
-      await togglePlatform(page, 'reddit')
+      await selectPlatform(page, 'reddit')
 
       await fillRedditFields(page, { subreddits: ['webdev', 'javascript'] })
       await fillContent(page, 'Code tip')
@@ -424,8 +393,8 @@ test.describe('Reddit Cross-posting', () => {
       await waitForNavigation(page, '/')
 
       const posts = await getAllPosts(page)
-      const webdevPost = posts.find(p => p.content.reddit?.subreddit === 'webdev')!
-      const jsPost = posts.find(p => p.content.reddit?.subreddit === 'javascript')!
+      const webdevPost = posts.find(p => getRedditContent(p)?.subreddit === 'webdev')!
+      const jsPost = posts.find(p => getRedditContent(p)?.subreddit === 'javascript')!
 
       expect(webdevPost.scheduledAt).not.toBe(jsPost.scheduledAt)
       expect(webdevPost.status).toBe('scheduled')
@@ -434,7 +403,7 @@ test.describe('Reddit Cross-posting', () => {
 
     test('should show preview text when card is collapsed', async ({ page }) => {
       await goToNewPost(page)
-      await togglePlatform(page, 'reddit')
+      await selectPlatform(page, 'reddit')
 
       await fillRedditFields(page, { subreddits: ['startups'] })
 
@@ -452,7 +421,7 @@ test.describe('Reddit Cross-posting', () => {
 
     test('should expand/collapse cards independently', async ({ page }) => {
       await goToNewPost(page)
-      await togglePlatform(page, 'reddit')
+      await selectPlatform(page, 'reddit')
 
       await fillRedditFields(page, { subreddits: ['webdev', 'javascript', 'programming'] })
 
@@ -476,7 +445,7 @@ test.describe('Reddit Cross-posting', () => {
 
     test('should remove subreddit via card X button', async ({ page }) => {
       await goToNewPost(page)
-      await togglePlatform(page, 'reddit')
+      await selectPlatform(page, 'reddit')
 
       await fillRedditFields(page, { subreddits: ['startups', 'entrepreneur'] })
 
@@ -495,7 +464,7 @@ test.describe('Reddit Cross-posting', () => {
     test('should preserve title when editing existing post', async ({ page }) => {
       // Create a post first
       await goToNewPost(page)
-      await togglePlatform(page, 'reddit')
+      await selectPlatform(page, 'reddit')
 
       await fillRedditFields(page, { subreddits: ['webdev'] })
       await expandSubredditCard(page, 'webdev')

@@ -44,22 +44,19 @@ function PostCard({ post, showSchedule = false }: { post: Post; showSchedule?: b
         'group'
       )}
     >
-      {/* Platform indicators */}
+      {/* Platform indicator */}
       <div className="flex items-center gap-2 mb-3">
-        {post.platforms.map((platform) => (
-          <div
-            key={platform}
-            className={cn(
-              'flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium',
-              platform === 'twitter' && 'bg-twitter/10 text-twitter',
-              platform === 'linkedin' && 'bg-linkedin/10 text-linkedin',
-              platform === 'reddit' && 'bg-reddit/10 text-reddit'
-            )}
-          >
-            <PlatformIcon platform={platform} />
-            <span className="hidden sm:inline">{PLATFORM_INFO[platform].label}</span>
-          </div>
-        ))}
+        <div
+          className={cn(
+            'flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium',
+            post.platform === 'twitter' && 'bg-twitter/10 text-twitter',
+            post.platform === 'linkedin' && 'bg-linkedin/10 text-linkedin',
+            post.platform === 'reddit' && 'bg-reddit/10 text-reddit'
+          )}
+        >
+          <PlatformIcon platform={post.platform} />
+          <span className="hidden sm:inline">{PLATFORM_INFO[post.platform].label}</span>
+        </div>
       </div>
 
       {/* Content preview */}

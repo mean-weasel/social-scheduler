@@ -38,8 +38,8 @@ test.describe('Database State Verification', () => {
 
       const posts = await getAllPosts(page)
       expect(posts[0].status).toBe('draft')
-      expect(posts[0].platforms).toEqual(['twitter'])
-      expect(posts[0].content.twitter).toMatchObject({ text: 'Twitter draft content' })
+      expect(posts[0].platform).toBe('twitter')
+      expect(posts[0].content).toMatchObject({ text: 'Twitter draft content' })
     })
 
     test('should create exactly one LinkedIn draft', async ({ page }) => {
@@ -54,8 +54,8 @@ test.describe('Database State Verification', () => {
       expect(await getPostCount(page)).toBe(1)
 
       const posts = await getAllPosts(page)
-      expect(posts[0].platforms).toEqual(['linkedin'])
-      expect(posts[0].content.linkedin).toMatchObject({ text: 'LinkedIn draft content' })
+      expect(posts[0].platform).toBe('linkedin')
+      expect(posts[0].content).toMatchObject({ text: 'LinkedIn draft content' })
     })
 
     test('should create exactly one Reddit draft with metadata', async ({ page }) => {
@@ -71,8 +71,8 @@ test.describe('Database State Verification', () => {
       expect(await getPostCount(page)).toBe(1)
 
       const posts = await getAllPosts(page)
-      expect(posts[0].platforms).toEqual(['reddit'])
-      expect(posts[0].content.reddit).toMatchObject({
+      expect(posts[0].platform).toBe('reddit')
+      expect(posts[0].content).toMatchObject({
         body: 'Reddit draft content',
         title: 'Test Title',
       })
@@ -99,23 +99,6 @@ test.describe('Database State Verification', () => {
       expect(posts[0].scheduledAt).toBeTruthy()
     })
 
-    test('should create exactly one multi-platform post', async ({ page }) => {
-      expect(await getPostCount(page)).toBe(0)
-
-      await page.goto('/new')
-      await page.getByRole('button', { name: 'Twitter' }).click()
-      await page.getByRole('button', { name: 'LinkedIn' }).click()
-      await fillContent(page, 'Multi-platform content')
-      await page.getByRole('button', { name: /save draft/i }).click()
-      await expect(page).toHaveURL('/')
-
-      expect(await getPostCount(page)).toBe(1)
-
-      const posts = await getAllPosts(page)
-      expect(posts[0].platforms).toContain('twitter')
-      expect(posts[0].platforms).toContain('linkedin')
-      expect(posts[0].platforms.length).toBe(2)
-    })
   })
 
   test.describe.serial('Edit Operations', () => {
@@ -137,19 +120,20 @@ test.describe('Database State Verification', () => {
       expect(await getPostCount(page)).toBe(1)
 
       const updatedPost = await getPostById(page, postId)
-      expect(updatedPost?.content.twitter).toMatchObject({ text: 'Updated content' })
+      expect(updatedPost?.content).toMatchObject({ text: 'Updated content' })
     })
 
-    test('should change platform without creating duplicates', async ({ page }) => {
+    test('should switch platform without creating duplicates', async ({ page }) => {
       await createTestPost(page, { platform: 'twitter', content: 'Platform test' })
       expect(await getPostCount(page)).toBe(1)
 
       const posts = await getAllPosts(page)
       const postId = posts[0].id
+      expect(posts[0].platform).toBe('twitter')
 
-      // Edit and change platform
+      // Edit and switch platform
       await page.goto(`/edit/${postId}`)
-      await page.getByRole('button', { name: 'LinkedIn' }).click() // Add LinkedIn
+      await page.getByRole('button', { name: 'LinkedIn' }).click() // Switch to LinkedIn
       await page.getByRole('button', { name: /save draft/i }).click()
       await expect(page).toHaveURL('/')
 
@@ -157,7 +141,7 @@ test.describe('Database State Verification', () => {
       expect(await getPostCount(page)).toBe(1)
 
       const updatedPost = await getPostById(page, postId)
-      expect(updatedPost?.platforms).toContain('linkedin')
+      expect(updatedPost?.platform).toBe('linkedin')
     })
 
     test('should convert draft to scheduled without creating duplicates', async ({ page }) => {
@@ -214,8 +198,8 @@ test.describe('Database State Verification', () => {
       expect(await getPostCount(page)).toBe(2)
 
       const posts = await getAllPosts(page)
-      const postToKeepId = posts.find((p) => p.platforms.includes('twitter'))?.id
-      const postToDeleteId = posts.find((p) => p.platforms.includes('linkedin'))?.id
+      const postToKeepId = posts.find((p) => p.platform === 'twitter')?.id
+      const postToDeleteId = posts.find((p) => p.platform === 'linkedin')?.id
 
       // Archive the LinkedIn post
       await page.goto(`/edit/${postToDeleteId}`)
@@ -234,7 +218,7 @@ test.describe('Database State Verification', () => {
       // The kept post should still exist
       const remainingPost = await getPostById(page, postToKeepId!)
       expect(remainingPost).toBeTruthy()
-      expect(remainingPost?.platforms).toContain('twitter')
+      expect(remainingPost?.platform).toBe('twitter')
     })
   })
 

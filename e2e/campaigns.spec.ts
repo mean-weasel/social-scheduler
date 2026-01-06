@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 import {
   enterDemoMode,
   goToNewPost,
-  togglePlatform,
+  selectPlatform,
   fillContent,
   fillRedditFields,
   saveDraft,
@@ -140,7 +140,7 @@ test.describe('Campaigns', () => {
       await goToNewPost(page)
 
       // Select Twitter
-      await togglePlatform(page, 'twitter')
+      await selectPlatform(page, 'twitter')
       await fillContent(page, 'This is a Twitter post for our campaign! #marketing')
 
       // Wait for campaigns to load, then select campaign from dropdown
@@ -163,8 +163,8 @@ test.describe('Campaigns', () => {
       // Verify post is associated with campaign
       const posts = await getCampaignPosts(page, campaignId)
       expect(posts.length).toBe(1)
-      expect(posts[0].platforms).toContain('twitter')
-      expect(posts[0].content.twitter?.text).toContain('Twitter post for our campaign')
+      expect(posts[0].platform).toBe('twitter')
+      expect((posts[0].content as { text: string }).text).toContain('Twitter post for our campaign')
     })
   })
 
@@ -180,7 +180,7 @@ test.describe('Campaigns', () => {
 
       // Create LinkedIn post
       await goToNewPost(page)
-      await togglePlatform(page, 'linkedin')
+      await selectPlatform(page, 'linkedin')
       await fillContent(
         page,
         'Professional update for LinkedIn. Excited to share our latest developments with the community.'
@@ -197,8 +197,8 @@ test.describe('Campaigns', () => {
       // Verify
       const posts = await getCampaignPosts(page, campaignId)
       expect(posts.length).toBe(1)
-      expect(posts[0].platforms).toContain('linkedin')
-      expect(posts[0].content.linkedin?.text).toContain('Professional update for LinkedIn')
+      expect(posts[0].platform).toBe('linkedin')
+      expect((posts[0].content as { text: string }).text).toContain('Professional update for LinkedIn')
     })
   })
 
@@ -214,7 +214,7 @@ test.describe('Campaigns', () => {
 
       // Create Reddit post
       await goToNewPost(page)
-      await togglePlatform(page, 'reddit')
+      await selectPlatform(page, 'reddit')
       await fillRedditFields(page, {
         subreddit: 'programming',
         title: 'Check out our new tool',
@@ -232,9 +232,9 @@ test.describe('Campaigns', () => {
       // Verify
       const posts = await getCampaignPosts(page, campaignId)
       expect(posts.length).toBe(1)
-      expect(posts[0].platforms).toContain('reddit')
-      expect(posts[0].content.reddit?.subreddit).toBe('programming')
-      expect(posts[0].content.reddit?.title).toBe('Check out our new tool')
+      expect(posts[0].platform).toBe('reddit')
+      expect((posts[0].content as { subreddit: string }).subreddit).toBe('programming')
+      expect((posts[0].content as { title: string }).title).toBe('Check out our new tool')
     })
   })
 
@@ -250,7 +250,7 @@ test.describe('Campaigns', () => {
 
       // Create Twitter post
       await goToNewPost(page)
-      await togglePlatform(page, 'twitter')
+      await selectPlatform(page, 'twitter')
       await fillContent(page, '🚀 Exciting news coming soon! #announcement')
       await page.getByRole('button', { name: /no campaign|select campaign/i }).click()
       await page.getByText('Twitter LinkedIn Campaign').click()
@@ -259,7 +259,7 @@ test.describe('Campaigns', () => {
 
       // Create LinkedIn post
       await goToNewPost(page)
-      await togglePlatform(page, 'linkedin')
+      await selectPlatform(page, 'linkedin')
       await fillContent(
         page,
         'Thrilled to share some exciting news with my professional network. Stay tuned for our upcoming announcement!'
@@ -273,7 +273,7 @@ test.describe('Campaigns', () => {
       const posts = await getCampaignPosts(page, campaignId)
       expect(posts.length).toBe(2)
 
-      const platforms = posts.map((p) => p.platforms[0])
+      const platforms = posts.map((p) => p.platform)
       expect(platforms).toContain('twitter')
       expect(platforms).toContain('linkedin')
     })
@@ -291,7 +291,7 @@ test.describe('Campaigns', () => {
 
       // Create Twitter post
       await goToNewPost(page)
-      await togglePlatform(page, 'twitter')
+      await selectPlatform(page, 'twitter')
       await fillContent(page, 'Just posted something interesting on Reddit! Check it out 👀')
       await page.getByRole('button', { name: /no campaign|select campaign/i }).click()
       await page.getByText('Twitter Reddit Campaign').click()
@@ -300,7 +300,7 @@ test.describe('Campaigns', () => {
 
       // Create Reddit post
       await goToNewPost(page)
-      await togglePlatform(page, 'reddit')
+      await selectPlatform(page, 'reddit')
       await fillRedditFields(page, {
         subreddit: 'webdev',
         title: 'I built a thing - feedback welcome!',
@@ -315,7 +315,7 @@ test.describe('Campaigns', () => {
       const posts = await getCampaignPosts(page, campaignId)
       expect(posts.length).toBe(2)
 
-      const platforms = posts.map((p) => p.platforms[0])
+      const platforms = posts.map((p) => p.platform)
       expect(platforms).toContain('twitter')
       expect(platforms).toContain('reddit')
     })
@@ -333,7 +333,7 @@ test.describe('Campaigns', () => {
 
       // Create LinkedIn post
       await goToNewPost(page)
-      await togglePlatform(page, 'linkedin')
+      await selectPlatform(page, 'linkedin')
       await fillContent(
         page,
         'Proud to announce our latest open source contribution. We believe in giving back to the developer community.'
@@ -345,7 +345,7 @@ test.describe('Campaigns', () => {
 
       // Create Reddit post
       await goToNewPost(page)
-      await togglePlatform(page, 'reddit')
+      await selectPlatform(page, 'reddit')
       await fillRedditFields(page, {
         subreddit: 'opensource',
         title: 'Our open source contribution - looking for collaborators',
@@ -360,7 +360,7 @@ test.describe('Campaigns', () => {
       const posts = await getCampaignPosts(page, campaignId)
       expect(posts.length).toBe(2)
 
-      const platforms = posts.map((p) => p.platforms[0])
+      const platforms = posts.map((p) => p.platform)
       expect(platforms).toContain('linkedin')
       expect(platforms).toContain('reddit')
     })
@@ -381,7 +381,7 @@ test.describe('Campaigns', () => {
 
       // Create Twitter post
       await goToNewPost(page)
-      await togglePlatform(page, 'twitter')
+      await selectPlatform(page, 'twitter')
       await fillContent(page, '🚀 Big announcement! Check out our new product. #launch #tech')
       await page.getByRole('button', { name: /no campaign|select campaign/i }).click()
       await page.getByText('Full Platform Launch').click()
@@ -390,7 +390,7 @@ test.describe('Campaigns', () => {
 
       // Create LinkedIn post
       await goToNewPost(page)
-      await togglePlatform(page, 'linkedin')
+      await selectPlatform(page, 'linkedin')
       await fillContent(
         page,
         'Thrilled to announce the launch of our latest product! After months of development, we are ready to share it with the world.'
@@ -402,7 +402,7 @@ test.describe('Campaigns', () => {
 
       // Create Reddit post
       await goToNewPost(page)
-      await togglePlatform(page, 'reddit')
+      await selectPlatform(page, 'reddit')
       await fillRedditFields(page, {
         subreddit: 'startups',
         title: '[Launch] We just launched our product - feedback welcome!',
@@ -418,19 +418,19 @@ test.describe('Campaigns', () => {
       expect(posts.length).toBe(3)
 
       // Verify we have one of each platform
-      const platforms = posts.map((p) => p.platforms[0])
+      const platforms = posts.map((p) => p.platform)
       expect(platforms).toContain('twitter')
       expect(platforms).toContain('linkedin')
       expect(platforms).toContain('reddit')
 
       // Verify each post has correct content
-      const twitterPost = posts.find((p) => p.platforms[0] === 'twitter')
-      const linkedinPost = posts.find((p) => p.platforms[0] === 'linkedin')
-      const redditPost = posts.find((p) => p.platforms[0] === 'reddit')
+      const twitterPost = posts.find((p) => p.platform === 'twitter')
+      const linkedinPost = posts.find((p) => p.platform === 'linkedin')
+      const redditPost = posts.find((p) => p.platform === 'reddit')
 
-      expect(twitterPost?.content.twitter?.text).toContain('Big announcement')
-      expect(linkedinPost?.content.linkedin?.text).toContain('Thrilled to announce')
-      expect(redditPost?.content.reddit?.subreddit).toBe('startups')
+      expect((twitterPost?.content as { text: string })?.text).toContain('Big announcement')
+      expect((linkedinPost?.content as { text: string })?.text).toContain('Thrilled to announce')
+      expect((redditPost?.content as { subreddit: string })?.subreddit).toBe('startups')
     })
   })
 
@@ -438,7 +438,7 @@ test.describe('Campaigns', () => {
     test('should add existing post to a campaign', async ({ page }) => {
       // Create a post first (without campaign)
       await goToNewPost(page)
-      await togglePlatform(page, 'twitter')
+      await selectPlatform(page, 'twitter')
       await fillContent(page, 'Standalone post that will be added to campaign')
       await saveDraft(page)
       await waitForNavigation(page, '/')
@@ -489,7 +489,7 @@ test.describe('Campaigns', () => {
 
       // Create a post in the campaign
       await goToNewPost(page)
-      await togglePlatform(page, 'twitter')
+      await selectPlatform(page, 'twitter')
       await fillContent(page, 'Post to be removed from campaign')
       await page.getByRole('button', { name: /no campaign|select campaign/i }).click()
       await page.getByText('Campaign to Remove Post From').click()

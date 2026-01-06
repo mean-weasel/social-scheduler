@@ -37,15 +37,16 @@ db.exec(`
     updated_at TEXT NOT NULL,
     scheduled_at TEXT,
     status TEXT NOT NULL DEFAULT 'draft',
-    platforms TEXT NOT NULL,
+    platform TEXT NOT NULL,
     notes TEXT,
     content TEXT NOT NULL,
-    publish_results TEXT
+    publish_result TEXT
   );
 
   CREATE INDEX IF NOT EXISTS idx_posts_status ON posts(status);
   CREATE INDEX IF NOT EXISTS idx_posts_scheduled_at ON posts(scheduled_at);
   CREATE INDEX IF NOT EXISTS idx_posts_updated_at ON posts(updated_at);
+  CREATE INDEX IF NOT EXISTS idx_posts_platform ON posts(platform);
 
   CREATE TABLE IF NOT EXISTS campaigns (
     id TEXT PRIMARY KEY,
@@ -80,10 +81,47 @@ try {
     console.log('Migration: Added group_type column to posts table')
   }
 
+  // Migration: Convert platforms array to platform string
+  // This handles migration from old multi-platform schema to new single-platform schema
+  if (columnNames.includes('platforms') && !columnNames.includes('platform')) {
+    db.exec('ALTER TABLE posts ADD COLUMN platform TEXT')
+
+    // Migrate single-platform posts (take first platform from array)
+    db.exec(`
+      UPDATE posts
+      SET platform = json_extract(platforms, '$[0]')
+      WHERE json_array_length(platforms) >= 1
+    `)
+
+    // Set default for any posts without platforms
+    db.exec(`
+      UPDATE posts
+      SET platform = 'twitter'
+      WHERE platform IS NULL
+    `)
+
+    console.log('Migration: Converted platforms array to platform string')
+  }
+
+  // Migration: Convert publish_results object to publish_result
+  if (columnNames.includes('publish_results') && !columnNames.includes('publish_result')) {
+    db.exec('ALTER TABLE posts ADD COLUMN publish_result TEXT')
+
+    // Migrate by extracting the result for the post's platform
+    db.exec(`
+      UPDATE posts
+      SET publish_result = json_extract(publish_results, '$.' || platform)
+      WHERE publish_results IS NOT NULL AND platform IS NOT NULL
+    `)
+
+    console.log('Migration: Converted publish_results to publish_result')
+  }
+
   // Create indexes on new columns after migration
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_posts_campaign_id ON posts(campaign_id);
     CREATE INDEX IF NOT EXISTS idx_posts_group_id ON posts(group_id);
+    CREATE INDEX IF NOT EXISTS idx_posts_platform ON posts(platform);
   `)
 } catch {
   // Columns might already exist or table doesn't exist yet

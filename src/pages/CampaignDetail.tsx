@@ -354,20 +354,17 @@ function CampaignPostCard({
       )}
       style={{ animationDelay: `${index * 30}ms` }}
     >
-      {/* Platform indicators */}
+      {/* Platform indicator */}
       <div className="flex flex-col gap-1.5 pt-1">
-        {post.platforms.map((platform) => (
-          <span
-            key={platform}
-            className={cn(
-              'w-2.5 h-2.5 rounded-full',
-              platform === 'twitter' && 'bg-twitter shadow-[0_0_8px_rgba(29,161,242,0.4)]',
-              platform === 'linkedin' && 'bg-linkedin shadow-[0_0_8px_rgba(10,102,194,0.4)]',
-              platform === 'reddit' && 'bg-reddit shadow-[0_0_8px_rgba(255,69,0,0.4)]'
-            )}
-            title={PLATFORM_INFO[platform].name}
-          />
-        ))}
+        <span
+          className={cn(
+            'w-2.5 h-2.5 rounded-full',
+            post.platform === 'twitter' && 'bg-twitter shadow-[0_0_8px_rgba(29,161,242,0.4)]',
+            post.platform === 'linkedin' && 'bg-linkedin shadow-[0_0_8px_rgba(10,102,194,0.4)]',
+            post.platform === 'reddit' && 'bg-reddit shadow-[0_0_8px_rgba(255,69,0,0.4)]'
+          )}
+          title={PLATFORM_INFO[post.platform].name}
+        />
       </div>
 
       {/* Content */}
@@ -434,17 +431,14 @@ function AddPostModal({
               className="w-full text-left p-3 bg-background border border-border rounded-lg hover:border-[hsl(var(--gold))]/50 transition-colors"
             >
               <div className="flex items-center gap-2 mb-1">
-                {post.platforms.map((platform) => (
-                  <span
-                    key={platform}
-                    className={cn(
-                      'w-2 h-2 rounded-full',
-                      platform === 'twitter' && 'bg-twitter',
-                      platform === 'linkedin' && 'bg-linkedin',
-                      platform === 'reddit' && 'bg-reddit'
-                    )}
-                  />
-                ))}
+                <span
+                  className={cn(
+                    'w-2 h-2 rounded-full',
+                    post.platform === 'twitter' && 'bg-twitter',
+                    post.platform === 'linkedin' && 'bg-linkedin',
+                    post.platform === 'reddit' && 'bg-reddit'
+                  )}
+                />
                 <span className="text-xs text-muted-foreground capitalize">{post.status}</span>
               </div>
               <p className="text-sm line-clamp-2">

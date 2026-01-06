@@ -39,7 +39,7 @@ test.describe('Auto-save', () => {
       // Get the post and verify content
       const posts = await getAllPosts(page)
       expect(posts[0].status).toBe('draft')
-      expect(posts[0].platforms).toContain('twitter')
+      expect(posts[0].platform).toBe('twitter')
     })
 
     test('should not create duplicate posts on subsequent edits', async ({ page }) => {
@@ -75,8 +75,8 @@ test.describe('Auto-save', () => {
       // Verify the post was updated (has both original and appended text)
       const posts = await getAllPosts(page)
       expect(posts[0].id).toBe(postId)
-      expect(posts[0].content.twitter.text).toContain('First content')
-      expect(posts[0].content.twitter.text).toContain('updated')
+      expect((posts[0].content as { text: string }).text).toContain('First content')
+      expect((posts[0].content as { text: string }).text).toContain('updated')
     })
 
     test('should show auto-save indicator after save completes', async ({ page }) => {
@@ -124,32 +124,31 @@ test.describe('Auto-save', () => {
       // Verify content was updated
       const updatedPosts = await getAllPosts(page)
       expect(updatedPosts[0].id).toBe(postId)
-      expect(updatedPosts[0].content.twitter).toMatchObject({ text: 'Modified draft content via auto-save' })
+      expect((updatedPosts[0].content as { text: string }).text).toBe('Modified draft content via auto-save')
     })
 
-    test('should auto-save platform changes', async ({ page }) => {
+    test('should auto-save platform switch', async ({ page }) => {
       // Create a Twitter draft
       await page.goto('/new')
       await page.getByRole('button', { name: 'Twitter' }).click()
-      await fillContent(page, 'Multi-platform test')
+      await fillContent(page, 'Platform switch test')
       await page.getByRole('button', { name: /save draft/i }).click()
       await expect(page).toHaveURL('/')
 
       const originalPosts = await getAllPosts(page)
       const postId = originalPosts[0].id
-      expect(originalPosts[0].platforms).toEqual(['twitter'])
+      expect(originalPosts[0].platform).toBe('twitter')
 
-      // Edit and add LinkedIn
+      // Edit and switch to LinkedIn
       await page.goto(`/edit/${postId}`)
       await page.getByRole('button', { name: 'LinkedIn' }).click()
 
       // Wait for auto-save
       await page.waitForTimeout(3000)
 
-      // Verify platforms were updated
+      // Verify platform was switched to LinkedIn
       const updatedPosts = await getAllPosts(page)
-      expect(updatedPosts[0].platforms).toContain('twitter')
-      expect(updatedPosts[0].platforms).toContain('linkedin')
+      expect(updatedPosts[0].platform).toBe('linkedin')
     })
   })
 

@@ -64,10 +64,11 @@ postsRouter.get('/:id', (req: Request, res: Response) => {
 // Create post
 postsRouter.post('/', (req: Request, res: Response) => {
   try {
-    const { platforms, content, scheduledAt, status, notes, campaignId, groupId, groupType } = req.body
+    const { platform, content, scheduledAt, status, notes, campaignId, groupId, groupType } = req.body
 
-    if (!platforms || !Array.isArray(platforms) || platforms.length === 0) {
-      res.status(400).json({ error: 'platforms is required and must be a non-empty array' })
+    const validPlatforms = ['twitter', 'linkedin', 'reddit']
+    if (!platform || !validPlatforms.includes(platform)) {
+      res.status(400).json({ error: 'platform is required and must be one of: twitter, linkedin, reddit' })
       return
     }
 
@@ -77,7 +78,7 @@ postsRouter.post('/', (req: Request, res: Response) => {
     }
 
     const post = createPost({
-      platforms,
+      platform,
       content,
       scheduledAt: scheduledAt || null,
       status: status || 'draft',

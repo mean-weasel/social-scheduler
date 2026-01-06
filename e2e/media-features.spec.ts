@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url'
 import {
   enterDemoMode,
   goToNewPost,
-  togglePlatform,
+  selectPlatform,
   fillContent,
   fillRedditFields,
   saveDraft,
@@ -25,7 +25,7 @@ test.describe('Media Features', () => {
   test.describe('Twitter Media Upload', () => {
     test('should show media button when Twitter is selected', async ({ page }) => {
       await goToNewPost(page)
-      await togglePlatform(page, 'twitter')
+      await selectPlatform(page, 'twitter')
 
       // Media button should be visible
       const mediaButton = page.locator('button[title="Add media (images/videos)"]')
@@ -34,7 +34,7 @@ test.describe('Media Features', () => {
 
     test('should open media input section when clicking media button', async ({ page }) => {
       await goToNewPost(page)
-      await togglePlatform(page, 'twitter')
+      await selectPlatform(page, 'twitter')
 
       // Click media button
       await page.locator('button[title="Add media (images/videos)"]').click()
@@ -46,7 +46,7 @@ test.describe('Media Features', () => {
 
     test('should show drag and drop upload zone for Twitter', async ({ page }) => {
       await goToNewPost(page)
-      await togglePlatform(page, 'twitter')
+      await selectPlatform(page, 'twitter')
 
       // Open media section
       await page.locator('button[title="Add media (images/videos)"]').click()
@@ -57,7 +57,7 @@ test.describe('Media Features', () => {
 
     test('should upload a media file for Twitter', async ({ page }) => {
       await goToNewPost(page)
-      await togglePlatform(page, 'twitter')
+      await selectPlatform(page, 'twitter')
       await fillContent(page, 'Check out this image!')
 
       // Open media section
@@ -77,7 +77,7 @@ test.describe('Media Features', () => {
 
     test('should show media count badge on media button', async ({ page }) => {
       await goToNewPost(page)
-      await togglePlatform(page, 'twitter')
+      await selectPlatform(page, 'twitter')
       await fillContent(page, 'Post with media')
 
       // Open media section and upload file
@@ -98,7 +98,7 @@ test.describe('Media Features', () => {
 
     test('should remove media when clicking remove button', async ({ page }) => {
       await goToNewPost(page)
-      await togglePlatform(page, 'twitter')
+      await selectPlatform(page, 'twitter')
 
       // Open media section and upload file
       await page.locator('button[title="Add media (images/videos)"]').click()
@@ -120,7 +120,7 @@ test.describe('Media Features', () => {
 
     test('should show media in Twitter preview panel', async ({ page }) => {
       await goToNewPost(page)
-      await togglePlatform(page, 'twitter')
+      await selectPlatform(page, 'twitter')
       await fillContent(page, 'Post with preview')
 
       // Open media section and upload file
@@ -140,7 +140,7 @@ test.describe('Media Features', () => {
   test.describe('LinkedIn Media Upload', () => {
     test('should show LinkedIn media input when LinkedIn is selected', async ({ page }) => {
       await goToNewPost(page)
-      await togglePlatform(page, 'linkedin')
+      await selectPlatform(page, 'linkedin')
 
       // Open media section
       await page.locator('button[title="Add media (images/videos)"]').click()
@@ -151,7 +151,7 @@ test.describe('Media Features', () => {
 
     test('should upload a media file for LinkedIn', async ({ page }) => {
       await goToNewPost(page)
-      await togglePlatform(page, 'linkedin')
+      await selectPlatform(page, 'linkedin')
       await fillContent(page, 'Professional post with image')
 
       // Open media section
@@ -171,7 +171,7 @@ test.describe('Media Features', () => {
 
     test('should show LinkedIn media in preview panel', async ({ page }) => {
       await goToNewPost(page)
-      await togglePlatform(page, 'linkedin')
+      await selectPlatform(page, 'linkedin')
       await fillContent(page, 'Post for LinkedIn')
 
       // Open media section and upload file
@@ -191,7 +191,7 @@ test.describe('Media Features', () => {
   test.describe('Reddit Link Posts', () => {
     test('should show link URL field for Reddit', async ({ page }) => {
       await goToNewPost(page)
-      await togglePlatform(page, 'reddit')
+      await selectPlatform(page, 'reddit')
 
       // Link URL field should be visible
       await expect(page.getByText('Link URL (optional)')).toBeVisible()
@@ -200,7 +200,7 @@ test.describe('Media Features', () => {
 
     test('should create a Reddit link post', async ({ page }) => {
       await goToNewPost(page)
-      await togglePlatform(page, 'reddit')
+      await selectPlatform(page, 'reddit')
 
       await fillRedditFields(page, {
         subreddit: 'videos',
@@ -219,7 +219,7 @@ test.describe('Media Features', () => {
 
     test('should show link indicator in Reddit preview', async ({ page }) => {
       await goToNewPost(page)
-      await togglePlatform(page, 'reddit')
+      await selectPlatform(page, 'reddit')
 
       await fillRedditFields(page, {
         subreddit: 'programming',
@@ -236,7 +236,7 @@ test.describe('Media Features', () => {
 
     test('should show text post indicator when no URL', async ({ page }) => {
       await goToNewPost(page)
-      await togglePlatform(page, 'reddit')
+      await selectPlatform(page, 'reddit')
 
       await fillRedditFields(page, {
         subreddit: 'AskReddit',
@@ -253,7 +253,7 @@ test.describe('Media Features', () => {
 
     test('should show link URL in Reddit preview', async ({ page }) => {
       await goToNewPost(page)
-      await togglePlatform(page, 'reddit')
+      await selectPlatform(page, 'reddit')
 
       await fillRedditFields(page, {
         subreddit: 'videos',
@@ -269,24 +269,11 @@ test.describe('Media Features', () => {
     })
   })
 
-  test.describe('Multi-platform Media', () => {
-    test('should show both Twitter and LinkedIn media inputs', async ({ page }) => {
-      await goToNewPost(page)
-      await togglePlatform(page, 'twitter')
-      await togglePlatform(page, 'linkedin')
-
-      // Open media section
-      await page.locator('button[title="Add media (images/videos)"]').click()
-
-      // Both platform sections should be visible
-      await expect(page.getByText('Twitter (up to 4 images or 1 video)')).toBeVisible()
-      await expect(page.getByText('LinkedIn (1 image or video)')).toBeVisible()
-    })
-
+  test.describe('Media Persistence', () => {
     test('should persist media when editing post', async ({ page }) => {
       // Create a post with media
       await goToNewPost(page)
-      await togglePlatform(page, 'twitter')
+      await selectPlatform(page, 'twitter')
       await fillContent(page, 'Post with media to edit')
 
       // Add media
@@ -313,7 +300,7 @@ test.describe('Media Features', () => {
   test.describe('File Validation', () => {
     test('should show upload zone in media section', async ({ page }) => {
       await goToNewPost(page)
-      await togglePlatform(page, 'twitter')
+      await selectPlatform(page, 'twitter')
 
       // Open media section
       await page.locator('button[title="Add media (images/videos)"]').click()
