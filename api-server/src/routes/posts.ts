@@ -28,11 +28,13 @@ postsRouter.post('/reset', (req: Request, res: Response) => {
 // List posts with optional filters
 postsRouter.get('/', (req: Request, res: Response) => {
   try {
-    const { status, platform, limit } = req.query
+    const { status, platform, campaignId, groupId, limit } = req.query
 
     const posts = listPosts({
       status: status as PostStatus | 'all' | undefined,
       platform: platform as Platform | undefined,
+      campaignId: campaignId as string | undefined,
+      groupId: groupId as string | undefined,
       limit: limit ? parseInt(limit as string, 10) : undefined,
     })
 

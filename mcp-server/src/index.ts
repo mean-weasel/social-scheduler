@@ -15,9 +15,19 @@ import {
   archivePost,
   restorePost,
   listPosts,
+  createCampaign,
+  getCampaign,
+  updateCampaign,
+  deleteCampaign,
+  listCampaigns,
+  addPostToCampaign,
+  removePostFromCampaign,
   type Platform,
   type PostStatus,
   type Post,
+  type Campaign,
+  type CampaignStatus,
+  type GroupType,
 } from './storage.js'
 
 // Create MCP server
@@ -69,17 +79,13 @@ const TOOLS = [
             reddit: {
               type: 'object',
               properties: {
-                subreddits: {
-                  type: 'array',
-                  items: { type: 'string' },
-                  description: 'Subreddit names (without r/) to cross-post to'
-                },
+                subreddit: { type: 'string', description: 'Target subreddit name (without r/)' },
                 title: { type: 'string', description: 'Post title (max 300 chars)' },
                 body: { type: 'string', description: 'Post body text' },
                 url: { type: 'string', description: 'Link URL for link posts' },
                 flairText: { type: 'string', description: 'Flair text' },
               },
-              required: ['subreddits', 'title'],
+              required: ['subreddit', 'title'],
             },
           },
           description: 'Content for each platform',
@@ -96,6 +102,19 @@ const TOOLS = [
         notes: {
           type: 'string',
           description: 'Private notes about this post (not published)',
+        },
+        campaignId: {
+          type: 'string',
+          description: 'Campaign ID to link this post to (optional)',
+        },
+        groupId: {
+          type: 'string',
+          description: 'Group ID for linking related posts (optional)',
+        },
+        groupType: {
+          type: 'string',
+          enum: ['reddit-crosspost'],
+          description: 'Type of grouping (optional)',
         },
       },
       required: ['platforms'],
@@ -140,6 +159,19 @@ const TOOLS = [
         notes: {
           type: 'string',
           description: 'Private notes about this post (not published)',
+        },
+        campaignId: {
+          type: 'string',
+          description: 'Campaign ID to link this post to',
+        },
+        groupId: {
+          type: 'string',
+          description: 'Group ID for linking related posts',
+        },
+        groupType: {
+          type: 'string',
+          enum: ['reddit-crosspost'],
+          description: 'Type of grouping',
         },
       },
       required: ['id'],
@@ -194,11 +226,169 @@ const TOOLS = [
           enum: ['twitter', 'linkedin', 'reddit'],
           description: 'Filter by platform',
         },
+        campaignId: {
+          type: 'string',
+          description: 'Filter by campaign ID',
+        },
+        groupId: {
+          type: 'string',
+          description: 'Filter by group ID (e.g., to get all posts in a Reddit crosspost group)',
+        },
         limit: {
           type: 'number',
           description: 'Maximum number of posts to return (default: 50)',
         },
       },
+    },
+  },
+  // Campaign management tools
+  {
+    name: 'create_campaign',
+    description: 'Create a new campaign to organize related social media posts',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        name: {
+          type: 'string',
+          description: 'Campaign name',
+        },
+        description: {
+          type: 'string',
+          description: 'Campaign description (optional)',
+        },
+        status: {
+          type: 'string',
+          enum: ['draft', 'active', 'completed', 'archived'],
+          description: 'Campaign status (default: draft)',
+        },
+      },
+      required: ['name'],
+    },
+  },
+  {
+    name: 'list_campaigns',
+    description: 'List campaigns with optional status filter',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        status: {
+          type: 'string',
+          enum: ['all', 'draft', 'active', 'completed', 'archived'],
+          description: 'Filter by status (default: all)',
+        },
+        limit: {
+          type: 'number',
+          description: 'Maximum number of campaigns to return (default: 50)',
+        },
+      },
+    },
+  },
+  {
+    name: 'get_campaign',
+    description: 'Get a single campaign by ID, including its associated posts',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        id: { type: 'string', description: 'Campaign ID' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'update_campaign',
+    description: 'Update an existing campaign',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        id: { type: 'string', description: 'Campaign ID to update' },
+        name: { type: 'string', description: 'New campaign name' },
+        description: { type: 'string', description: 'New campaign description' },
+        status: {
+          type: 'string',
+          enum: ['draft', 'active', 'completed', 'archived'],
+          description: 'New campaign status',
+        },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'delete_campaign',
+    description: 'Delete a campaign. Posts linked to the campaign will have their campaignId cleared but will not be deleted.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        id: { type: 'string', description: 'Campaign ID to delete' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'add_post_to_campaign',
+    description: 'Link an existing post to a campaign',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        campaignId: { type: 'string', description: 'Campaign ID' },
+        postId: { type: 'string', description: 'Post ID to add to the campaign' },
+      },
+      required: ['campaignId', 'postId'],
+    },
+  },
+  {
+    name: 'remove_post_from_campaign',
+    description: 'Unlink a post from a campaign (does not delete the post)',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        campaignId: { type: 'string', description: 'Campaign ID' },
+        postId: { type: 'string', description: 'Post ID to remove from the campaign' },
+      },
+      required: ['campaignId', 'postId'],
+    },
+  },
+  // Reddit cross-posting tool
+  {
+    name: 'create_reddit_crossposts',
+    description: 'Create multiple Reddit posts to different subreddits with a shared groupId. Each subreddit can have its own title, body, and schedule time.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        subreddits: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              subreddit: { type: 'string', description: 'Subreddit name (without r/)' },
+              title: { type: 'string', description: 'Post title for this subreddit (max 300 chars)' },
+              body: { type: 'string', description: 'Post body text (optional)' },
+              url: { type: 'string', description: 'Link URL for link posts (optional)' },
+              flairText: { type: 'string', description: 'Flair text for this subreddit (optional)' },
+              scheduledAt: { type: 'string', description: 'ISO 8601 datetime for scheduling this specific post (optional)' },
+            },
+            required: ['subreddit', 'title'],
+          },
+          description: 'Array of subreddit configurations',
+        },
+        defaultScheduledAt: {
+          type: 'string',
+          description: 'Default ISO 8601 datetime for posts without a specific scheduledAt',
+        },
+        status: {
+          type: 'string',
+          enum: ['draft', 'scheduled'],
+          description: 'Status for all posts (default: draft)',
+        },
+        notes: {
+          type: 'string',
+          description: 'Private notes about this cross-post group',
+        },
+        campaignId: {
+          type: 'string',
+          description: 'Optional campaign ID to link all posts to',
+        },
+      },
+      required: ['subreddits'],
     },
   },
 ]
@@ -215,12 +405,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   try {
     switch (name) {
       case 'create_post': {
-        const { platforms, content, scheduledAt, status, notes } = args as {
+        const { platforms, content, scheduledAt, status, notes, campaignId, groupId, groupType } = args as {
           platforms: Platform[]
           content: Post['content']
           scheduledAt?: string
           status?: 'draft' | 'scheduled'
           notes?: string
+          campaignId?: string
+          groupId?: string
+          groupType?: GroupType
         }
 
         if (!platforms || platforms.length === 0) {
@@ -236,6 +429,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           scheduledAt: scheduledAt || null,
           status: status || 'draft',
           notes,
+          campaignId,
+          groupId,
+          groupType,
         })
 
         return {
@@ -354,15 +550,19 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'list_posts': {
-        const { status, platform, limit } = args as {
+        const { status, platform, campaignId, groupId, limit } = args as {
           status?: PostStatus | 'all'
           platform?: Platform
+          campaignId?: string
+          groupId?: string
           limit?: number
         }
 
         const posts = await listPosts({
           status,
           platform,
+          campaignId,
+          groupId,
           limit: limit || 50,
         })
 
@@ -371,6 +571,238 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             {
               type: 'text',
               text: JSON.stringify({ success: true, count: posts.length, posts }, null, 2),
+            },
+          ],
+        }
+      }
+
+      // Campaign management handlers
+      case 'create_campaign': {
+        const { name, description, status } = args as {
+          name: string
+          description?: string
+          status?: CampaignStatus
+        }
+
+        if (!name || name.trim() === '') {
+          return {
+            content: [{ type: 'text', text: 'Error: Campaign name is required' }],
+            isError: true,
+          }
+        }
+
+        const campaign = await createCampaign({
+          name: name.trim(),
+          description,
+          status: status || 'draft',
+        })
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({ success: true, campaign }, null, 2),
+            },
+          ],
+        }
+      }
+
+      case 'list_campaigns': {
+        const { status, limit } = args as {
+          status?: CampaignStatus | 'all'
+          limit?: number
+        }
+
+        const campaigns = await listCampaigns({
+          status,
+          limit: limit || 50,
+        })
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({ success: true, count: campaigns.length, campaigns }, null, 2),
+            },
+          ],
+        }
+      }
+
+      case 'get_campaign': {
+        const { id } = args as { id: string }
+        const result = await getCampaign(id)
+
+        if (!result) {
+          return {
+            content: [{ type: 'text', text: `Error: Campaign with ID ${id} not found` }],
+            isError: true,
+          }
+        }
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({ success: true, ...result }, null, 2),
+            },
+          ],
+        }
+      }
+
+      case 'update_campaign': {
+        const { id, ...updates } = args as { id: string } & Partial<Campaign>
+        const campaign = await updateCampaign(id, updates)
+
+        if (!campaign) {
+          return {
+            content: [{ type: 'text', text: `Error: Campaign with ID ${id} not found` }],
+            isError: true,
+          }
+        }
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({ success: true, campaign }, null, 2),
+            },
+          ],
+        }
+      }
+
+      case 'delete_campaign': {
+        const { id } = args as { id: string }
+        const success = await deleteCampaign(id)
+
+        if (!success) {
+          return {
+            content: [{ type: 'text', text: `Error: Campaign with ID ${id} not found` }],
+            isError: true,
+          }
+        }
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({ success: true, message: `Campaign ${id} deleted` }, null, 2),
+            },
+          ],
+        }
+      }
+
+      case 'add_post_to_campaign': {
+        const { campaignId, postId } = args as { campaignId: string; postId: string }
+        const post = await addPostToCampaign(campaignId, postId)
+
+        if (!post) {
+          return {
+            content: [{ type: 'text', text: 'Error: Campaign or post not found' }],
+            isError: true,
+          }
+        }
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({ success: true, post }, null, 2),
+            },
+          ],
+        }
+      }
+
+      case 'remove_post_from_campaign': {
+        const { campaignId, postId } = args as { campaignId: string; postId: string }
+        const post = await removePostFromCampaign(campaignId, postId)
+
+        if (!post) {
+          return {
+            content: [{ type: 'text', text: 'Error: Post not found' }],
+            isError: true,
+          }
+        }
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({ success: true, post }, null, 2),
+            },
+          ],
+        }
+      }
+
+      // Reddit cross-posting handler
+      case 'create_reddit_crossposts': {
+        const { subreddits, defaultScheduledAt, status, notes, campaignId } = args as {
+          subreddits: Array<{
+            subreddit: string
+            title: string
+            body?: string
+            url?: string
+            flairText?: string
+            scheduledAt?: string
+          }>
+          defaultScheduledAt?: string
+          status?: 'draft' | 'scheduled'
+          notes?: string
+          campaignId?: string
+        }
+
+        if (!subreddits || subreddits.length === 0) {
+          return {
+            content: [{ type: 'text', text: 'Error: At least one subreddit is required' }],
+            isError: true,
+          }
+        }
+
+        // Validate all subreddits have titles
+        for (const sub of subreddits) {
+          if (!sub.subreddit || !sub.title) {
+            return {
+              content: [{ type: 'text', text: 'Error: Each subreddit entry requires subreddit and title' }],
+              isError: true,
+            }
+          }
+        }
+
+        // Generate a shared groupId for all posts
+        const groupId = crypto.randomUUID()
+        const createdPosts: Post[] = []
+
+        for (const sub of subreddits) {
+          const post = await createPost({
+            platforms: ['reddit'] as Platform[],
+            content: {
+              reddit: {
+                subreddit: sub.subreddit,
+                title: sub.title,
+                body: sub.body,
+                url: sub.url,
+                flairText: sub.flairText,
+              },
+            },
+            scheduledAt: sub.scheduledAt || defaultScheduledAt || null,
+            status: status || 'draft',
+            notes,
+            campaignId,
+            groupId,
+            groupType: 'reddit-crosspost',
+          })
+          createdPosts.push(post)
+        }
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                success: true,
+                groupId,
+                count: createdPosts.length,
+                posts: createdPosts,
+              }, null, 2),
             },
           ],
         }

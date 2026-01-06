@@ -252,6 +252,8 @@ export function restorePost(id: string): Post | undefined {
 export function listPosts(options?: {
   status?: PostStatus | 'all'
   platform?: Platform
+  campaignId?: string
+  groupId?: string
   limit?: number
 }): Post[] {
   let sql = 'SELECT * FROM posts WHERE 1=1'
@@ -265,6 +267,16 @@ export function listPosts(options?: {
   if (options?.platform) {
     sql += ' AND platforms LIKE ?'
     params.push(`%"${options.platform}"%`)
+  }
+
+  if (options?.campaignId) {
+    sql += ' AND campaign_id = ?'
+    params.push(options.campaignId)
+  }
+
+  if (options?.groupId) {
+    sql += ' AND group_id = ?'
+    params.push(options.groupId)
   }
 
   sql += ' ORDER BY updated_at DESC'
