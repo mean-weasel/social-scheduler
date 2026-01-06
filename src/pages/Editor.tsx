@@ -1304,7 +1304,7 @@ export function Editor() {
                   return { ...prev, scheduledAt: localDate.toISOString() }
                 })
               }
-              className="absolute opacity-0 pointer-events-none"
+              className="absolute opacity-0"
               tabIndex={-1}
             />
           </div>
@@ -1342,7 +1342,7 @@ export function Editor() {
                   return { ...prev, scheduledAt: localDate.toISOString() }
                 })
               }
-              className="absolute opacity-0 pointer-events-none"
+              className="absolute opacity-0"
               tabIndex={-1}
             />
           </div>
