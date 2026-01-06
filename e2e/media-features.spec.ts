@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test'
+import path from 'path'
+import { fileURLToPath } from 'url'
 import {
   enterDemoMode,
   goToNewPost,
@@ -11,12 +13,16 @@ import {
   clickPost,
 } from './helpers'
 
+// Path to test fixtures (ES module compatible)
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const TEST_IMAGE_PATH = path.join(__dirname, 'fixtures', 'test-image.png')
+
 test.describe('Media Features', () => {
   test.beforeEach(async ({ page }) => {
     await enterDemoMode(page)
   })
 
-  test.describe('Twitter Media URLs', () => {
+  test.describe('Twitter Media Upload', () => {
     test('should show media button when Twitter is selected', async ({ page }) => {
       await goToNewPost(page)
       await togglePlatform(page, 'twitter')
@@ -38,7 +44,18 @@ test.describe('Media Features', () => {
       await expect(page.getByText('Twitter (up to 4 images or 1 video)')).toBeVisible()
     })
 
-    test('should add a media URL for Twitter', async ({ page }) => {
+    test('should show drag and drop upload zone for Twitter', async ({ page }) => {
+      await goToNewPost(page)
+      await togglePlatform(page, 'twitter')
+
+      // Open media section
+      await page.locator('button[title="Add media (images/videos)"]').click()
+
+      // Drag and drop zone should be visible
+      await expect(page.getByText('Drag & drop or click to upload')).toBeVisible()
+    })
+
+    test('should upload a media file for Twitter', async ({ page }) => {
       await goToNewPost(page)
       await togglePlatform(page, 'twitter')
       await fillContent(page, 'Check out this image!')
@@ -46,14 +63,12 @@ test.describe('Media Features', () => {
       // Open media section
       await page.locator('button[title="Add media (images/videos)"]').click()
 
-      // Add a media URL
-      const testUrl = 'https://res.cloudinary.com/demo/image/upload/sample.jpg'
-      await page.locator('input[placeholder="https://res.cloudinary.com/..."]').first().fill(testUrl)
-      await page.locator('button.bg-twitter').click()
+      // Find the file input and upload
+      const fileInput = page.locator('input[type="file"]').first()
+      await fileInput.setInputFiles(TEST_IMAGE_PATH)
 
-      // URL should be added (check for the image in the media input grid, not preview)
-      const mediaSection = page.locator('.mb-6.p-4.rounded-xl.border-border')
-      await expect(mediaSection.locator('img[alt="Media 1"]')).toBeVisible()
+      // Wait for upload to complete - look for the preview image
+      await expect(page.locator('img[alt="Media 1"]').first()).toBeVisible({ timeout: 10000 })
 
       // Save and verify
       await saveDraft(page)
@@ -65,11 +80,13 @@ test.describe('Media Features', () => {
       await togglePlatform(page, 'twitter')
       await fillContent(page, 'Post with media')
 
-      // Open media section and add URL
+      // Open media section and upload file
       await page.locator('button[title="Add media (images/videos)"]').click()
-      const testUrl = 'https://res.cloudinary.com/demo/image/upload/sample.jpg'
-      await page.locator('input[placeholder="https://res.cloudinary.com/..."]').first().fill(testUrl)
-      await page.locator('button.bg-twitter').click()
+      const fileInput = page.locator('input[type="file"]').first()
+      await fileInput.setInputFiles(TEST_IMAGE_PATH)
+
+      // Wait for upload to complete
+      await expect(page.locator('img[alt="Media 1"]').first()).toBeVisible({ timeout: 10000 })
 
       // Close media section
       await page.locator('button[title="Add media (images/videos)"]').click()
@@ -79,26 +96,26 @@ test.describe('Media Features', () => {
       await expect(mediaButton).toContainText('1')
     })
 
-    test('should remove media URL when clicking remove button', async ({ page }) => {
+    test('should remove media when clicking remove button', async ({ page }) => {
       await goToNewPost(page)
       await togglePlatform(page, 'twitter')
 
-      // Open media section and add URL
+      // Open media section and upload file
       await page.locator('button[title="Add media (images/videos)"]').click()
-      const testUrl = 'https://res.cloudinary.com/demo/image/upload/sample.jpg'
-      await page.locator('input[placeholder="https://res.cloudinary.com/..."]').first().fill(testUrl)
-      await page.locator('button.bg-twitter').click()
+      const fileInput = page.locator('input[type="file"]').first()
+      await fileInput.setInputFiles(TEST_IMAGE_PATH)
 
-      // Image should be visible in the media input section
-      const mediaSection = page.locator('.mb-6.p-4.rounded-xl.border-border')
-      await expect(mediaSection.locator('img[alt="Media 1"]')).toBeVisible()
+      // Wait for upload to complete
+      const mediaPreview = page.locator('img[alt="Media 1"]').first()
+      await expect(mediaPreview).toBeVisible({ timeout: 10000 })
 
-      // Hover over image and click remove (within media section)
-      await mediaSection.locator('.relative.group').first().hover()
-      await mediaSection.locator('.relative.group button').first().click()
+      // Hover over image and click remove
+      const mediaItem = page.locator('.relative.group').first()
+      await mediaItem.hover()
+      await mediaItem.locator('button').click()
 
-      // Image should be removed from input section
-      await expect(mediaSection.locator('img[alt="Media 1"]')).not.toBeVisible()
+      // Image should be removed
+      await expect(mediaPreview).not.toBeVisible()
     })
 
     test('should show media in Twitter preview panel', async ({ page }) => {
@@ -106,19 +123,21 @@ test.describe('Media Features', () => {
       await togglePlatform(page, 'twitter')
       await fillContent(page, 'Post with preview')
 
-      // Open media section and add URL
+      // Open media section and upload file
       await page.locator('button[title="Add media (images/videos)"]').click()
-      const testUrl = 'https://res.cloudinary.com/demo/image/upload/sample.jpg'
-      await page.locator('input[placeholder="https://res.cloudinary.com/..."]').first().fill(testUrl)
-      await page.locator('button.bg-twitter').click()
+      const fileInput = page.locator('input[type="file"]').first()
+      await fileInput.setInputFiles(TEST_IMAGE_PATH)
 
-      // Check preview panel shows media
+      // Wait for upload to complete
+      await expect(page.locator('img[alt="Media 1"]').first()).toBeVisible({ timeout: 10000 })
+
+      // Check preview panel shows media (in the preview area with dark background)
       const previewPanel = page.locator('.border-l.border-border')
       await expect(previewPanel.locator('img[alt="Media 1"]')).toBeVisible()
     })
   })
 
-  test.describe('LinkedIn Media URL', () => {
+  test.describe('LinkedIn Media Upload', () => {
     test('should show LinkedIn media input when LinkedIn is selected', async ({ page }) => {
       await goToNewPost(page)
       await togglePlatform(page, 'linkedin')
@@ -130,7 +149,7 @@ test.describe('Media Features', () => {
       await expect(page.getByText('LinkedIn (1 image or video)')).toBeVisible()
     })
 
-    test('should add a media URL for LinkedIn', async ({ page }) => {
+    test('should upload a media file for LinkedIn', async ({ page }) => {
       await goToNewPost(page)
       await togglePlatform(page, 'linkedin')
       await fillContent(page, 'Professional post with image')
@@ -138,13 +157,12 @@ test.describe('Media Features', () => {
       // Open media section
       await page.locator('button[title="Add media (images/videos)"]').click()
 
-      // Add LinkedIn media URL
-      const testUrl = 'https://res.cloudinary.com/demo/image/upload/sample.jpg'
-      await page.locator('input[placeholder="https://res.cloudinary.com/..."]').fill(testUrl)
+      // Upload file (LinkedIn is the second upload zone if both are visible)
+      const fileInput = page.locator('input[type="file"]').first()
+      await fileInput.setInputFiles(TEST_IMAGE_PATH)
 
-      // Preview should show the image in the media section
-      const mediaSection = page.locator('.mb-6.p-4.rounded-xl.border-border')
-      await expect(mediaSection.locator('img[alt="LinkedIn media"]')).toBeVisible()
+      // Wait for upload to complete
+      await expect(page.locator('img[alt="Media 1"]').first()).toBeVisible({ timeout: 10000 })
 
       // Save
       await saveDraft(page)
@@ -156,10 +174,13 @@ test.describe('Media Features', () => {
       await togglePlatform(page, 'linkedin')
       await fillContent(page, 'Post for LinkedIn')
 
-      // Open media section and add URL
+      // Open media section and upload file
       await page.locator('button[title="Add media (images/videos)"]').click()
-      const testUrl = 'https://res.cloudinary.com/demo/image/upload/sample.jpg'
-      await page.locator('input[placeholder="https://res.cloudinary.com/..."]').fill(testUrl)
+      const fileInput = page.locator('input[type="file"]').first()
+      await fileInput.setInputFiles(TEST_IMAGE_PATH)
+
+      // Wait for upload to complete
+      await expect(page.locator('img[alt="Media 1"]').first()).toBeVisible({ timeout: 10000 })
 
       // Check preview panel shows media
       const previewPanel = page.locator('.border-l.border-border')
@@ -262,7 +283,7 @@ test.describe('Media Features', () => {
       await expect(page.getByText('LinkedIn (1 image or video)')).toBeVisible()
     })
 
-    test('should persist media URLs when editing post', async ({ page }) => {
+    test('should persist media when editing post', async ({ page }) => {
       // Create a post with media
       await goToNewPost(page)
       await togglePlatform(page, 'twitter')
@@ -270,9 +291,11 @@ test.describe('Media Features', () => {
 
       // Add media
       await page.locator('button[title="Add media (images/videos)"]').click()
-      const testUrl = 'https://res.cloudinary.com/demo/image/upload/sample.jpg'
-      await page.locator('input[placeholder="https://res.cloudinary.com/..."]').first().fill(testUrl)
-      await page.locator('button.bg-twitter').click()
+      const fileInput = page.locator('input[type="file"]').first()
+      await fileInput.setInputFiles(TEST_IMAGE_PATH)
+
+      // Wait for upload to complete
+      await expect(page.locator('img[alt="Media 1"]').first()).toBeVisible({ timeout: 10000 })
 
       await saveDraft(page)
       await waitForNavigation(page, '/')
@@ -283,8 +306,23 @@ test.describe('Media Features', () => {
 
       // Open media section - should show existing media
       await page.locator('button[title="Add media (images/videos)"]').click()
-      const mediaSection = page.locator('.mb-6.p-4.rounded-xl.border-border')
-      await expect(mediaSection.locator('img[alt="Media 1"]')).toBeVisible()
+      await expect(page.locator('img[alt="Media 1"]').first()).toBeVisible()
+    })
+  })
+
+  test.describe('File Validation', () => {
+    test('should show upload zone in media section', async ({ page }) => {
+      await goToNewPost(page)
+      await togglePlatform(page, 'twitter')
+
+      // Open media section
+      await page.locator('button[title="Add media (images/videos)"]').click()
+
+      // The upload zone should be visible
+      await expect(page.getByText('Drag & drop or click to upload')).toBeVisible()
+
+      // File input should exist
+      await expect(page.locator('input[type="file"]').first()).toBeAttached()
     })
   })
 })

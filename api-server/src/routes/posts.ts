@@ -11,6 +11,7 @@ import {
   Platform,
   PostStatus,
 } from '../storage.js'
+import { deletePostMedia } from '../media.js'
 
 export const postsRouter = Router()
 
@@ -109,8 +110,22 @@ postsRouter.patch('/:id', (req: Request, res: Response) => {
 })
 
 // Delete post
-postsRouter.delete('/:id', (req: Request, res: Response) => {
+postsRouter.delete('/:id', async (req: Request, res: Response) => {
   try {
+    // Get post first to extract media filenames for cleanup
+    const post = getPost(req.params.id)
+    if (!post) {
+      res.status(404).json({ error: 'Post not found' })
+      return
+    }
+
+    // Delete associated media files
+    const mediaDeleted = await deletePostMedia(post)
+    if (mediaDeleted > 0) {
+      console.log(`Deleted ${mediaDeleted} media file(s) for post ${req.params.id}`)
+    }
+
+    // Delete the post from database
     const success = deletePost(req.params.id)
     if (!success) {
       res.status(404).json({ error: 'Post not found' })
