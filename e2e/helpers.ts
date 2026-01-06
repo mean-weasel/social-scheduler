@@ -82,6 +82,28 @@ export async function togglePlatform(page: Page, platform: 'twitter' | 'linkedin
 }
 
 /**
+ * Switch platform and confirm if dialog appears (when content exists)
+ */
+export async function switchPlatformWithConfirm(
+  page: Page,
+  platform: 'twitter' | 'linkedin' | 'reddit'
+) {
+  const platformNames = {
+    twitter: 'Twitter',
+    linkedin: 'LinkedIn',
+    reddit: 'Reddit',
+  }
+  await page.getByRole('button', { name: platformNames[platform] }).click()
+
+  // Check if confirmation dialog appears and confirm it
+  const dialog = page.getByRole('alertdialog')
+  const dialogVisible = await dialog.isVisible().catch(() => false)
+  if (dialogVisible) {
+    await dialog.getByRole('button', { name: 'Switch' }).click()
+  }
+}
+
+/**
  * Fill in the main content textarea
  */
 export async function fillContent(page: Page, content: string) {

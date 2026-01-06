@@ -190,8 +190,9 @@ export function Editor() {
   const hasMultipleSubreddits = post.platform === 'reddit' && subredditsInput.length > 1
 
   // Check if scheduling is valid (used to disable Schedule button)
+  // For Reddit with multiple subreddits: each subreddit must have a schedule OR a fallback main schedule
   const canSchedule = hasMultipleSubreddits
-    ? subredditsInput.every(sub => subredditSchedules[sub])
+    ? subredditsInput.every(sub => subredditSchedules[sub]) || !!post.scheduledAt
     : !!post.scheduledAt
   const { status: autoSaveStatus } = useAutoSave({
     data: { post, content, mediaUrls, linkedInMediaUrl, redditUrl },

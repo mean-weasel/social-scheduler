@@ -151,16 +151,15 @@ test.describe('Scheduling', () => {
       expect(posts[0].scheduledAt).toBeTruthy()
     })
 
-    test('should show error when scheduling without date', async ({ page }) => {
+    test('should disable schedule button when no date is set', async ({ page }) => {
       await goToNewPost(page)
       await selectPlatform(page, 'twitter')
       await fillContent(page, 'Missing date test')
 
-      // Try to schedule without setting date
-      await schedulePost(page)
-
-      // Should show error toast
-      await expect(page.getByText(/please select a date/i)).toBeVisible()
+      // Schedule button should be disabled without a date
+      const scheduleButton = page.getByRole('button', { name: /^schedule$/i })
+      await expect(scheduleButton).toBeDisabled()
+      await expect(scheduleButton).toHaveAttribute('title', 'Select a date and time to schedule')
     })
 
     test('should reschedule existing post', async ({ page }) => {
