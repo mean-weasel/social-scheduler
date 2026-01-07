@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useState, useCallback } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, isBefore, startOfDay } from 'date-fns'
 import {
   Clock,
@@ -34,7 +34,33 @@ const STATUS_CONFIG: Record<PostStatus, { label: string; icon: typeof FileText; 
 
 export function Posts() {
   const allPosts = usePostsStore((state) => state.posts)
-  const [filter, setFilter] = useState<FilterStatus>('all')
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  // Initialize filter from URL query param, default to 'all'
+  const getFilterFromParams = useCallback((): FilterStatus => {
+    const statusParam = searchParams.get('status')
+    const validStatuses: FilterStatus[] = ['all', 'draft', 'scheduled', 'published', 'failed', 'archived']
+    if (statusParam && validStatuses.includes(statusParam as FilterStatus)) {
+      return statusParam as FilterStatus
+    }
+    return 'all'
+  }, [searchParams])
+
+  const filter = getFilterFromParams()
+
+  // Update filter via URL params
+  const setFilter = useCallback(
+    (newFilter: FilterStatus) => {
+      if (newFilter === 'all') {
+        searchParams.delete('status')
+      } else {
+        searchParams.set('status', newFilter)
+      }
+      setSearchParams(searchParams, { replace: true })
+    },
+    [searchParams, setSearchParams]
+  )
+
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [currentDate, setCurrentDate] = useState(new Date())
   const [searchQuery, setSearchQuery] = useState('')
