@@ -158,19 +158,19 @@ function Section({
   return (
     <section className="animate-fade-in">
       {/* Section header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <div className="p-2 rounded-lg bg-[hsl(var(--gold))]/10">
+      <div className="flex items-center justify-between gap-2 mb-4">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="p-2 rounded-lg bg-[hsl(var(--gold))]/10 shrink-0">
             <Icon className="w-4 h-4 text-[hsl(var(--gold-dark))]" />
           </div>
-          <h2 className="text-sm font-bold uppercase tracking-widest text-[hsl(var(--gold-dark))]">
+          <h2 className="text-sm font-bold uppercase tracking-widest text-[hsl(var(--gold-dark))] truncate">
             {title}
           </h2>
         </div>
         {!isEmpty && (
           <Link
             to={viewAllLink}
-            className="text-xs font-medium text-muted-foreground hover:text-[hsl(var(--gold-dark))] transition-colors flex items-center gap-1"
+            className="text-xs font-medium text-muted-foreground hover:text-[hsl(var(--gold-dark))] transition-colors flex items-center gap-1 whitespace-nowrap shrink-0"
           >
             {viewAllLabel}
             <ChevronRight className="w-3.5 h-3.5" />
