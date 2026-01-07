@@ -13,8 +13,8 @@ const navItems: NavItem[] = [
   { icon: Home, label: 'Home', path: '/' },
   { icon: Calendar, label: 'Posts', path: '/posts' },
   { icon: Plus, label: 'New', path: '/new', isAction: true },
-  { icon: FolderOpen, label: 'Campaigns', path: '/campaigns' },
-  { icon: Settings, label: 'Settings', path: '/settings' },
+  { icon: FolderOpen, label: 'Groups', path: '/campaigns' },
+  { icon: Settings, label: 'More', path: '/settings' },
 ]
 
 export function BottomNav() {
@@ -66,7 +66,7 @@ export function BottomNav() {
               to={item.path}
               className={cn(
                 'flex flex-col items-center justify-center',
-                'w-16 h-full',
+                'flex-1 h-full max-w-[72px]',
                 'text-muted-foreground',
                 'active:scale-95 transition-all',
                 isActive && 'text-[hsl(var(--gold-dark))]'
@@ -74,7 +74,7 @@ export function BottomNav() {
             >
               <Icon className={cn('w-6 h-6', isActive && 'stroke-[2.5]')} />
               <span className={cn(
-                'text-[10px] mt-1 font-semibold tracking-wide uppercase',
+                'text-[10px] mt-1 font-semibold uppercase',
                 isActive && 'text-[hsl(var(--gold-dark))]'
               )}>
                 {item.label}
