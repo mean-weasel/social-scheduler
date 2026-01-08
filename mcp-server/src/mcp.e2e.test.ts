@@ -89,6 +89,7 @@ describe('MCP Server E2E', () => {
       const toolNames = response.tools.map((t) => t.name)
       expect(toolNames).toContain('create_post')
       expect(toolNames).toContain('list_posts')
+      expect(toolNames).toContain('search_posts')
       expect(toolNames).toContain('create_campaign')
       expect(toolNames).toContain('create_reddit_crossposts')
       // Blog draft tools
@@ -115,10 +116,8 @@ describe('MCP Server E2E', () => {
           params: {
             name: 'create_post',
             arguments: {
-              platforms: ['twitter'],
-              content: {
-                twitter: { text: 'E2E test tweet from MCP' },
-              },
+              platform: 'twitter',
+              content: { text: 'E2E test tweet from MCP' },
             },
           },
         },
@@ -129,7 +128,7 @@ describe('MCP Server E2E', () => {
       expect(result.success).toBe(true)
       expect(result.post).toBeDefined()
       expect(result.post.id).toBeDefined()
-      expect(result.post.platforms).toEqual(['twitter'])
+      expect(result.post.platform).toEqual('twitter')
       expect(result.post.status).toBe('draft')
 
       createdPostId = result.post.id
@@ -189,13 +188,13 @@ describe('MCP Server E2E', () => {
       expect(result.post.notes).toBe('Updated via E2E test')
     })
 
-    it('should delete a post', async () => {
+    it('should delete a post with confirmation', async () => {
       const response = await client.request(
         {
           method: 'tools/call',
           params: {
             name: 'delete_post',
-            arguments: { id: createdPostId },
+            arguments: { id: createdPostId, confirmed: true },
           },
         },
         CallToolResultSchema
@@ -203,6 +202,191 @@ describe('MCP Server E2E', () => {
 
       const result = parseToolResponse(response)
       expect(result.success).toBe(true)
+    })
+
+    it('should require confirmation for delete_post', async () => {
+      // First create a post to delete
+      const createResponse = await client.request(
+        {
+          method: 'tools/call',
+          params: {
+            name: 'create_post',
+            arguments: {
+              platform: 'twitter',
+              content: { text: 'Post to test deletion confirmation' },
+            },
+          },
+        },
+        CallToolResultSchema
+      )
+      const postId = parseToolResponse(createResponse).post.id
+
+      // Try to delete without confirmation
+      const response = await client.request(
+        {
+          method: 'tools/call',
+          params: {
+            name: 'delete_post',
+            arguments: { id: postId, confirmed: false },
+          },
+        },
+        CallToolResultSchema
+      )
+
+      // Check isError is true
+      expect(response.isError).toBe(true)
+
+      // Clean up: delete with confirmation
+      await client.request(
+        {
+          method: 'tools/call',
+          params: {
+            name: 'delete_post',
+            arguments: { id: postId, confirmed: true },
+          },
+        },
+        CallToolResultSchema
+      )
+    })
+
+    it('should require confirmation for archive_post', async () => {
+      // First create a post to archive
+      const createResponse = await client.request(
+        {
+          method: 'tools/call',
+          params: {
+            name: 'create_post',
+            arguments: {
+              platform: 'twitter',
+              content: { text: 'Post to test archive confirmation' },
+            },
+          },
+        },
+        CallToolResultSchema
+      )
+      const postId = parseToolResponse(createResponse).post.id
+
+      // Try to archive without confirmation
+      const response = await client.request(
+        {
+          method: 'tools/call',
+          params: {
+            name: 'archive_post',
+            arguments: { id: postId, confirmed: false },
+          },
+        },
+        CallToolResultSchema
+      )
+
+      // Check isError is true
+      expect(response.isError).toBe(true)
+
+      // Clean up: delete with confirmation
+      await client.request(
+        {
+          method: 'tools/call',
+          params: {
+            name: 'delete_post',
+            arguments: { id: postId, confirmed: true },
+          },
+        },
+        CallToolResultSchema
+      )
+    })
+
+    it('should search posts', async () => {
+      // First create a post with specific content to search for
+      const createResponse = await client.request(
+        {
+          method: 'tools/call',
+          params: {
+            name: 'create_post',
+            arguments: {
+              platform: 'twitter',
+              content: { text: 'UniqueSearchableContent12345' },
+              notes: 'searchable notes for testing',
+            },
+          },
+        },
+        CallToolResultSchema
+      )
+      const postId = parseToolResponse(createResponse).post.id
+
+      // Search for the post
+      const response = await client.request(
+        {
+          method: 'tools/call',
+          params: {
+            name: 'search_posts',
+            arguments: { query: 'UniqueSearchableContent12345' },
+          },
+        },
+        CallToolResultSchema
+      )
+
+      const result = parseToolResponse(response)
+      expect(result.success).toBe(true)
+      expect(Array.isArray(result.posts)).toBe(true)
+      expect(result.posts.some((p: { id: string }) => p.id === postId)).toBe(true)
+
+      // Clean up
+      await client.request(
+        {
+          method: 'tools/call',
+          params: {
+            name: 'delete_post',
+            arguments: { id: postId, confirmed: true },
+          },
+        },
+        CallToolResultSchema
+      )
+    })
+
+    it('should search posts by notes', async () => {
+      // First create a post with specific notes to search for
+      const createResponse = await client.request(
+        {
+          method: 'tools/call',
+          params: {
+            name: 'create_post',
+            arguments: {
+              platform: 'linkedin',
+              content: { text: 'Regular content', visibility: 'public' },
+              notes: 'UniqueNoteSearch98765',
+            },
+          },
+        },
+        CallToolResultSchema
+      )
+      const postId = parseToolResponse(createResponse).post.id
+
+      // Search for the post by notes
+      const response = await client.request(
+        {
+          method: 'tools/call',
+          params: {
+            name: 'search_posts',
+            arguments: { query: 'UniqueNoteSearch98765' },
+          },
+        },
+        CallToolResultSchema
+      )
+
+      const result = parseToolResponse(response)
+      expect(result.success).toBe(true)
+      expect(result.posts.some((p: { id: string }) => p.id === postId)).toBe(true)
+
+      // Clean up
+      await client.request(
+        {
+          method: 'tools/call',
+          params: {
+            name: 'delete_post',
+            arguments: { id: postId, confirmed: true },
+          },
+        },
+        CallToolResultSchema
+      )
     })
   })
 
@@ -296,10 +480,8 @@ describe('MCP Server E2E', () => {
           params: {
             name: 'create_post',
             arguments: {
-              platforms: ['linkedin'],
-              content: {
-                linkedin: { text: 'Campaign post test', visibility: 'public' },
-              },
+              platform: 'linkedin',
+              content: { text: 'Campaign post test', visibility: 'public' },
             },
           },
         },
@@ -406,9 +588,9 @@ describe('MCP Server E2E', () => {
       expect(result.posts[0].groupType).toBe('reddit-crosspost')
       expect(result.posts[1].groupType).toBe('reddit-crosspost')
 
-      // Verify different subreddits
-      expect(result.posts[0].content.reddit.subreddit).toBe('test1')
-      expect(result.posts[1].content.reddit.subreddit).toBe('test2')
+      // Verify different subreddits (content is directly the platform content, not nested under platform key)
+      expect(result.posts[0].content.subreddit).toBe('test1')
+      expect(result.posts[1].content.subreddit).toBe('test2')
     })
 
     it('should create crossposts with individual schedules', async () => {
@@ -690,21 +872,20 @@ describe('MCP Server E2E', () => {
       )
       const draftId = parseToolResponse(createResponse).draft.id
 
-      // Try to delete without confirmation
+      // Try to delete without confirmation (confirmed: false)
       const response = await client.request(
         {
           method: 'tools/call',
           params: {
             name: 'delete_blog_draft',
-            arguments: { id: draftId },
+            arguments: { id: draftId, confirmed: false },
           },
         },
         CallToolResultSchema
       )
 
-      const result = parseToolResponse(response)
-      expect(result.success).toBe(false)
-      expect(result.requiresConfirmation).toBe(true)
+      // Should return error when not confirmed
+      expect(response.isError).toBe(true)
 
       // Clean up: delete with confirmation
       await client.request(
@@ -736,21 +917,20 @@ describe('MCP Server E2E', () => {
       )
       const draftId = parseToolResponse(createResponse).draft.id
 
-      // Try to archive without confirmation
+      // Try to archive without confirmation (confirmed: false)
       const response = await client.request(
         {
           method: 'tools/call',
           params: {
             name: 'archive_blog_draft',
-            arguments: { id: draftId },
+            arguments: { id: draftId, confirmed: false },
           },
         },
         CallToolResultSchema
       )
 
-      const result = parseToolResponse(response)
-      expect(result.success).toBe(false)
-      expect(result.requiresConfirmation).toBe(true)
+      // Should return error when not confirmed
+      expect(response.isError).toBe(true)
 
       // Clean up: delete with confirmation
       await client.request(

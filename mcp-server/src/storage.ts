@@ -216,6 +216,23 @@ export async function listPosts(options?: {
   return posts
 }
 
+export async function searchPosts(query: string, options?: { limit?: number }): Promise<Post[]> {
+  const params = new URLSearchParams()
+  params.set('q', query)
+  if (options?.limit) {
+    params.set('limit', String(options.limit))
+  }
+
+  const res = await fetch(`${API_BASE}/posts/search?${params.toString()}`)
+
+  if (!res.ok) {
+    throw new Error(`Failed to search posts: ${res.statusText}`)
+  }
+
+  const { posts } = await res.json()
+  return posts
+}
+
 // Campaign CRUD Operations
 
 export async function createCampaign(data: {

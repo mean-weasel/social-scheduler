@@ -7,6 +7,7 @@ import {
   archivePost,
   restorePost,
   listPosts,
+  searchPosts,
   clearAll,
   Platform,
   PostStatus,
@@ -44,6 +45,27 @@ postsRouter.get('/', (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error listing posts:', error)
     res.status(500).json({ error: 'Failed to list posts' })
+  }
+})
+
+// Search posts by content, notes, platform, and campaign name
+postsRouter.get('/search', (req: Request, res: Response) => {
+  try {
+    const { q, limit } = req.query
+
+    if (!q || typeof q !== 'string' || q.trim() === '') {
+      res.status(400).json({ error: 'Search query "q" is required' })
+      return
+    }
+
+    const posts = searchPosts(q.trim(), {
+      limit: limit ? parseInt(limit as string, 10) : undefined,
+    })
+
+    res.json({ posts })
+  } catch (error) {
+    console.error('Error searching posts:', error)
+    res.status(500).json({ error: 'Failed to search posts' })
   }
 })
 

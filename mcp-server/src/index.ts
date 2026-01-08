@@ -15,6 +15,7 @@ import {
   archivePost,
   restorePost,
   listPosts,
+  searchPosts,
   createCampaign,
   getCampaign,
   updateCampaign,
@@ -162,24 +163,32 @@ const TOOLS = [
   },
   {
     name: 'delete_post',
-    description: 'Permanently delete a post',
+    description: 'Permanently delete a post. This action cannot be undone. Please confirm with the user before calling this.',
     inputSchema: {
       type: 'object' as const,
       properties: {
         id: { type: 'string', description: 'Post ID to delete' },
+        confirmed: {
+          type: 'boolean',
+          description: 'Set to true to confirm deletion. Required to prevent accidental deletions.',
+        },
       },
-      required: ['id'],
+      required: ['id', 'confirmed'],
     },
   },
   {
     name: 'archive_post',
-    description: 'Archive a post (soft delete). Archived posts can be restored.',
+    description: 'Archive a post (soft delete). Archived posts can be restored. Please confirm with the user before calling this.',
     inputSchema: {
       type: 'object' as const,
       properties: {
         id: { type: 'string', description: 'Post ID to archive' },
+        confirmed: {
+          type: 'boolean',
+          description: 'Set to true to confirm archival.',
+        },
       },
-      required: ['id'],
+      required: ['id', 'confirmed'],
     },
   },
   {
@@ -222,6 +231,24 @@ const TOOLS = [
           description: 'Maximum number of posts to return (default: 50)',
         },
       },
+    },
+  },
+  {
+    name: 'search_posts',
+    description: 'Search posts by content, notes, platform, or campaign name. Excludes archived posts.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        query: {
+          type: 'string',
+          description: 'Search query to match against post content, notes, platform, or campaign name',
+        },
+        limit: {
+          type: 'number',
+          description: 'Maximum number of results (default: 50)',
+        },
+      },
+      required: ['query'],
     },
   },
   // Campaign management tools
@@ -664,7 +691,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case 'delete_post': {
-        const { id } = args as { id: string }
+        const { id, confirmed } = args as { id: string; confirmed: boolean }
+
+        if (!confirmed) {
+          return {
+            content: [{ type: 'text', text: 'Error: Deletion not confirmed. Please set confirmed=true after confirming with the user.' }],
+            isError: true,
+          }
+        }
+
         const success = await deletePost(id)
 
         if (!success) {
@@ -678,14 +713,22 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           content: [
             {
               type: 'text',
-              text: JSON.stringify({ success: true, message: `Post ${id} deleted` }, null, 2),
+              text: JSON.stringify({ success: true, message: `Post ${id} permanently deleted` }, null, 2),
             },
           ],
         }
       }
 
       case 'archive_post': {
-        const { id } = args as { id: string }
+        const { id, confirmed } = args as { id: string; confirmed: boolean }
+
+        if (!confirmed) {
+          return {
+            content: [{ type: 'text', text: 'Error: Archive not confirmed. Please set confirmed=true after confirming with the user.' }],
+            isError: true,
+          }
+        }
+
         const post = await archivePost(id)
 
         if (!post) {
@@ -742,6 +785,28 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           groupId,
           limit: limit || 50,
         })
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({ success: true, count: posts.length, posts }, null, 2),
+            },
+          ],
+        }
+      }
+
+      case 'search_posts': {
+        const { query, limit } = args as { query: string; limit?: number }
+
+        if (!query || query.trim() === '') {
+          return {
+            content: [{ type: 'text', text: 'Error: search query is required' }],
+            isError: true,
+          }
+        }
+
+        const posts = await searchPosts(query, { limit: limit || 50 })
 
         return {
           content: [
