@@ -59,6 +59,26 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_campaigns_status ON campaigns(status);
   CREATE INDEX IF NOT EXISTS idx_campaigns_updated_at ON campaigns(updated_at);
+
+  CREATE TABLE IF NOT EXISTS blog_drafts (
+    id TEXT PRIMARY KEY,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    scheduled_at TEXT,
+    status TEXT NOT NULL DEFAULT 'draft',
+    title TEXT NOT NULL,
+    date TEXT,
+    content TEXT NOT NULL DEFAULT '',
+    notes TEXT,
+    word_count INTEGER DEFAULT 0,
+    campaign_id TEXT,
+    images TEXT
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_blog_drafts_status ON blog_drafts(status);
+  CREATE INDEX IF NOT EXISTS idx_blog_drafts_scheduled_at ON blog_drafts(scheduled_at);
+  CREATE INDEX IF NOT EXISTS idx_blog_drafts_updated_at ON blog_drafts(updated_at);
+  CREATE INDEX IF NOT EXISTS idx_blog_drafts_campaign_id ON blog_drafts(campaign_id);
 `)
 
 // Migration: Add new columns to existing posts table if they don't exist

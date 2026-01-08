@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import { cn } from '@/lib/utils'
-import { Home, Calendar, Plus, Settings, FolderOpen } from 'lucide-react'
+import { Home, Calendar, Plus, Settings, FileText } from 'lucide-react'
 
 interface NavItem {
   icon: typeof Home
@@ -13,7 +13,7 @@ const navItems: NavItem[] = [
   { icon: Home, label: 'Home', path: '/' },
   { icon: Calendar, label: 'Posts', path: '/posts' },
   { icon: Plus, label: 'New', path: '/new', isAction: true },
-  { icon: FolderOpen, label: 'Groups', path: '/campaigns' },
+  { icon: FileText, label: 'Blog', path: '/blog' },
   { icon: Settings, label: 'More', path: '/settings' },
 ]
 
@@ -21,7 +21,7 @@ export function BottomNav() {
   const location = useLocation()
 
   // Don't show on editor pages (they have their own back navigation)
-  const isEditorPage = location.pathname.startsWith('/new') || location.pathname.startsWith('/edit')
+  const isEditorPage = location.pathname.startsWith('/new') || location.pathname.startsWith('/edit') || location.pathname.startsWith('/blog/new') || location.pathname.startsWith('/blog/edit')
   if (isEditorPage) return null
 
   return (

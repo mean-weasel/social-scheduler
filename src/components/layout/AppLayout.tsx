@@ -5,12 +5,13 @@ import {
   Settings,
   Plus,
   FolderOpen,
+  FileText,
 } from 'lucide-react'
 import { BottomNav } from './BottomNav'
 
 export function AppLayout() {
   const location = useLocation()
-  const isEditorPage = location.pathname.startsWith('/new') || location.pathname.startsWith('/edit')
+  const isEditorPage = location.pathname.startsWith('/new') || location.pathname.startsWith('/edit') || location.pathname.startsWith('/blog/new') || location.pathname.startsWith('/blog/edit')
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -58,6 +59,16 @@ export function AppLayout() {
               title="Campaigns"
             >
               <FolderOpen className="w-5 h-5" />
+            </Link>
+            <Link
+              to="/blog"
+              className={cn(
+                'p-2 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors',
+                location.pathname.startsWith('/blog') && 'bg-accent text-foreground'
+              )}
+              title="Blog Drafts"
+            >
+              <FileText className="w-5 h-5" />
             </Link>
             <Link
               to="/settings"

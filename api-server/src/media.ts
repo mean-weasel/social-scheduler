@@ -12,6 +12,7 @@ const STORAGE_DIR = isTest
   : process.env.STORAGE_DIR || path.join(os.homedir(), '.social-scheduler')
 
 export const MEDIA_DIR = path.join(STORAGE_DIR, 'media')
+export const BLOG_MEDIA_DIR = path.join(STORAGE_DIR, 'blog-media')
 
 // Allowed file types
 export const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
@@ -40,6 +41,16 @@ export function initMediaDir(): void {
   if (!fs.existsSync(MEDIA_DIR)) {
     fs.mkdirSync(MEDIA_DIR, { recursive: true })
     console.log(`Media directory initialized at: ${MEDIA_DIR}`)
+  }
+}
+
+/**
+ * Initialize the blog media storage directory
+ */
+export function initBlogMediaDir(): void {
+  if (!fs.existsSync(BLOG_MEDIA_DIR)) {
+    fs.mkdirSync(BLOG_MEDIA_DIR, { recursive: true })
+    console.log(`Blog media directory initialized at: ${BLOG_MEDIA_DIR}`)
   }
 }
 
@@ -193,4 +204,124 @@ export async function deletePostMedia(post: Post): Promise<number> {
   }
 
   return deleted
+}
+
+// ============================================================================
+// Blog Media Functions
+// ============================================================================
+
+// Blog media size limit (10MB for images only, no videos)
+export const BLOG_MAX_IMAGE_SIZE = 10 * 1024 * 1024 // 10MB
+
+/**
+ * Get the full path to a blog media file
+ */
+export function getBlogMediaPath(filename: string): string {
+  return path.join(BLOG_MEDIA_DIR, filename)
+}
+
+/**
+ * Check if a blog media file exists
+ */
+export function blogMediaFileExists(filename: string): boolean {
+  const filepath = getBlogMediaPath(filename)
+  return fs.existsSync(filepath)
+}
+
+/**
+ * Copy an image from an external path to blog-media directory
+ * @param sourcePath - The full path to the source image file
+ * @returns The filename (not full path) for storage in database
+ */
+export async function copyImageToBlogMedia(sourcePath: string): Promise<{
+  filename: string
+  size: number
+  mimetype: string
+}> {
+  // Validate source exists
+  if (!fs.existsSync(sourcePath)) {
+    throw new Error(`Source file not found: ${sourcePath}`)
+  }
+
+  // Get file stats
+  const stats = await fs.promises.stat(sourcePath)
+  if (stats.size > BLOG_MAX_IMAGE_SIZE) {
+    throw new Error(`File exceeds 10MB limit: ${(stats.size / 1024 / 1024).toFixed(2)}MB`)
+  }
+
+  // Determine MIME type from extension
+  const mimetype = getMimeTypeFromFilename(sourcePath)
+  if (!mimetype || !isImageType(mimetype)) {
+    throw new Error(`Invalid image type. Allowed: jpg, png, gif, webp`)
+  }
+
+  // Generate new filename and copy
+  const filename = generateMediaFilename(mimetype)
+  const destPath = getBlogMediaPath(filename)
+
+  await fs.promises.copyFile(sourcePath, destPath)
+
+  return {
+    filename,
+    size: stats.size,
+    mimetype,
+  }
+}
+
+/**
+ * Save a buffer as a blog media file
+ * @returns The filename (not full path) for storage in database
+ */
+export async function saveBlogMediaFile(buffer: Buffer, mimetype: string): Promise<string> {
+  if (buffer.length > BLOG_MAX_IMAGE_SIZE) {
+    throw new Error(`File exceeds 10MB limit: ${(buffer.length / 1024 / 1024).toFixed(2)}MB`)
+  }
+
+  if (!isImageType(mimetype)) {
+    throw new Error(`Invalid image type. Allowed: jpg, png, gif, webp`)
+  }
+
+  const filename = generateMediaFilename(mimetype)
+  const filepath = getBlogMediaPath(filename)
+
+  await fs.promises.writeFile(filepath, buffer)
+  return filename
+}
+
+/**
+ * Delete a blog media file from disk
+ * @returns true if file was deleted, false if it didn't exist
+ */
+export async function deleteBlogMediaFile(filename: string): Promise<boolean> {
+  const filepath = getBlogMediaPath(filename)
+
+  try {
+    await fs.promises.unlink(filepath)
+    return true
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return false
+    }
+    throw error
+  }
+}
+
+/**
+ * Read a blog media file
+ * @returns The file buffer and mimetype
+ */
+export async function readBlogMediaFile(filename: string): Promise<{
+  buffer: Buffer
+  mimetype: string
+}> {
+  const filepath = getBlogMediaPath(filename)
+
+  if (!fs.existsSync(filepath)) {
+    throw new Error(`Blog media file not found: ${filename}`)
+  }
+
+  const buffer = await fs.promises.readFile(filepath)
+  const mimetype = getMimeTypeFromFilename(filename) || 'application/octet-stream'
+
+  return { buffer, mimetype }
 }

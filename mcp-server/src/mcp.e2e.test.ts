@@ -91,6 +91,17 @@ describe('MCP Server E2E', () => {
       expect(toolNames).toContain('list_posts')
       expect(toolNames).toContain('create_campaign')
       expect(toolNames).toContain('create_reddit_crossposts')
+      // Blog draft tools
+      expect(toolNames).toContain('create_blog_draft')
+      expect(toolNames).toContain('get_blog_draft')
+      expect(toolNames).toContain('update_blog_draft')
+      expect(toolNames).toContain('delete_blog_draft')
+      expect(toolNames).toContain('archive_blog_draft')
+      expect(toolNames).toContain('restore_blog_draft')
+      expect(toolNames).toContain('list_blog_drafts')
+      expect(toolNames).toContain('search_blog_drafts')
+      expect(toolNames).toContain('add_image_to_draft')
+      expect(toolNames).toContain('get_draft_images')
     })
   })
 
@@ -479,6 +490,325 @@ describe('MCP Server E2E', () => {
       // Verify all returned posts have the matching groupId
       expect(listResult.posts.length).toBeGreaterThanOrEqual(2)
       expect(listResult.posts.every((p: { groupId: string }) => p.groupId === groupId)).toBe(true)
+    })
+  })
+
+  describe('Blog Draft Operations', () => {
+    let createdDraftId: string
+
+    it('should create a blog draft', async () => {
+      const response = await client.request(
+        {
+          method: 'tools/call',
+          params: {
+            name: 'create_blog_draft',
+            arguments: {
+              title: 'E2E Test Blog Post',
+              content: '# Hello World\n\nThis is a test blog post created via MCP E2E test.',
+              date: '2024-06-15',
+              notes: 'Private test notes',
+            },
+          },
+        },
+        CallToolResultSchema
+      )
+
+      const result = parseToolResponse(response)
+      expect(result.success).toBe(true)
+      expect(result.draft).toBeDefined()
+      expect(result.draft.id).toBeDefined()
+      expect(result.draft.title).toBe('E2E Test Blog Post')
+      expect(result.draft.status).toBe('draft')
+      expect(result.draft.wordCount).toBeGreaterThan(0)
+
+      createdDraftId = result.draft.id
+    })
+
+    it('should list blog drafts', async () => {
+      const response = await client.request(
+        {
+          method: 'tools/call',
+          params: {
+            name: 'list_blog_drafts',
+            arguments: { limit: 10 },
+          },
+        },
+        CallToolResultSchema
+      )
+
+      const result = parseToolResponse(response)
+      expect(result.success).toBe(true)
+      expect(Array.isArray(result.drafts)).toBe(true)
+    })
+
+    it('should get a blog draft by id', async () => {
+      const response = await client.request(
+        {
+          method: 'tools/call',
+          params: {
+            name: 'get_blog_draft',
+            arguments: { id: createdDraftId },
+          },
+        },
+        CallToolResultSchema
+      )
+
+      const result = parseToolResponse(response)
+      expect(result.success).toBe(true)
+      expect(result.draft.id).toBe(createdDraftId)
+      expect(result.draft.title).toBe('E2E Test Blog Post')
+    })
+
+    it('should update a blog draft', async () => {
+      const response = await client.request(
+        {
+          method: 'tools/call',
+          params: {
+            name: 'update_blog_draft',
+            arguments: {
+              id: createdDraftId,
+              title: 'Updated E2E Test Blog Post',
+              content: '# Updated Content\n\nThis content was updated via MCP E2E test.',
+            },
+          },
+        },
+        CallToolResultSchema
+      )
+
+      const result = parseToolResponse(response)
+      expect(result.success).toBe(true)
+      expect(result.draft.title).toBe('Updated E2E Test Blog Post')
+    })
+
+    it('should search blog drafts', async () => {
+      const response = await client.request(
+        {
+          method: 'tools/call',
+          params: {
+            name: 'search_blog_drafts',
+            arguments: { query: 'Updated E2E Test' },
+          },
+        },
+        CallToolResultSchema
+      )
+
+      const result = parseToolResponse(response)
+      expect(result.success).toBe(true)
+      expect(Array.isArray(result.drafts)).toBe(true)
+      // Should find our updated draft
+      expect(result.drafts.some((d: { id: string }) => d.id === createdDraftId)).toBe(true)
+    })
+
+    it('should archive a blog draft with confirmation', async () => {
+      const response = await client.request(
+        {
+          method: 'tools/call',
+          params: {
+            name: 'archive_blog_draft',
+            arguments: {
+              id: createdDraftId,
+              confirmed: true,
+            },
+          },
+        },
+        CallToolResultSchema
+      )
+
+      const result = parseToolResponse(response)
+      expect(result.success).toBe(true)
+      expect(result.draft.status).toBe('archived')
+    })
+
+    it('should restore an archived blog draft', async () => {
+      const response = await client.request(
+        {
+          method: 'tools/call',
+          params: {
+            name: 'restore_blog_draft',
+            arguments: { id: createdDraftId },
+          },
+        },
+        CallToolResultSchema
+      )
+
+      const result = parseToolResponse(response)
+      expect(result.success).toBe(true)
+      expect(result.draft.status).toBe('draft')
+    })
+
+    it('should get draft images (empty initially)', async () => {
+      const response = await client.request(
+        {
+          method: 'tools/call',
+          params: {
+            name: 'get_draft_images',
+            arguments: { draftId: createdDraftId },
+          },
+        },
+        CallToolResultSchema
+      )
+
+      const result = parseToolResponse(response)
+      expect(result.success).toBe(true)
+      expect(Array.isArray(result.images)).toBe(true)
+      expect(result.images.length).toBe(0)
+    })
+
+    it('should delete a blog draft with confirmation', async () => {
+      const response = await client.request(
+        {
+          method: 'tools/call',
+          params: {
+            name: 'delete_blog_draft',
+            arguments: {
+              id: createdDraftId,
+              confirmed: true,
+            },
+          },
+        },
+        CallToolResultSchema
+      )
+
+      const result = parseToolResponse(response)
+      expect(result.success).toBe(true)
+    })
+
+    it('should require confirmation for delete', async () => {
+      // First create a draft to delete
+      const createResponse = await client.request(
+        {
+          method: 'tools/call',
+          params: {
+            name: 'create_blog_draft',
+            arguments: {
+              title: 'Draft to Delete',
+              content: 'Test content',
+            },
+          },
+        },
+        CallToolResultSchema
+      )
+      const draftId = parseToolResponse(createResponse).draft.id
+
+      // Try to delete without confirmation
+      const response = await client.request(
+        {
+          method: 'tools/call',
+          params: {
+            name: 'delete_blog_draft',
+            arguments: { id: draftId },
+          },
+        },
+        CallToolResultSchema
+      )
+
+      const result = parseToolResponse(response)
+      expect(result.success).toBe(false)
+      expect(result.requiresConfirmation).toBe(true)
+
+      // Clean up: delete with confirmation
+      await client.request(
+        {
+          method: 'tools/call',
+          params: {
+            name: 'delete_blog_draft',
+            arguments: { id: draftId, confirmed: true },
+          },
+        },
+        CallToolResultSchema
+      )
+    })
+
+    it('should require confirmation for archive', async () => {
+      // First create a draft to archive
+      const createResponse = await client.request(
+        {
+          method: 'tools/call',
+          params: {
+            name: 'create_blog_draft',
+            arguments: {
+              title: 'Draft to Archive',
+              content: 'Test content',
+            },
+          },
+        },
+        CallToolResultSchema
+      )
+      const draftId = parseToolResponse(createResponse).draft.id
+
+      // Try to archive without confirmation
+      const response = await client.request(
+        {
+          method: 'tools/call',
+          params: {
+            name: 'archive_blog_draft',
+            arguments: { id: draftId },
+          },
+        },
+        CallToolResultSchema
+      )
+
+      const result = parseToolResponse(response)
+      expect(result.success).toBe(false)
+      expect(result.requiresConfirmation).toBe(true)
+
+      // Clean up: delete with confirmation
+      await client.request(
+        {
+          method: 'tools/call',
+          params: {
+            name: 'delete_blog_draft',
+            arguments: { id: draftId, confirmed: true },
+          },
+        },
+        CallToolResultSchema
+      )
+    })
+
+    it('should filter drafts by status', async () => {
+      // Create a draft
+      const createResponse = await client.request(
+        {
+          method: 'tools/call',
+          params: {
+            name: 'create_blog_draft',
+            arguments: {
+              title: 'Status Filter Test',
+              content: 'Test content for status filter',
+            },
+          },
+        },
+        CallToolResultSchema
+      )
+      const draftId = parseToolResponse(createResponse).draft.id
+
+      // List drafts with status filter
+      const response = await client.request(
+        {
+          method: 'tools/call',
+          params: {
+            name: 'list_blog_drafts',
+            arguments: { status: 'draft' },
+          },
+        },
+        CallToolResultSchema
+      )
+
+      const result = parseToolResponse(response)
+      expect(result.success).toBe(true)
+      expect(result.drafts.every((d: { status: string }) => d.status === 'draft')).toBe(true)
+
+      // Clean up
+      await client.request(
+        {
+          method: 'tools/call',
+          params: {
+            name: 'delete_blog_draft',
+            arguments: { id: draftId, confirmed: true },
+          },
+        },
+        CallToolResultSchema
+      )
     })
   })
 })

@@ -7,6 +7,8 @@ import { Posts } from '@/pages/Posts'
 import { Campaigns } from '@/pages/Campaigns'
 import { CampaignDetail } from '@/pages/CampaignDetail'
 import { Settings } from '@/pages/Settings'
+import { BlogDrafts } from '@/pages/BlogDrafts'
+import { BlogEditor } from '@/pages/BlogEditor'
 import { useScheduleChecker } from '@/hooks/useScheduleChecker'
 import { usePostsStore } from '@/lib/storage'
 
@@ -31,6 +33,9 @@ export default function App() {
         <Route path="posts" element={<Posts />} />
         <Route path="campaigns" element={<Campaigns />} />
         <Route path="campaigns/:id" element={<CampaignDetail />} />
+        <Route path="blog" element={<BlogDrafts />} />
+        <Route path="blog/new" element={<BlogEditor />} />
+        <Route path="blog/edit/:id" element={<BlogEditor />} />
         <Route path="new" element={<Editor />} />
         <Route path="edit/:id" element={<Editor />} />
         <Route path="settings" element={<Settings />} />

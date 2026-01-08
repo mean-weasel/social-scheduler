@@ -348,3 +348,223 @@ export async function removePostFromCampaign(campaignId: string, postId: string)
   const { post } = await res.json()
   return post
 }
+
+// ==================
+// Blog Draft Types and Operations
+// ==================
+
+export type BlogDraftStatus = 'draft' | 'scheduled' | 'published' | 'archived'
+
+export interface BlogDraft {
+  id: string
+  createdAt: string
+  updatedAt: string
+  scheduledAt: string | null
+  status: BlogDraftStatus
+  title: string
+  date: string | null
+  content: string
+  notes?: string
+  wordCount: number
+  campaignId?: string
+  images: string[]
+}
+
+export async function createBlogDraft(data: {
+  title: string
+  content?: string
+  date?: string | null
+  scheduledAt?: string | null
+  status?: BlogDraftStatus
+  notes?: string
+  campaignId?: string
+  images?: string[]
+}): Promise<BlogDraft> {
+  const res = await fetch(`${API_BASE}/blog-drafts`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ error: res.statusText }))
+    throw new Error(`Failed to create blog draft: ${error.error || res.statusText}`)
+  }
+
+  const { draft } = await res.json()
+  return draft
+}
+
+export async function getBlogDraft(id: string): Promise<BlogDraft | undefined> {
+  const res = await fetch(`${API_BASE}/blog-drafts/${id}`)
+
+  if (res.status === 404) {
+    return undefined
+  }
+
+  if (!res.ok) {
+    throw new Error(`Failed to get blog draft: ${res.statusText}`)
+  }
+
+  const { draft } = await res.json()
+  return draft
+}
+
+export async function updateBlogDraft(
+  id: string,
+  updates: Partial<Omit<BlogDraft, 'id' | 'createdAt' | 'wordCount'>>
+): Promise<BlogDraft | undefined> {
+  const res = await fetch(`${API_BASE}/blog-drafts/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(updates),
+  })
+
+  if (res.status === 404) {
+    return undefined
+  }
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ error: res.statusText }))
+    throw new Error(`Failed to update blog draft: ${error.error || res.statusText}`)
+  }
+
+  const { draft } = await res.json()
+  return draft
+}
+
+export async function deleteBlogDraft(id: string): Promise<boolean> {
+  const res = await fetch(`${API_BASE}/blog-drafts/${id}`, {
+    method: 'DELETE',
+  })
+
+  if (res.status === 404) {
+    return false
+  }
+
+  if (!res.ok) {
+    throw new Error(`Failed to delete blog draft: ${res.statusText}`)
+  }
+
+  return true
+}
+
+export async function archiveBlogDraft(id: string): Promise<BlogDraft | undefined> {
+  const res = await fetch(`${API_BASE}/blog-drafts/${id}/archive`, {
+    method: 'POST',
+  })
+
+  if (res.status === 404) {
+    return undefined
+  }
+
+  if (!res.ok) {
+    throw new Error(`Failed to archive blog draft: ${res.statusText}`)
+  }
+
+  const { draft } = await res.json()
+  return draft
+}
+
+export async function restoreBlogDraft(id: string): Promise<BlogDraft | undefined> {
+  const res = await fetch(`${API_BASE}/blog-drafts/${id}/restore`, {
+    method: 'POST',
+  })
+
+  if (res.status === 404) {
+    return undefined
+  }
+
+  if (!res.ok) {
+    throw new Error(`Failed to restore blog draft: ${res.statusText}`)
+  }
+
+  const { draft } = await res.json()
+  return draft
+}
+
+export async function listBlogDrafts(options?: {
+  status?: BlogDraftStatus | 'all'
+  campaignId?: string
+  limit?: number
+  search?: string
+}): Promise<BlogDraft[]> {
+  const params = new URLSearchParams()
+
+  if (options?.status && options.status !== 'all') {
+    params.set('status', options.status)
+  }
+  if (options?.campaignId) {
+    params.set('campaignId', options.campaignId)
+  }
+  if (options?.limit) {
+    params.set('limit', String(options.limit))
+  }
+  if (options?.search) {
+    params.set('search', options.search)
+  }
+
+  const url = `${API_BASE}/blog-drafts${params.toString() ? '?' + params.toString() : ''}`
+  const res = await fetch(url)
+
+  if (!res.ok) {
+    throw new Error(`Failed to list blog drafts: ${res.statusText}`)
+  }
+
+  const { drafts } = await res.json()
+  return drafts
+}
+
+export async function searchBlogDrafts(query: string, options?: { limit?: number }): Promise<BlogDraft[]> {
+  const params = new URLSearchParams()
+  params.set('q', query)
+  if (options?.limit) {
+    params.set('limit', String(options.limit))
+  }
+
+  const res = await fetch(`${API_BASE}/blog-drafts/search?${params.toString()}`)
+
+  if (!res.ok) {
+    throw new Error(`Failed to search blog drafts: ${res.statusText}`)
+  }
+
+  const { drafts } = await res.json()
+  return drafts
+}
+
+export async function addImageToBlogDraft(
+  draftId: string,
+  sourcePath: string
+): Promise<{ filename: string; size: number; mimetype: string; markdown: string; draft: BlogDraft }> {
+  const res = await fetch(`${API_BASE}/blog-drafts/${draftId}/images`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sourcePath }),
+  })
+
+  if (res.status === 404) {
+    throw new Error(`Blog draft with ID ${draftId} not found`)
+  }
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ error: res.statusText }))
+    throw new Error(error.error || `Failed to add image: ${res.statusText}`)
+  }
+
+  return await res.json()
+}
+
+export async function getDraftImages(draftId: string): Promise<string[]> {
+  const res = await fetch(`${API_BASE}/blog-drafts/${draftId}/images`)
+
+  if (res.status === 404) {
+    throw new Error(`Blog draft with ID ${draftId} not found`)
+  }
+
+  if (!res.ok) {
+    throw new Error(`Failed to get draft images: ${res.statusText}`)
+  }
+
+  const { images } = await res.json()
+  return images
+}
