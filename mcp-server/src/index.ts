@@ -22,12 +22,25 @@ import {
   listCampaigns,
   addPostToCampaign,
   removePostFromCampaign,
+  // Blog draft functions
+  createBlogDraft,
+  getBlogDraft,
+  updateBlogDraft,
+  deleteBlogDraft,
+  archiveBlogDraft,
+  restoreBlogDraft,
+  listBlogDrafts,
+  searchBlogDrafts,
+  addImageToBlogDraft,
+  getDraftImages,
   type Platform,
   type PostStatus,
   type Post,
   type Campaign,
   type CampaignStatus,
   type GroupType,
+  type BlogDraft,
+  type BlogDraftStatus,
 } from './storage.js'
 
 // Create MCP server
@@ -359,6 +372,192 @@ const TOOLS = [
         },
       },
       required: ['subreddits'],
+    },
+  },
+  // Blog draft management tools
+  {
+    name: 'create_blog_draft',
+    description: 'Create a new blog post draft with markdown content. Claude will help write the content from scratch or based on a topic/outline.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        title: {
+          type: 'string',
+          description: 'Blog post title',
+        },
+        content: {
+          type: 'string',
+          description: 'Markdown content for the blog post body',
+        },
+        date: {
+          type: 'string',
+          description: 'Publication date (ISO 8601 format, optional)',
+        },
+        scheduledAt: {
+          type: 'string',
+          description: 'ISO 8601 datetime for scheduling (optional)',
+        },
+        status: {
+          type: 'string',
+          enum: ['draft', 'scheduled'],
+          description: 'Draft status (default: draft)',
+        },
+        notes: {
+          type: 'string',
+          description: 'Private notes about this draft (not published)',
+        },
+        campaignId: {
+          type: 'string',
+          description: 'Campaign ID to link this draft to (optional)',
+        },
+      },
+      required: ['title'],
+    },
+  },
+  {
+    name: 'get_blog_draft',
+    description: 'Get a single blog draft by ID with full content',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        id: { type: 'string', description: 'Blog draft ID' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'update_blog_draft',
+    description: 'Update an existing blog draft. Can update title, content, date, notes, status, or campaign.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        id: { type: 'string', description: 'Blog draft ID to update' },
+        title: { type: 'string', description: 'New title' },
+        content: { type: 'string', description: 'New markdown content' },
+        date: { type: 'string', description: 'Publication date (ISO 8601)' },
+        scheduledAt: { type: 'string', description: 'Schedule datetime (ISO 8601)' },
+        status: {
+          type: 'string',
+          enum: ['draft', 'scheduled', 'published'],
+          description: 'Draft status',
+        },
+        notes: { type: 'string', description: 'Private notes' },
+        campaignId: { type: 'string', description: 'Campaign ID' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'delete_blog_draft',
+    description: 'Permanently delete a blog draft. This action cannot be undone. Please confirm with the user before calling this.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        id: { type: 'string', description: 'Blog draft ID to delete' },
+        confirmed: {
+          type: 'boolean',
+          description: 'Set to true to confirm deletion. Required to prevent accidental deletions.',
+        },
+      },
+      required: ['id', 'confirmed'],
+    },
+  },
+  {
+    name: 'archive_blog_draft',
+    description: 'Archive a blog draft (soft delete). Archived drafts can be restored. Please confirm with the user before calling this.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        id: { type: 'string', description: 'Blog draft ID to archive' },
+        confirmed: {
+          type: 'boolean',
+          description: 'Set to true to confirm archival.',
+        },
+      },
+      required: ['id', 'confirmed'],
+    },
+  },
+  {
+    name: 'restore_blog_draft',
+    description: 'Restore an archived blog draft back to draft status',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        id: { type: 'string', description: 'Blog draft ID to restore' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'list_blog_drafts',
+    description: 'List blog drafts with optional filters. Returns title, status, and date for each draft.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        status: {
+          type: 'string',
+          enum: ['all', 'draft', 'scheduled', 'published', 'archived'],
+          description: 'Filter by status (default: all)',
+        },
+        campaignId: {
+          type: 'string',
+          description: 'Filter by campaign ID',
+        },
+        limit: {
+          type: 'number',
+          description: 'Maximum number of drafts to return (default: 50)',
+        },
+      },
+    },
+  },
+  {
+    name: 'search_blog_drafts',
+    description: 'Search blog drafts by content, title, or notes',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        query: {
+          type: 'string',
+          description: 'Search query',
+        },
+        limit: {
+          type: 'number',
+          description: 'Maximum number of results (default: 50)',
+        },
+      },
+      required: ['query'],
+    },
+  },
+  {
+    name: 'add_image_to_draft',
+    description: 'Copy an image from a file path to the blog media folder and attach it to a draft. Returns markdown syntax to embed the image.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        draftId: {
+          type: 'string',
+          description: 'Blog draft ID to add the image to',
+        },
+        sourcePath: {
+          type: 'string',
+          description: 'Full path to the source image file (e.g., /Users/name/Pictures/image.png)',
+        },
+      },
+      required: ['draftId', 'sourcePath'],
+    },
+  },
+  {
+    name: 'get_draft_images',
+    description: 'Get list of images attached to a blog draft',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        draftId: {
+          type: 'string',
+          description: 'Blog draft ID',
+        },
+      },
+      required: ['draftId'],
     },
   },
 ]
@@ -778,6 +977,277 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 groupId,
                 count: createdPosts.length,
                 posts: createdPosts,
+              }, null, 2),
+            },
+          ],
+        }
+      }
+
+      // Blog draft handlers
+      case 'create_blog_draft': {
+        const { title, content, date, scheduledAt, status, notes, campaignId } = args as {
+          title: string
+          content?: string
+          date?: string
+          scheduledAt?: string
+          status?: 'draft' | 'scheduled'
+          notes?: string
+          campaignId?: string
+        }
+
+        if (!title || title.trim() === '') {
+          return {
+            content: [{ type: 'text', text: 'Error: title is required' }],
+            isError: true,
+          }
+        }
+
+        const draft = await createBlogDraft({
+          title: title.trim(),
+          content: content || '',
+          date: date || null,
+          scheduledAt: scheduledAt || null,
+          status: status || 'draft',
+          notes,
+          campaignId,
+        })
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({ success: true, draft }, null, 2),
+            },
+          ],
+        }
+      }
+
+      case 'get_blog_draft': {
+        const { id } = args as { id: string }
+        const draft = await getBlogDraft(id)
+
+        if (!draft) {
+          return {
+            content: [{ type: 'text', text: `Error: Blog draft with ID ${id} not found` }],
+            isError: true,
+          }
+        }
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({ success: true, draft }, null, 2),
+            },
+          ],
+        }
+      }
+
+      case 'update_blog_draft': {
+        const { id, ...updates } = args as { id: string } & Partial<BlogDraft>
+        const draft = await updateBlogDraft(id, updates)
+
+        if (!draft) {
+          return {
+            content: [{ type: 'text', text: `Error: Blog draft with ID ${id} not found` }],
+            isError: true,
+          }
+        }
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({ success: true, draft }, null, 2),
+            },
+          ],
+        }
+      }
+
+      case 'delete_blog_draft': {
+        const { id, confirmed } = args as { id: string; confirmed: boolean }
+
+        if (!confirmed) {
+          return {
+            content: [{ type: 'text', text: 'Error: Deletion not confirmed. Please set confirmed=true after confirming with the user.' }],
+            isError: true,
+          }
+        }
+
+        const success = await deleteBlogDraft(id)
+
+        if (!success) {
+          return {
+            content: [{ type: 'text', text: `Error: Blog draft with ID ${id} not found` }],
+            isError: true,
+          }
+        }
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({ success: true, message: `Blog draft ${id} permanently deleted` }, null, 2),
+            },
+          ],
+        }
+      }
+
+      case 'archive_blog_draft': {
+        const { id, confirmed } = args as { id: string; confirmed: boolean }
+
+        if (!confirmed) {
+          return {
+            content: [{ type: 'text', text: 'Error: Archive not confirmed. Please set confirmed=true after confirming with the user.' }],
+            isError: true,
+          }
+        }
+
+        const draft = await archiveBlogDraft(id)
+
+        if (!draft) {
+          return {
+            content: [{ type: 'text', text: `Error: Blog draft with ID ${id} not found` }],
+            isError: true,
+          }
+        }
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({ success: true, draft }, null, 2),
+            },
+          ],
+        }
+      }
+
+      case 'restore_blog_draft': {
+        const { id } = args as { id: string }
+        const draft = await restoreBlogDraft(id)
+
+        if (!draft) {
+          return {
+            content: [{ type: 'text', text: `Error: Blog draft with ID ${id} not found` }],
+            isError: true,
+          }
+        }
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({ success: true, draft }, null, 2),
+            },
+          ],
+        }
+      }
+
+      case 'list_blog_drafts': {
+        const { status, campaignId, limit } = args as {
+          status?: BlogDraftStatus | 'all'
+          campaignId?: string
+          limit?: number
+        }
+
+        const drafts = await listBlogDrafts({
+          status,
+          campaignId,
+          limit: limit || 50,
+        })
+
+        // Return simplified list (title, status, date, id)
+        const simplifiedDrafts = drafts.map(d => ({
+          id: d.id,
+          title: d.title,
+          status: d.status,
+          date: d.date,
+          wordCount: d.wordCount,
+          updatedAt: d.updatedAt,
+        }))
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({ success: true, count: drafts.length, drafts: simplifiedDrafts }, null, 2),
+            },
+          ],
+        }
+      }
+
+      case 'search_blog_drafts': {
+        const { query, limit } = args as { query: string; limit?: number }
+
+        if (!query || query.trim() === '') {
+          return {
+            content: [{ type: 'text', text: 'Error: search query is required' }],
+            isError: true,
+          }
+        }
+
+        const drafts = await searchBlogDrafts(query, { limit: limit || 50 })
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({ success: true, count: drafts.length, drafts }, null, 2),
+            },
+          ],
+        }
+      }
+
+      case 'add_image_to_draft': {
+        const { draftId, sourcePath } = args as { draftId: string; sourcePath: string }
+
+        if (!draftId || !sourcePath) {
+          return {
+            content: [{ type: 'text', text: 'Error: draftId and sourcePath are required' }],
+            isError: true,
+          }
+        }
+
+        const result = await addImageToBlogDraft(draftId, sourcePath)
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                success: true,
+                filename: result.filename,
+                size: result.size,
+                mimetype: result.mimetype,
+                markdown: result.markdown,
+                message: `Image added. Use this markdown to embed it: ${result.markdown}`,
+              }, null, 2),
+            },
+          ],
+        }
+      }
+
+      case 'get_draft_images': {
+        const { draftId } = args as { draftId: string }
+
+        if (!draftId) {
+          return {
+            content: [{ type: 'text', text: 'Error: draftId is required' }],
+            isError: true,
+          }
+        }
+
+        const images = await getDraftImages(draftId)
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                success: true,
+                count: images.length,
+                images,
+                markdownRefs: images.map(img => `![image](/api/blog-media/${img})`),
               }, null, 2),
             },
           ],

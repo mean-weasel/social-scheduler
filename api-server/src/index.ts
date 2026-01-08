@@ -5,8 +5,9 @@ import os from 'os'
 import { postsRouter } from './routes/posts.js'
 import { campaignsRouter } from './routes/campaigns.js'
 import { mediaRouter } from './routes/media.js'
+import { blogDraftsRouter, blogMediaRouter } from './routes/blogDrafts.js'
 import { importFromJson } from './storage.js'
-import { initMediaDir } from './media.js'
+import { initMediaDir, initBlogMediaDir } from './media.js'
 
 const app = express()
 const PORT = parseInt(process.env.API_PORT || '3001', 10)
@@ -20,14 +21,17 @@ app.use(express.json())
 app.use('/api/posts', postsRouter)
 app.use('/api/campaigns', campaignsRouter)
 app.use('/api/media', mediaRouter)
+app.use('/api/blog-drafts', blogDraftsRouter)
+app.use('/api/blog-media', blogMediaRouter)
 
 // Health check
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
 
-// Initialize media directory
+// Initialize media directories
 initMediaDir()
+initBlogMediaDir()
 
 // One-time migration from JSON file (if exists)
 const jsonPath = path.join(os.homedir(), '.social-scheduler', 'posts.json')
