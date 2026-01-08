@@ -504,3 +504,32 @@ export function removePostFromCampaign(campaignId: string, postId: string): Post
 
   return { ...existing, campaignId: undefined, updatedAt: timestamp }
 }
+
+// Search posts by content, notes, platform, and campaign name
+export function searchPosts(query: string, options?: { limit?: number }): Post[] {
+  const searchTerm = `%${query}%`
+
+  // Use LEFT JOIN to also search campaign names
+  let sql = `
+    SELECT DISTINCT p.* FROM posts p
+    LEFT JOIN campaigns c ON p.campaign_id = c.id
+    WHERE (
+      p.content LIKE ?
+      OR p.notes LIKE ?
+      OR p.platform LIKE ?
+      OR c.name LIKE ?
+    )
+    AND p.status != 'archived'
+    ORDER BY p.updated_at DESC
+  `
+  const params: (string | number)[] = [searchTerm, searchTerm, searchTerm, searchTerm]
+
+  if (options?.limit && options.limit > 0) {
+    sql += ' LIMIT ?'
+    params.push(options.limit)
+  }
+
+  const stmt = db.prepare(sql)
+  const rows = stmt.all(...params) as PostRow[]
+  return rows.map(rowToPost)
+}
