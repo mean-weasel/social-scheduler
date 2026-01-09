@@ -22,6 +22,9 @@ Thumbs.db
 .env.local
 .env.*.local
 
+# Local config (user overrides)
+config.json
+
 # Logs
 logs
 *.log

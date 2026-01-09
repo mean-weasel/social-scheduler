@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "CI=true vite",
     "dev:proxy": "lcp --proxyUrl https://github.com --port 8010",
     "dev:all": "concurrently \"npm run dev\" \"npm run dev:proxy\"",
     "api": "cd api-server && npm run dev",
@@ -12,7 +12,7 @@
     "api:start": "cd api-server && npm start",
     "dev:full": "concurrently \"npm run api\" \"npm run dev\"",
     "build": "tsc -b && vite build",
-    "preview": "vite preview",
+    "preview": "CI=true vite preview",
     "lint": "eslint . --ext .ts,.tsx",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "typecheck": "tsc --noEmit",

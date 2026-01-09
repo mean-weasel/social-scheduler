@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "tsx watch src/index.ts"
+    "dev": "CI=true tsx watch src/index.ts"
   },
   "dependencies": {
     "better-sqlite3": "^11.7.0",

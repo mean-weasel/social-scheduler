@@ -1,7 +1,8 @@
 import { defineConfig, devices } from '@playwright/test'
+import { config } from './config/index.js'
 
-const PORT = process.env.TEST_PORT || 5176
-const API_PORT = 3001
+const PORT = process.env.TEST_PORT || config.test.port
+const API_PORT = config.api.port
 
 export default defineConfig({
   testDir: './e2e',

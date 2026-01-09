@@ -80,4 +80,7 @@ export default defineConfig({
   // Base path for GitHub Pages deployment
   // Change this to your repo name when deploying
   base: process.env.NODE_ENV === 'production' ? '/social-scheduler/' : '/',
+  server: {
+    port: parseInt(process.env.PORT || '5173', 10),
+  },
 })

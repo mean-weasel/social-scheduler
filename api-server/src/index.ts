@@ -8,10 +8,11 @@ import { mediaRouter } from './routes/media.js'
 import { blogDraftsRouter, blogMediaRouter } from './routes/blogDrafts.js'
 import { importFromJson } from './storage.js'
 import { initMediaDir, initBlogMediaDir } from './media.js'
+import { config } from './config.js'
 
 const app = express()
-const PORT = parseInt(process.env.API_PORT || '3001', 10)
-const HOST = process.env.API_HOST || '0.0.0.0'
+const PORT = parseInt(process.env.API_PORT || String(config.api.port), 10)
+const HOST = process.env.API_HOST || config.api.host
 
 // Middleware
 app.use(cors({ origin: true })) // Allow all origins for home network use
@@ -41,7 +42,17 @@ if (imported > 0) {
 }
 
 // Start server
-app.listen(PORT, HOST, () => {
+const server = app.listen(PORT, HOST, () => {
   console.log(`API server running on http://${HOST}:${PORT}`)
   console.log(`Health check: http://localhost:${PORT}/api/health`)
+})
+
+server.on('error', (err: NodeJS.ErrnoException) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`Error: Port ${PORT} is already in use.`)
+    console.error(`Either stop the other process or set a different port in config.json:`)
+    console.error(`  { "api": { "port": <another-port> } }`)
+    process.exit(1)
+  }
+  throw err
 })
