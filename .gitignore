@@ -39,3 +39,4 @@ coverage
 bleep/
 playwright-report/
 test-results/
+.next
