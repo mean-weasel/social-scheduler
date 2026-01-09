@@ -8,8 +8,9 @@ function getApiBase() {
     return '/api'
   }
   // Client-side: check if Vite or Next.js
-  // Vite dev server runs on 5173, production builds don't have port in URL
-  const isVite = window.location.port === '5173' || window.location.port === '5174'
+  // Vite dev server runs on 5173/5174, test server on 5176
+  const port = window.location.port
+  const isVite = port === '5173' || port === '5174' || port === '5176'
   if (isVite) {
     // Check for Vite env var
     try {
