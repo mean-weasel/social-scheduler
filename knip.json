@@ -1,8 +1,16 @@
 {
   "$schema": "https://unpkg.com/knip@latest/schema.json",
-  "entry": ["src/main.tsx"],
+  "entry": [
+    "src/main.tsx",
+    "src/app/**/page.tsx",
+    "src/app/**/layout.tsx",
+    "src/app/**/route.ts"
+  ],
   "project": ["src/**/*.{ts,tsx}"],
-  "ignore": ["src/vite-env.d.ts"],
+  "ignore": [
+    "src/vite-env.d.ts",
+    "src/app/**/*"
+  ],
   "ignoreDependencies": [
     "@octokit/rest",
     "@typescript-eslint/eslint-plugin",
@@ -10,7 +18,9 @@
     "eslint-plugin-react-hooks",
     "eslint-plugin-react-refresh",
     "gh-pages",
-    "tsx"
+    "tsx",
+    "@supabase/ssr",
+    "@supabase/supabase-js"
   ],
   "playwright": {
     "entry": ["e2e/**/*.spec.ts", "playwright.config.ts"]
