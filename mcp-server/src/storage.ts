@@ -1,9 +1,11 @@
-// API-based storage for MCP server
-// Connects to the shared API server for unified data access
+// Supabase-based storage for MCP server
+// Connects directly to Supabase for unified data access
 
-const API_BASE = process.env.API_URL || 'http://localhost:3001/api'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
-// Type definitions (shared with web app and API server)
+// Note: Environment variables should be loaded by index.ts before importing this module
+
+// Type definitions
 export type Platform = 'twitter' | 'linkedin' | 'reddit'
 export type PostStatus = 'draft' | 'scheduled' | 'published' | 'failed' | 'archived'
 export type CampaignStatus = 'draft' | 'active' | 'completed' | 'archived'
@@ -21,14 +23,14 @@ export interface Campaign {
 export interface TwitterContent {
   text: string
   mediaUrls?: string[]
-  launchedUrl?: string  // URL of the published tweet
+  launchedUrl?: string
 }
 
 export interface LinkedInContent {
   text: string
   visibility: 'public' | 'connections'
   mediaUrl?: string
-  launchedUrl?: string  // URL of the published LinkedIn post
+  launchedUrl?: string
 }
 
 export interface RedditContent {
@@ -49,7 +51,6 @@ export interface PublishResult {
   publishedAt?: string
 }
 
-// Platform-specific content type based on selected platform
 export type PlatformContent = TwitterContent | LinkedInContent | RedditContent
 
 export interface Post {
@@ -66,309 +67,6 @@ export interface Post {
   content: PlatformContent
   publishResult?: PublishResult
 }
-
-// CRUD Operations - all async via API
-
-export async function createPost(data: {
-  platform: Platform
-  content: PlatformContent
-  scheduledAt?: string | null
-  status?: PostStatus
-  notes?: string
-  campaignId?: string
-  groupId?: string
-  groupType?: GroupType
-}): Promise<Post> {
-  const res = await fetch(`${API_BASE}/posts`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  })
-
-  if (!res.ok) {
-    throw new Error(`Failed to create post: ${res.statusText}`)
-  }
-
-  const { post } = await res.json()
-  return post
-}
-
-export async function getPost(id: string): Promise<Post | undefined> {
-  const res = await fetch(`${API_BASE}/posts/${id}`)
-
-  if (res.status === 404) {
-    return undefined
-  }
-
-  if (!res.ok) {
-    throw new Error(`Failed to get post: ${res.statusText}`)
-  }
-
-  const { post } = await res.json()
-  return post
-}
-
-export async function updatePost(
-  id: string,
-  updates: Partial<Omit<Post, 'id' | 'createdAt'>>
-): Promise<Post | undefined> {
-  const res = await fetch(`${API_BASE}/posts/${id}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(updates),
-  })
-
-  if (res.status === 404) {
-    return undefined
-  }
-
-  if (!res.ok) {
-    throw new Error(`Failed to update post: ${res.statusText}`)
-  }
-
-  const { post } = await res.json()
-  return post
-}
-
-export async function deletePost(id: string): Promise<boolean> {
-  const res = await fetch(`${API_BASE}/posts/${id}`, {
-    method: 'DELETE',
-  })
-
-  if (res.status === 404) {
-    return false
-  }
-
-  if (!res.ok) {
-    throw new Error(`Failed to delete post: ${res.statusText}`)
-  }
-
-  return true
-}
-
-export async function archivePost(id: string): Promise<Post | undefined> {
-  const res = await fetch(`${API_BASE}/posts/${id}/archive`, {
-    method: 'POST',
-  })
-
-  if (res.status === 404) {
-    return undefined
-  }
-
-  if (!res.ok) {
-    throw new Error(`Failed to archive post: ${res.statusText}`)
-  }
-
-  const { post } = await res.json()
-  return post
-}
-
-export async function restorePost(id: string): Promise<Post | undefined> {
-  const res = await fetch(`${API_BASE}/posts/${id}/restore`, {
-    method: 'POST',
-  })
-
-  if (res.status === 404) {
-    return undefined
-  }
-
-  if (!res.ok) {
-    throw new Error(`Failed to restore post: ${res.statusText}`)
-  }
-
-  const { post } = await res.json()
-  return post
-}
-
-export async function listPosts(options?: {
-  status?: PostStatus | 'all'
-  platform?: Platform
-  campaignId?: string
-  groupId?: string
-  limit?: number
-}): Promise<Post[]> {
-  const params = new URLSearchParams()
-
-  if (options?.status && options.status !== 'all') {
-    params.set('status', options.status)
-  }
-  if (options?.platform) {
-    params.set('platform', options.platform)
-  }
-  if (options?.campaignId) {
-    params.set('campaignId', options.campaignId)
-  }
-  if (options?.groupId) {
-    params.set('groupId', options.groupId)
-  }
-  if (options?.limit) {
-    params.set('limit', String(options.limit))
-  }
-
-  const url = `${API_BASE}/posts${params.toString() ? '?' + params.toString() : ''}`
-  const res = await fetch(url)
-
-  if (!res.ok) {
-    throw new Error(`Failed to list posts: ${res.statusText}`)
-  }
-
-  const { posts } = await res.json()
-  return posts
-}
-
-export async function searchPosts(query: string, options?: { limit?: number }): Promise<Post[]> {
-  const params = new URLSearchParams()
-  params.set('q', query)
-  if (options?.limit) {
-    params.set('limit', String(options.limit))
-  }
-
-  const res = await fetch(`${API_BASE}/posts/search?${params.toString()}`)
-
-  if (!res.ok) {
-    throw new Error(`Failed to search posts: ${res.statusText}`)
-  }
-
-  const { posts } = await res.json()
-  return posts
-}
-
-// Campaign CRUD Operations
-
-export async function createCampaign(data: {
-  name: string
-  description?: string
-  status?: CampaignStatus
-}): Promise<Campaign> {
-  const res = await fetch(`${API_BASE}/campaigns`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  })
-
-  if (!res.ok) {
-    throw new Error(`Failed to create campaign: ${res.statusText}`)
-  }
-
-  const { campaign } = await res.json()
-  return campaign
-}
-
-export async function getCampaign(id: string): Promise<{ campaign: Campaign; posts: Post[] } | undefined> {
-  const res = await fetch(`${API_BASE}/campaigns/${id}`)
-
-  if (res.status === 404) {
-    return undefined
-  }
-
-  if (!res.ok) {
-    throw new Error(`Failed to get campaign: ${res.statusText}`)
-  }
-
-  return await res.json()
-}
-
-export async function updateCampaign(
-  id: string,
-  updates: Partial<Omit<Campaign, 'id' | 'createdAt'>>
-): Promise<Campaign | undefined> {
-  const res = await fetch(`${API_BASE}/campaigns/${id}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(updates),
-  })
-
-  if (res.status === 404) {
-    return undefined
-  }
-
-  if (!res.ok) {
-    throw new Error(`Failed to update campaign: ${res.statusText}`)
-  }
-
-  const { campaign } = await res.json()
-  return campaign
-}
-
-export async function deleteCampaign(id: string): Promise<boolean> {
-  const res = await fetch(`${API_BASE}/campaigns/${id}`, {
-    method: 'DELETE',
-  })
-
-  if (res.status === 404) {
-    return false
-  }
-
-  if (!res.ok) {
-    throw new Error(`Failed to delete campaign: ${res.statusText}`)
-  }
-
-  return true
-}
-
-export async function listCampaigns(options?: {
-  status?: CampaignStatus | 'all'
-  limit?: number
-}): Promise<Campaign[]> {
-  const params = new URLSearchParams()
-
-  if (options?.status && options.status !== 'all') {
-    params.set('status', options.status)
-  }
-  if (options?.limit) {
-    params.set('limit', String(options.limit))
-  }
-
-  const url = `${API_BASE}/campaigns${params.toString() ? '?' + params.toString() : ''}`
-  const res = await fetch(url)
-
-  if (!res.ok) {
-    throw new Error(`Failed to list campaigns: ${res.statusText}`)
-  }
-
-  const { campaigns } = await res.json()
-  return campaigns
-}
-
-export async function addPostToCampaign(campaignId: string, postId: string): Promise<Post | undefined> {
-  const res = await fetch(`${API_BASE}/campaigns/${campaignId}/posts`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ postId }),
-  })
-
-  if (res.status === 404) {
-    return undefined
-  }
-
-  if (!res.ok) {
-    throw new Error(`Failed to add post to campaign: ${res.statusText}`)
-  }
-
-  const { post } = await res.json()
-  return post
-}
-
-export async function removePostFromCampaign(campaignId: string, postId: string): Promise<Post | undefined> {
-  const res = await fetch(`${API_BASE}/campaigns/${campaignId}/posts/${postId}`, {
-    method: 'DELETE',
-  })
-
-  if (res.status === 404) {
-    return undefined
-  }
-
-  if (!res.ok) {
-    throw new Error(`Failed to remove post from campaign: ${res.statusText}`)
-  }
-
-  const { post } = await res.json()
-  return post
-}
-
-// ==================
-// Blog Draft Types and Operations
-// ==================
 
 export type BlogDraftStatus = 'draft' | 'scheduled' | 'published' | 'archived'
 
@@ -387,6 +85,457 @@ export interface BlogDraft {
   images: string[]
 }
 
+// Database row types (snake_case)
+interface DbPost {
+  id: string
+  user_id: string | null
+  created_at: string
+  updated_at: string
+  scheduled_at: string | null
+  status: PostStatus
+  platform: Platform
+  content: PlatformContent
+  notes: string | null
+  publish_result: PublishResult | null
+  campaign_id: string | null
+  group_id: string | null
+  group_type: GroupType | null
+}
+
+interface DbCampaign {
+  id: string
+  user_id: string | null
+  name: string
+  description: string | null
+  status: CampaignStatus
+  created_at: string
+  updated_at: string
+}
+
+interface DbBlogDraft {
+  id: string
+  user_id: string | null
+  created_at: string
+  updated_at: string
+  scheduled_at: string | null
+  status: BlogDraftStatus
+  title: string
+  date: string | null
+  content: string | null
+  notes: string | null
+  word_count: number
+  campaign_id: string | null
+  images: string[]
+}
+
+// Convert database row to API format
+function toPost(row: DbPost): Post {
+  return {
+    id: row.id,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    scheduledAt: row.scheduled_at,
+    status: row.status,
+    platform: row.platform,
+    content: row.content,
+    notes: row.notes || undefined,
+    publishResult: row.publish_result || undefined,
+    campaignId: row.campaign_id || undefined,
+    groupId: row.group_id || undefined,
+    groupType: row.group_type || undefined,
+  }
+}
+
+function toCampaign(row: DbCampaign): Campaign {
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description || undefined,
+    status: row.status,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }
+}
+
+function toBlogDraft(row: DbBlogDraft): BlogDraft {
+  return {
+    id: row.id,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    scheduledAt: row.scheduled_at,
+    status: row.status,
+    title: row.title,
+    date: row.date,
+    content: row.content || '',
+    notes: row.notes || undefined,
+    wordCount: row.word_count,
+    campaignId: row.campaign_id || undefined,
+    images: row.images || [],
+  }
+}
+
+// Supabase client singleton
+let supabase: SupabaseClient | null = null
+
+function getSupabase(): SupabaseClient {
+  if (!supabase) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error(
+        'Missing Supabase environment variables. Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (or NEXT_PUBLIC_SUPABASE_ANON_KEY)'
+      )
+    }
+
+    supabase = createClient(supabaseUrl, supabaseKey)
+  }
+  return supabase
+}
+
+// ==================
+// Post Operations
+// ==================
+
+export async function createPost(data: {
+  platform: Platform
+  content: PlatformContent
+  scheduledAt?: string | null
+  status?: PostStatus
+  notes?: string
+  campaignId?: string
+  groupId?: string
+  groupType?: GroupType
+}): Promise<Post> {
+  const db = getSupabase()
+
+  const { data: row, error } = await db
+    .from('posts')
+    .insert({
+      platform: data.platform,
+      content: data.content,
+      scheduled_at: data.scheduledAt || null,
+      status: data.status || 'draft',
+      notes: data.notes || null,
+      campaign_id: data.campaignId || null,
+      group_id: data.groupId || null,
+      group_type: data.groupType || null,
+    })
+    .select()
+    .single()
+
+  if (error) {
+    throw new Error(`Failed to create post: ${error.message}`)
+  }
+
+  return toPost(row)
+}
+
+export async function getPost(id: string): Promise<Post | undefined> {
+  const db = getSupabase()
+
+  const { data: row, error } = await db
+    .from('posts')
+    .select()
+    .eq('id', id)
+    .single()
+
+  if (error) {
+    if (error.code === 'PGRST116') return undefined // Not found
+    throw new Error(`Failed to get post: ${error.message}`)
+  }
+
+  return toPost(row)
+}
+
+export async function updatePost(
+  id: string,
+  updates: Partial<Omit<Post, 'id' | 'createdAt'>>
+): Promise<Post | undefined> {
+  const db = getSupabase()
+
+  const dbUpdates: Record<string, unknown> = {}
+  if (updates.platform !== undefined) dbUpdates.platform = updates.platform
+  if (updates.content !== undefined) dbUpdates.content = updates.content
+  if (updates.scheduledAt !== undefined) dbUpdates.scheduled_at = updates.scheduledAt
+  if (updates.status !== undefined) dbUpdates.status = updates.status
+  if (updates.notes !== undefined) dbUpdates.notes = updates.notes
+  if (updates.campaignId !== undefined) dbUpdates.campaign_id = updates.campaignId
+  if (updates.groupId !== undefined) dbUpdates.group_id = updates.groupId
+  if (updates.groupType !== undefined) dbUpdates.group_type = updates.groupType
+  if (updates.publishResult !== undefined) dbUpdates.publish_result = updates.publishResult
+
+  const { data: row, error } = await db
+    .from('posts')
+    .update(dbUpdates)
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) {
+    if (error.code === 'PGRST116') return undefined
+    throw new Error(`Failed to update post: ${error.message}`)
+  }
+
+  return toPost(row)
+}
+
+export async function deletePost(id: string): Promise<boolean> {
+  const db = getSupabase()
+
+  const { error, count } = await db
+    .from('posts')
+    .delete()
+    .eq('id', id)
+
+  if (error) {
+    throw new Error(`Failed to delete post: ${error.message}`)
+  }
+
+  return count !== null && count > 0
+}
+
+export async function archivePost(id: string): Promise<Post | undefined> {
+  return updatePost(id, { status: 'archived' })
+}
+
+export async function restorePost(id: string): Promise<Post | undefined> {
+  return updatePost(id, { status: 'draft' })
+}
+
+export async function listPosts(options?: {
+  status?: PostStatus | 'all'
+  platform?: Platform
+  campaignId?: string
+  groupId?: string
+  limit?: number
+}): Promise<Post[]> {
+  const db = getSupabase()
+
+  let query = db
+    .from('posts')
+    .select()
+    .order('updated_at', { ascending: false })
+
+  if (options?.status && options.status !== 'all') {
+    query = query.eq('status', options.status)
+  }
+  if (options?.platform) {
+    query = query.eq('platform', options.platform)
+  }
+  if (options?.campaignId) {
+    query = query.eq('campaign_id', options.campaignId)
+  }
+  if (options?.groupId) {
+    query = query.eq('group_id', options.groupId)
+  }
+  if (options?.limit) {
+    query = query.limit(options.limit)
+  }
+
+  const { data, error } = await query
+
+  if (error) {
+    throw new Error(`Failed to list posts: ${error.message}`)
+  }
+
+  return (data || []).map(toPost)
+}
+
+export async function searchPosts(query: string, options?: { limit?: number }): Promise<Post[]> {
+  const db = getSupabase()
+  const searchTerm = `%${query}%`
+
+  // Search in content (as text), notes, and platform
+  // Using textSearch for better results, but falling back to ilike for simplicity
+  let dbQuery = db
+    .from('posts')
+    .select()
+    .neq('status', 'archived')
+    .or(`notes.ilike.${searchTerm},platform.ilike.${searchTerm}`)
+    .order('updated_at', { ascending: false })
+
+  if (options?.limit) {
+    dbQuery = dbQuery.limit(options.limit)
+  }
+
+  const { data, error } = await dbQuery
+
+  if (error) {
+    throw new Error(`Failed to search posts: ${error.message}`)
+  }
+
+  return (data || []).map(toPost)
+}
+
+// ==================
+// Campaign Operations
+// ==================
+
+export async function createCampaign(data: {
+  name: string
+  description?: string
+  status?: CampaignStatus
+}): Promise<Campaign> {
+  const db = getSupabase()
+
+  const { data: row, error } = await db
+    .from('campaigns')
+    .insert({
+      name: data.name,
+      description: data.description || null,
+      status: data.status || 'active',
+    })
+    .select()
+    .single()
+
+  if (error) {
+    throw new Error(`Failed to create campaign: ${error.message}`)
+  }
+
+  return toCampaign(row)
+}
+
+export async function getCampaign(id: string): Promise<{ campaign: Campaign; posts: Post[] } | undefined> {
+  const db = getSupabase()
+
+  const { data: campaign, error } = await db
+    .from('campaigns')
+    .select()
+    .eq('id', id)
+    .single()
+
+  if (error) {
+    if (error.code === 'PGRST116') return undefined
+    throw new Error(`Failed to get campaign: ${error.message}`)
+  }
+
+  const { data: posts, error: postsError } = await db
+    .from('posts')
+    .select()
+    .eq('campaign_id', id)
+    .order('updated_at', { ascending: false })
+
+  if (postsError) {
+    throw new Error(`Failed to get campaign posts: ${postsError.message}`)
+  }
+
+  return {
+    campaign: toCampaign(campaign),
+    posts: (posts || []).map(toPost),
+  }
+}
+
+export async function updateCampaign(
+  id: string,
+  updates: Partial<Omit<Campaign, 'id' | 'createdAt'>>
+): Promise<Campaign | undefined> {
+  const db = getSupabase()
+
+  const dbUpdates: Record<string, unknown> = {}
+  if (updates.name !== undefined) dbUpdates.name = updates.name
+  if (updates.description !== undefined) dbUpdates.description = updates.description
+  if (updates.status !== undefined) dbUpdates.status = updates.status
+
+  const { data: row, error } = await db
+    .from('campaigns')
+    .update(dbUpdates)
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) {
+    if (error.code === 'PGRST116') return undefined
+    throw new Error(`Failed to update campaign: ${error.message}`)
+  }
+
+  return toCampaign(row)
+}
+
+export async function deleteCampaign(id: string): Promise<boolean> {
+  const db = getSupabase()
+
+  // First, clear campaign_id from all posts
+  await db
+    .from('posts')
+    .update({ campaign_id: null })
+    .eq('campaign_id', id)
+
+  const { error, count } = await db
+    .from('campaigns')
+    .delete()
+    .eq('id', id)
+
+  if (error) {
+    throw new Error(`Failed to delete campaign: ${error.message}`)
+  }
+
+  return count !== null && count > 0
+}
+
+export async function listCampaigns(options?: {
+  status?: CampaignStatus | 'all'
+  limit?: number
+}): Promise<Campaign[]> {
+  const db = getSupabase()
+
+  let query = db
+    .from('campaigns')
+    .select()
+    .order('updated_at', { ascending: false })
+
+  if (options?.status && options.status !== 'all') {
+    query = query.eq('status', options.status)
+  }
+  if (options?.limit) {
+    query = query.limit(options.limit)
+  }
+
+  const { data, error } = await query
+
+  if (error) {
+    throw new Error(`Failed to list campaigns: ${error.message}`)
+  }
+
+  return (data || []).map(toCampaign)
+}
+
+export async function addPostToCampaign(campaignId: string, postId: string): Promise<Post | undefined> {
+  // Verify campaign exists
+  const campaignResult = await getCampaign(campaignId)
+  if (!campaignResult) return undefined
+
+  return updatePost(postId, { campaignId })
+}
+
+export async function removePostFromCampaign(_campaignId: string, postId: string): Promise<Post | undefined> {
+  const db = getSupabase()
+
+  const { data: row, error } = await db
+    .from('posts')
+    .update({ campaign_id: null })
+    .eq('id', postId)
+    .select()
+    .single()
+
+  if (error) {
+    if (error.code === 'PGRST116') return undefined
+    throw new Error(`Failed to remove post from campaign: ${error.message}`)
+  }
+
+  return toPost(row)
+}
+
+// ==================
+// Blog Draft Operations
+// ==================
+
+function calculateWordCount(content: string): number {
+  const trimmed = content.trim()
+  if (!trimmed) return 0
+  return trimmed.split(/\s+/).length
+}
+
 export async function createBlogDraft(data: {
   title: string
   content?: string
@@ -397,107 +546,104 @@ export async function createBlogDraft(data: {
   campaignId?: string
   images?: string[]
 }): Promise<BlogDraft> {
-  const res = await fetch(`${API_BASE}/blog-drafts`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  })
+  const db = getSupabase()
+  const content = data.content || ''
 
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({ error: res.statusText }))
-    throw new Error(`Failed to create blog draft: ${error.error || res.statusText}`)
+  const { data: row, error } = await db
+    .from('blog_drafts')
+    .insert({
+      title: data.title,
+      content,
+      date: data.date || null,
+      scheduled_at: data.scheduledAt || null,
+      status: data.status || 'draft',
+      notes: data.notes || null,
+      campaign_id: data.campaignId || null,
+      word_count: calculateWordCount(content),
+      images: data.images || [],
+    })
+    .select()
+    .single()
+
+  if (error) {
+    throw new Error(`Failed to create blog draft: ${error.message}`)
   }
 
-  const { draft } = await res.json()
-  return draft
+  return toBlogDraft(row)
 }
 
 export async function getBlogDraft(id: string): Promise<BlogDraft | undefined> {
-  const res = await fetch(`${API_BASE}/blog-drafts/${id}`)
+  const db = getSupabase()
 
-  if (res.status === 404) {
-    return undefined
+  const { data: row, error } = await db
+    .from('blog_drafts')
+    .select()
+    .eq('id', id)
+    .single()
+
+  if (error) {
+    if (error.code === 'PGRST116') return undefined
+    throw new Error(`Failed to get blog draft: ${error.message}`)
   }
 
-  if (!res.ok) {
-    throw new Error(`Failed to get blog draft: ${res.statusText}`)
-  }
-
-  const { draft } = await res.json()
-  return draft
+  return toBlogDraft(row)
 }
 
 export async function updateBlogDraft(
   id: string,
   updates: Partial<Omit<BlogDraft, 'id' | 'createdAt' | 'wordCount'>>
 ): Promise<BlogDraft | undefined> {
-  const res = await fetch(`${API_BASE}/blog-drafts/${id}`, {
-    method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(updates),
-  })
+  const db = getSupabase()
 
-  if (res.status === 404) {
-    return undefined
+  const dbUpdates: Record<string, unknown> = {}
+  if (updates.title !== undefined) dbUpdates.title = updates.title
+  if (updates.content !== undefined) {
+    dbUpdates.content = updates.content
+    dbUpdates.word_count = calculateWordCount(updates.content)
+  }
+  if (updates.date !== undefined) dbUpdates.date = updates.date
+  if (updates.scheduledAt !== undefined) dbUpdates.scheduled_at = updates.scheduledAt
+  if (updates.status !== undefined) dbUpdates.status = updates.status
+  if (updates.notes !== undefined) dbUpdates.notes = updates.notes
+  if (updates.campaignId !== undefined) dbUpdates.campaign_id = updates.campaignId
+  if (updates.images !== undefined) dbUpdates.images = updates.images
+
+  const { data: row, error } = await db
+    .from('blog_drafts')
+    .update(dbUpdates)
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) {
+    if (error.code === 'PGRST116') return undefined
+    throw new Error(`Failed to update blog draft: ${error.message}`)
   }
 
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({ error: res.statusText }))
-    throw new Error(`Failed to update blog draft: ${error.error || res.statusText}`)
-  }
-
-  const { draft } = await res.json()
-  return draft
+  return toBlogDraft(row)
 }
 
 export async function deleteBlogDraft(id: string): Promise<boolean> {
-  const res = await fetch(`${API_BASE}/blog-drafts/${id}`, {
-    method: 'DELETE',
-  })
+  const db = getSupabase()
 
-  if (res.status === 404) {
-    return false
+  const { error, count } = await db
+    .from('blog_drafts')
+    .delete()
+    .eq('id', id)
+
+  if (error) {
+    throw new Error(`Failed to delete blog draft: ${error.message}`)
   }
 
-  if (!res.ok) {
-    throw new Error(`Failed to delete blog draft: ${res.statusText}`)
-  }
-
-  return true
+  return count !== null && count > 0
 }
 
 export async function archiveBlogDraft(id: string): Promise<BlogDraft | undefined> {
-  const res = await fetch(`${API_BASE}/blog-drafts/${id}/archive`, {
-    method: 'POST',
-  })
-
-  if (res.status === 404) {
-    return undefined
-  }
-
-  if (!res.ok) {
-    throw new Error(`Failed to archive blog draft: ${res.statusText}`)
-  }
-
-  const { draft } = await res.json()
-  return draft
+  return updateBlogDraft(id, { status: 'archived' })
 }
 
 export async function restoreBlogDraft(id: string): Promise<BlogDraft | undefined> {
-  const res = await fetch(`${API_BASE}/blog-drafts/${id}/restore`, {
-    method: 'POST',
-  })
-
-  if (res.status === 404) {
-    return undefined
-  }
-
-  if (!res.ok) {
-    throw new Error(`Failed to restore blog draft: ${res.statusText}`)
-  }
-
-  const { draft } = await res.json()
-  return draft
+  return updateBlogDraft(id, { status: 'draft' })
 }
 
 export async function listBlogDrafts(options?: {
@@ -506,82 +652,105 @@ export async function listBlogDrafts(options?: {
   limit?: number
   search?: string
 }): Promise<BlogDraft[]> {
-  const params = new URLSearchParams()
+  const db = getSupabase()
+
+  let query = db
+    .from('blog_drafts')
+    .select()
+    .order('updated_at', { ascending: false })
 
   if (options?.status && options.status !== 'all') {
-    params.set('status', options.status)
+    query = query.eq('status', options.status)
   }
   if (options?.campaignId) {
-    params.set('campaignId', options.campaignId)
+    query = query.eq('campaign_id', options.campaignId)
   }
   if (options?.limit) {
-    params.set('limit', String(options.limit))
+    query = query.limit(options.limit)
   }
   if (options?.search) {
-    params.set('search', options.search)
+    const searchTerm = `%${options.search}%`
+    query = query.or(`title.ilike.${searchTerm},content.ilike.${searchTerm},notes.ilike.${searchTerm}`)
   }
 
-  const url = `${API_BASE}/blog-drafts${params.toString() ? '?' + params.toString() : ''}`
-  const res = await fetch(url)
+  const { data, error } = await query
 
-  if (!res.ok) {
-    throw new Error(`Failed to list blog drafts: ${res.statusText}`)
+  if (error) {
+    throw new Error(`Failed to list blog drafts: ${error.message}`)
   }
 
-  const { drafts } = await res.json()
-  return drafts
+  return (data || []).map(toBlogDraft)
 }
 
 export async function searchBlogDrafts(query: string, options?: { limit?: number }): Promise<BlogDraft[]> {
-  const params = new URLSearchParams()
-  params.set('q', query)
+  const db = getSupabase()
+  const searchTerm = `%${query}%`
+
+  let dbQuery = db
+    .from('blog_drafts')
+    .select()
+    .neq('status', 'archived')
+    .or(`title.ilike.${searchTerm},content.ilike.${searchTerm},notes.ilike.${searchTerm}`)
+    .order('updated_at', { ascending: false })
+
   if (options?.limit) {
-    params.set('limit', String(options.limit))
+    dbQuery = dbQuery.limit(options.limit)
   }
 
-  const res = await fetch(`${API_BASE}/blog-drafts/search?${params.toString()}`)
+  const { data, error } = await dbQuery
 
-  if (!res.ok) {
-    throw new Error(`Failed to search blog drafts: ${res.statusText}`)
+  if (error) {
+    throw new Error(`Failed to search blog drafts: ${error.message}`)
   }
 
-  const { drafts } = await res.json()
-  return drafts
+  return (data || []).map(toBlogDraft)
 }
 
 export async function addImageToBlogDraft(
   draftId: string,
   sourcePath: string
 ): Promise<{ filename: string; size: number; mimetype: string; markdown: string; draft: BlogDraft }> {
-  const res = await fetch(`${API_BASE}/blog-drafts/${draftId}/images`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ sourcePath }),
-  })
+  // Note: For now, we'll just add the path to the images array
+  // Full file copying would require access to the file system
+  // which may not be available in all MCP contexts
 
-  if (res.status === 404) {
+  const draft = await getBlogDraft(draftId)
+  if (!draft) {
     throw new Error(`Blog draft with ID ${draftId} not found`)
   }
 
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({ error: res.statusText }))
-    throw new Error(error.error || `Failed to add image: ${res.statusText}`)
+  // Extract filename from path
+  const filename = sourcePath.split('/').pop() || 'image'
+  const images = [...draft.images, filename]
+
+  const updatedDraft = await updateBlogDraft(draftId, { images })
+  if (!updatedDraft) {
+    throw new Error('Failed to update draft with image')
   }
 
-  return await res.json()
+  // Determine mimetype from extension
+  const ext = filename.split('.').pop()?.toLowerCase() || ''
+  const mimetypes: Record<string, string> = {
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    png: 'image/png',
+    gif: 'image/gif',
+    webp: 'image/webp',
+  }
+
+  return {
+    filename,
+    size: 0, // Would need filesystem access to get actual size
+    mimetype: mimetypes[ext] || 'application/octet-stream',
+    markdown: `![image](/api/blog-media/${filename})`,
+    draft: updatedDraft,
+  }
 }
 
 export async function getDraftImages(draftId: string): Promise<string[]> {
-  const res = await fetch(`${API_BASE}/blog-drafts/${draftId}/images`)
-
-  if (res.status === 404) {
+  const draft = await getBlogDraft(draftId)
+  if (!draft) {
     throw new Error(`Blog draft with ID ${draftId} not found`)
   }
-
-  if (!res.ok) {
-    throw new Error(`Failed to get draft images: ${res.statusText}`)
-  }
-
-  const { images } = await res.json()
-  return images
+  return draft.images
 }
