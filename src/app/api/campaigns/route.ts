@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json(data)
+    return NextResponse.json({ campaigns: data })
   } catch (error) {
     console.error('Error fetching campaigns:', error)
     return NextResponse.json({ error: 'Failed to fetch campaigns' }, { status: 500 })
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json(data, { status: 201 })
+    return NextResponse.json({ campaign: data }, { status: 201 })
   } catch (error) {
     console.error('Error creating campaign:', error)
     return NextResponse.json({ error: 'Failed to create campaign' }, { status: 500 })

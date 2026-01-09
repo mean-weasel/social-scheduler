@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
              platformStr.includes(searchLower)
     })
 
-    return NextResponse.json(filtered)
+    return NextResponse.json({ posts: filtered })
   } catch (error) {
     console.error('Error searching posts:', error)
     return NextResponse.json({ error: 'Failed to search posts' }, { status: 500 })

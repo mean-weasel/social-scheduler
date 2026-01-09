@@ -35,7 +35,7 @@ export async function GET(
       return NextResponse.json({ error: postsError.message }, { status: 500 })
     }
 
-    return NextResponse.json({ ...campaign, posts: posts || [] })
+    return NextResponse.json({ campaign, posts: posts || [] })
   } catch (error) {
     console.error('Error fetching campaign:', error)
     return NextResponse.json({ error: 'Failed to fetch campaign' }, { status: 500 })
@@ -71,7 +71,7 @@ export async function PATCH(
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json(data)
+    return NextResponse.json({ campaign: data })
   } catch (error) {
     console.error('Error updating campaign:', error)
     return NextResponse.json({ error: 'Failed to update campaign' }, { status: 500 })

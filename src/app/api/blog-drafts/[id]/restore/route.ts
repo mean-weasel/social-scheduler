@@ -38,7 +38,7 @@ export async function POST(
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json(data)
+    return NextResponse.json({ draft: data })
   } catch (error) {
     console.error('Error restoring blog draft:', error)
     return NextResponse.json({ error: 'Failed to restore blog draft' }, { status: 500 })

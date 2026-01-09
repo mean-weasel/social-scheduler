@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json(data)
+    return NextResponse.json({ drafts: data })
   } catch (error) {
     console.error('Error searching blog drafts:', error)
     return NextResponse.json({ error: 'Failed to search blog drafts' }, { status: 500 })

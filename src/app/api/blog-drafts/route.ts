@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json(data)
+    return NextResponse.json({ drafts: data })
   } catch (error) {
     console.error('Error fetching blog drafts:', error)
     return NextResponse.json({ error: 'Failed to fetch blog drafts' }, { status: 500 })
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json(data, { status: 201 })
+    return NextResponse.json({ draft: data }, { status: 201 })
   } catch (error) {
     console.error('Error creating blog draft:', error)
     return NextResponse.json({ error: 'Failed to create blog draft' }, { status: 500 })

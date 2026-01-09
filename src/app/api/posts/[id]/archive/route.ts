@@ -39,7 +39,7 @@ export async function POST(
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json(data)
+    return NextResponse.json({ post: data })
   } catch (error) {
     console.error('Error archiving post:', error)
     return NextResponse.json({ error: 'Failed to archive post' }, { status: 500 })

@@ -44,7 +44,7 @@ export async function GET(
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json(data)
+    return NextResponse.json({ draft: data })
   } catch (error) {
     console.error('Error fetching blog draft:', error)
     return NextResponse.json({ error: 'Failed to fetch blog draft' }, { status: 500 })
@@ -115,7 +115,7 @@ export async function PATCH(
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json(data)
+    return NextResponse.json({ draft: data })
   } catch (error) {
     console.error('Error updating blog draft:', error)
     return NextResponse.json({ error: 'Failed to update blog draft' }, { status: 500 })
