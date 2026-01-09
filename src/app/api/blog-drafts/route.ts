@@ -1,0 +1,97 @@
+import { createClient } from '@/lib/supabase/server'
+import { NextRequest, NextResponse } from 'next/server'
+
+// Calculate word count from markdown content
+function calculateWordCount(content: string): number {
+  if (!content) return 0
+  // Remove markdown syntax and count words
+  const text = content
+    .replace(/```[\s\S]*?```/g, '') // Remove code blocks
+    .replace(/`[^`]*`/g, '') // Remove inline code
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1') // Convert links to text
+    .replace(/[#*_~>\-|]/g, '') // Remove markdown characters
+    .replace(/\s+/g, ' ') // Normalize whitespace
+    .trim()
+  return text ? text.split(' ').length : 0
+}
+
+// GET /api/blog-drafts - List blog drafts
+export async function GET(request: NextRequest) {
+  try {
+    const supabase = await createClient()
+    const { searchParams } = new URL(request.url)
+
+    const status = searchParams.get('status')
+    const campaignId = searchParams.get('campaignId')
+    const limit = parseInt(searchParams.get('limit') || '50')
+    const search = searchParams.get('search')
+
+    let query = supabase
+      .from('blog_drafts')
+      .select('*')
+      .order('updated_at', { ascending: false })
+
+    if (status && status !== 'all') {
+      query = query.eq('status', status)
+    }
+    if (campaignId) {
+      query = query.eq('campaign_id', campaignId)
+    }
+    if (search) {
+      query = query.or(`title.ilike.%${search}%,content.ilike.%${search}%,notes.ilike.%${search}%`)
+    }
+    if (limit > 0) {
+      query = query.limit(limit)
+    }
+
+    const { data, error } = await query
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    return NextResponse.json({ drafts: data })
+  } catch (error) {
+    console.error('Error fetching blog drafts:', error)
+    return NextResponse.json({ error: 'Failed to fetch blog drafts' }, { status: 500 })
+  }
+}
+
+// POST /api/blog-drafts - Create blog draft
+export async function POST(request: NextRequest) {
+  try {
+    const supabase = await createClient()
+    const body = await request.json()
+
+    const { data: { user } } = await supabase.auth.getUser()
+
+    const content = body.content || ''
+    const wordCount = calculateWordCount(content)
+
+    const { data, error } = await supabase
+      .from('blog_drafts')
+      .insert({
+        user_id: user?.id,
+        title: body.title,
+        content: content,
+        date: body.date,
+        status: body.status || 'draft',
+        scheduled_at: body.scheduled_at || body.scheduledAt,
+        notes: body.notes,
+        word_count: wordCount,
+        campaign_id: body.campaign_id || body.campaignId,
+        images: body.images || [],
+      })
+      .select()
+      .single()
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    return NextResponse.json({ draft: data }, { status: 201 })
+  } catch (error) {
+    console.error('Error creating blog draft:', error)
+    return NextResponse.json({ error: 'Failed to create blog draft' }, { status: 500 })
+  }
+}

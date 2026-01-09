@@ -1,0 +1,92 @@
+import { createClient } from '@/lib/supabase/server'
+import { NextRequest, NextResponse } from 'next/server'
+
+// GET /api/blog-drafts/[id]/images - List images for a blog draft
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+    const supabase = await createClient()
+
+    const { data: draft, error } = await supabase
+      .from('blog_drafts')
+      .select('images')
+      .eq('id', id)
+      .single()
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return NextResponse.json({ error: 'Blog draft not found' }, { status: 404 })
+      }
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    return NextResponse.json(draft.images || [])
+  } catch (error) {
+    console.error('Error fetching blog draft images:', error)
+    return NextResponse.json({ error: 'Failed to fetch images' }, { status: 500 })
+  }
+}
+
+// POST /api/blog-drafts/[id]/images - Add image to blog draft
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params
+    const supabase = await createClient()
+    const body = await request.json()
+
+    const { filename, url, sourcePath } = body
+
+    if (!filename && !url && !sourcePath) {
+      return NextResponse.json(
+        { error: 'filename, url, or sourcePath is required' },
+        { status: 400 }
+      )
+    }
+
+    // Get current draft
+    const { data: draft, error: fetchError } = await supabase
+      .from('blog_drafts')
+      .select('images')
+      .eq('id', id)
+      .single()
+
+    if (fetchError) {
+      if (fetchError.code === 'PGRST116') {
+        return NextResponse.json({ error: 'Blog draft not found' }, { status: 404 })
+      }
+      return NextResponse.json({ error: fetchError.message }, { status: 500 })
+    }
+
+    // Add new image to array
+    const images = draft.images || []
+    const newImage = {
+      filename: filename || url || sourcePath,
+      url: url,
+      addedAt: new Date().toISOString(),
+    }
+    images.push(newImage)
+
+    // Update draft
+    const { data, error } = await supabase
+      .from('blog_drafts')
+      .update({ images })
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    return NextResponse.json(data, { status: 201 })
+  } catch (error) {
+    console.error('Error adding image to blog draft:', error)
+    return NextResponse.json({ error: 'Failed to add image' }, { status: 500 })
+  }
+}

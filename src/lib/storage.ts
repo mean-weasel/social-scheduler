@@ -1,8 +1,30 @@
 import { create } from 'zustand'
 import { Post, PostStatus } from './posts'
 
-// API URL - defaults to localhost:3001 for development
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+// API URL - use relative path for Next.js, fallback to Vite env or localhost
+function getApiBase() {
+  // Server-side or no window
+  if (typeof window === 'undefined') {
+    return '/api'
+  }
+  // Client-side: check if Vite or Next.js
+  // Vite dev server runs on 5173/5174, test server on 5176
+  const port = window.location.port
+  const isVite = port === '5173' || port === '5174' || port === '5176'
+  if (isVite) {
+    // Check for Vite env var
+    try {
+      // Vite env vars
+      return import.meta.env?.VITE_API_URL || 'http://localhost:3001/api'
+    } catch {
+      return 'http://localhost:3001/api'
+    }
+  }
+  // Next.js or production: use relative path
+  return '/api'
+}
+
+const API_BASE = getApiBase()
 
 interface PostsState {
   posts: Post[]

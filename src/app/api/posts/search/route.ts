@@ -1,0 +1,52 @@
+import { createClient } from '@/lib/supabase/server'
+import { NextRequest, NextResponse } from 'next/server'
+
+// GET /api/posts/search - Search posts
+export async function GET(request: NextRequest) {
+  try {
+    const supabase = await createClient()
+    const { searchParams } = new URL(request.url)
+
+    const query = searchParams.get('q') || searchParams.get('query') || ''
+    const limit = parseInt(searchParams.get('limit') || '50')
+
+    if (!query) {
+      return NextResponse.json({ error: 'Search query is required' }, { status: 400 })
+    }
+
+    // Search in content (as text), notes, and platform
+    // Note: Supabase textSearch requires full-text search setup
+    // Using ilike for simple search
+    const searchPattern = `%${query}%`
+
+    const { data, error } = await supabase
+      .from('posts')
+      .select('*')
+      .neq('status', 'archived')
+      .or(`notes.ilike.${searchPattern},platform.ilike.${searchPattern}`)
+      .order('updated_at', { ascending: false })
+      .limit(limit)
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    // Additionally filter by content (JSON field) on the client side
+    // since Supabase doesn't easily search within JSONB text
+    const filtered = data.filter(post => {
+      const contentStr = JSON.stringify(post.content || {}).toLowerCase()
+      const notesStr = (post.notes || '').toLowerCase()
+      const platformStr = (post.platform || '').toLowerCase()
+      const searchLower = query.toLowerCase()
+
+      return contentStr.includes(searchLower) ||
+             notesStr.includes(searchLower) ||
+             platformStr.includes(searchLower)
+    })
+
+    return NextResponse.json({ posts: filtered })
+  } catch (error) {
+    console.error('Error searching posts:', error)
+    return NextResponse.json({ error: 'Failed to search posts' }, { status: 500 })
+  }
+}
