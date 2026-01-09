@@ -13,7 +13,9 @@
     "test:e2e": "vitest run --config vitest.e2e.config.ts"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.0"
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@supabase/supabase-js": "^2.49.1",
+    "dotenv": "^16.3.1"
   },
   "devDependencies": {
     "@types/cross-spawn": "^6.0.6",
