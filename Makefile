@@ -54,19 +54,19 @@ nuke: ## Remove all node_modules and reinstall
 
 dev: ## Start both API + web servers (recommended)
 	@echo ""
-	@echo "$(GREEN)Starting API server (port 3001) and Web app (port 5173)...$(RESET)"
-	@echo "$(YELLOW)Web:  http://localhost:5173$(RESET)"
-	@echo "$(YELLOW)API:  http://localhost:3001$(RESET)"
+	@echo "$(GREEN)Starting API server (port $${API_PORT:-3001}) and Web app (port $${PORT:-5173})...$(RESET)"
+	@echo "$(YELLOW)Web:  http://localhost:$${PORT:-5173}$(RESET)"
+	@echo "$(YELLOW)API:  http://localhost:$${API_PORT:-3001}$(RESET)"
 	@echo ""
-	npm run dev:full
+	CI=true PORT=$${PORT:-5173} API_PORT=$${API_PORT:-3001} npm run dev:full
 
 dev-api: ## Start API server only (port 3001)
-	@echo "$(GREEN)Starting API server on http://localhost:3001...$(RESET)"
-	npm run api
+	@echo "$(GREEN)Starting API server on http://localhost:$${API_PORT:-3001}...$(RESET)"
+	CI=true API_PORT=$${API_PORT:-3001} npm run api
 
 dev-web: ## Start web dev server only (port 5173)
-	@echo "$(GREEN)Starting web server on http://localhost:5173...$(RESET)"
-	npm run dev
+	@echo "$(GREEN)Starting web server on http://localhost:$${PORT:-5173}...$(RESET)"
+	CI=true PORT=$${PORT:-5173} npm run dev
 
 serve: build ## Build and serve on home network (accessible from iPhone)
 	@echo ""
