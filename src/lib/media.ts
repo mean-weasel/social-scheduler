@@ -1,5 +1,5 @@
-// API URL - defaults to localhost:3001 for development
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+// API URL - use relative path for Next.js API routes
+const API_BASE = '/api'
 
 // File type and size limits (must match backend)
 const ALLOWED_IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
