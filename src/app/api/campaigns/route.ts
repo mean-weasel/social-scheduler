@@ -37,12 +37,17 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient()
     const body = await request.json()
 
-    const { data: { user } } = await supabase.auth.getUser()
+    // In E2E test mode, skip user lookup since we bypass auth
+    let userId: string | null = null
+    if (process.env.E2E_TEST_MODE !== 'true') {
+      const { data: { user } } = await supabase.auth.getUser()
+      userId = user?.id || null
+    }
 
     const { data, error } = await supabase
       .from('campaigns')
       .insert({
-        user_id: user?.id,
+        user_id: userId,
         name: body.name,
         description: body.description,
         status: body.status || 'active',

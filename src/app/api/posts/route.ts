@@ -53,12 +53,18 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient()
     const body = await request.json()
 
-    const { data: { user } } = await supabase.auth.getUser()
+    // In E2E test mode, skip user lookup since we bypass auth
+    // user_id is nullable, so we can leave it null for test posts
+    let userId: string | null = null
+    if (process.env.E2E_TEST_MODE !== 'true') {
+      const { data: { user } } = await supabase.auth.getUser()
+      userId = user?.id || null
+    }
 
     const { data, error } = await supabase
       .from('posts')
       .insert({
-        user_id: user?.id,
+        user_id: userId,
         platform: body.platform,
         content: body.content,
         status: body.status || 'draft',
