@@ -40,3 +40,4 @@ bleep/
 playwright-report/
 test-results/
 .next
+.vercel
