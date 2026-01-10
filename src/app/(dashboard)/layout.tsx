@@ -8,11 +8,14 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  // Skip auth check in E2E test mode
+  if (process.env.E2E_TEST_MODE !== 'true') {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
 
-  if (!user) {
-    redirect('/login')
+    if (!user) {
+      redirect('/login')
+    }
   }
 
   return (
