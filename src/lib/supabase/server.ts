@@ -1,18 +1,13 @@
-import { createServerClient, createClient as createSupabaseClient } from '@supabase/ssr'
+import { createServerClient } from '@supabase/ssr'
+import { createClient as createSupabaseJsClient } from '@supabase/supabase-js'
 import { cookies } from 'next/headers'
 
 export async function createClient() {
   // In E2E test mode, use service role key to bypass RLS
   if (process.env.E2E_TEST_MODE === 'true' && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return createSupabaseClient(
+    return createSupabaseJsClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY,
-      {
-        cookies: {
-          getAll() { return [] },
-          setAll() {},
-        },
-      }
+      process.env.SUPABASE_SERVICE_ROLE_KEY
     )
   }
 

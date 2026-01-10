@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
 
     // Additionally filter by content (JSON field) on the client side
     // since Supabase doesn't easily search within JSONB text
-    const filtered = data.filter(post => {
+    const filtered = data.filter((post: { content?: unknown; notes?: string; platform?: string }) => {
       const contentStr = JSON.stringify(post.content || {}).toLowerCase()
       const notesStr = (post.notes || '').toLowerCase()
       const platformStr = (post.platform || '').toLowerCase()
