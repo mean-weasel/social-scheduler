@@ -28,9 +28,8 @@ const nextConfig = {
     return config
   },
 
-  // Disable Pages Router - we only use App Router
-  // This prevents Next.js from scanning src/pages as routes
-  pageExtensions: ['page.tsx', 'page.ts', 'page.jsx', 'page.js'],
+  // Note: We keep src/pages for the old Vite app
+  // The App Router in src/app takes precedence
 }
 
 export default nextConfig
