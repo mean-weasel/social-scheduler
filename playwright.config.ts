@@ -22,12 +22,9 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `npm run dev:next -- --port ${PORT}`,
+    command: `E2E_TEST_MODE=true npm run dev:next -- --port ${PORT}`,
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
-    env: {
-      E2E_TEST_MODE: 'true',
-    },
   },
 })
