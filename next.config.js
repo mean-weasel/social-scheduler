@@ -17,19 +17,8 @@ const nextConfig = {
     ],
   },
 
-  // Exclude old Vite pages from Next.js compilation
-  // The old pages use React Router and are kept for backward compatibility
-  webpack: (config) => {
-    // Ignore the old Vite pages directory
-    config.module.rules.push({
-      test: /src\/pages\//,
-      loader: 'ignore-loader',
-    })
-    return config
-  },
-
-  // Note: We keep src/pages for the old Vite app
-  // The App Router in src/app takes precedence
+  // Note: src/pages contains the old Vite app components
+  // Next.js App Router in src/app takes precedence for routing
 }
 
 export default nextConfig

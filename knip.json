@@ -1,7 +1,6 @@
 {
   "$schema": "https://unpkg.com/knip@latest/schema.json",
   "entry": [
-    "src/main.tsx",
     "src/app/**/page.tsx",
     "src/app/**/layout.tsx",
     "src/app/**/route.ts"
@@ -13,15 +12,12 @@
   ],
   "ignoreDependencies": [
     "@octokit/rest",
-    "@typescript-eslint/eslint-plugin",
-    "@typescript-eslint/parser",
-    "eslint-plugin-react-hooks",
-    "eslint-plugin-react-refresh",
     "gh-pages",
-    "tsx",
-    "@supabase/ssr",
-    "@supabase/supabase-js"
+    "tsx"
   ],
+  "rules": {
+    "exports": "off"
+  },
   "playwright": {
     "entry": ["e2e/**/*.spec.ts", "playwright.config.ts"]
   },
