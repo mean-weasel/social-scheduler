@@ -1,6 +1,7 @@
 import { Page, expect, TestInfo } from '@playwright/test'
 
-const API_BASE = 'http://localhost:3001/api'
+// Use relative URL - the Next.js app serves API at /api
+const API_BASE = 'http://localhost:3000/api'
 
 /**
  * Generate a unique test ID for content isolation in parallel tests.
