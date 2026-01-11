@@ -1,7 +1,7 @@
 # Social Scheduler - Makefile
 # Run `make help` to see available commands
 
-.PHONY: help install dev dev-api dev-web dev-full serve build build-api build-web test test-e2e lint typecheck knip format check fix clean all
+.PHONY: help install dev dev-full build test test-e2e lint typecheck knip format check fix clean all
 
 # Default target
 .DEFAULT_GOAL := help
@@ -60,7 +60,6 @@ setup: install ## First-time setup (install deps + start Supabase + reset DB)
 
 nuke: ## Remove all node_modules and reinstall
 	rm -rf node_modules package-lock.json
-	rm -rf api-server/node_modules api-server/package-lock.json
 	rm -rf mcp-server/node_modules mcp-server/package-lock.json
 	npm install
 	cd mcp-server && npm install
@@ -78,7 +77,7 @@ dev: ## Start Next.js dev server (requires Supabase running)
 	@echo "$(YELLOW)Requested port: $${PORT:-$(NEXT_PORT)} (will auto-increment if busy)$(RESET)"
 	@echo "$(YELLOW)Supabase Studio: http://localhost:54323$(RESET)"
 	@echo ""
-	@PORT=$${PORT:-$(NEXT_PORT)} npm run dev:next
+	@PORT=$${PORT:-$(NEXT_PORT)} npm run dev
 
 dev-full: ## Start Supabase + Next.js together
 	@echo ""
@@ -87,20 +86,7 @@ dev-full: ## Start Supabase + Next.js together
 
 dev-next-only:
 	@sleep 3
-	@PORT=$${PORT:-$(NEXT_PORT)} npm run dev:next
-
-# Legacy dev commands (for transition period)
-dev-legacy: ## Start legacy API + Vite servers
-	@echo "$(YELLOW)Starting legacy servers (API + Vite)...$(RESET)"
-	CI=true PORT=$${PORT:-5173} API_PORT=$${API_PORT:-3001} npm run dev:full
-
-dev-api-legacy: ## Start legacy API server only
-	@echo "$(GREEN)Starting legacy API server on http://localhost:$${API_PORT:-3001}...$(RESET)"
-	CI=true API_PORT=$${API_PORT:-3001} npm run api
-
-dev-web-legacy: ## Start legacy Vite web server only
-	@echo "$(GREEN)Starting legacy Vite server on http://localhost:$${PORT:-5173}...$(RESET)"
-	CI=true PORT=$${PORT:-5173} npm run dev
+	@PORT=$${PORT:-$(NEXT_PORT)} npm run dev
 
 # =============================================================================
 # Supabase
@@ -173,16 +159,10 @@ db-seed: ## Seed local database with test data
 
 build: ## Build Next.js for production
 	@echo "$(BLUE)Building Next.js app...$(RESET)"
-	npm run build:next
-
-build-legacy: ## Build legacy API + Vite
-	@echo "$(BLUE)Building legacy API server...$(RESET)"
-	npm run api:build
-	@echo "$(BLUE)Building legacy Vite app...$(RESET)"
 	npm run build
 
 preview: build ## Preview production build locally
-	npm run start:next
+	npm run start
 
 deploy: ## Deploy to Vercel (production)
 	@echo "$(BLUE)Deploying to Vercel (production)...$(RESET)"
@@ -258,24 +238,18 @@ mcp-dev: ## Run MCP server with local Supabase
 mcp-build: ## Build MCP server
 	cd mcp-server && npm run build
 
-mcp-legacy: ## Run MCP server with legacy API
-	@echo "$(GREEN)Starting MCP server (legacy API)...$(RESET)"
-	cd mcp-server && API_URL=http://localhost:3001/api npm run dev
-
 # =============================================================================
 # Utilities
 # =============================================================================
 
 clean: ## Clean build artifacts and cache
 	rm -rf .next dist coverage playwright-report test-results
-	rm -rf api-server/dist
 	@echo "$(GREEN)✓ Cleaned build artifacts$(RESET)"
 
 logs: ## Show data locations
 	@echo "$(BLUE)Data Locations:$(RESET)"
 	@echo "  Local Supabase DB: postgresql://postgres:postgres@localhost:54322/postgres"
 	@echo "  Supabase Studio:   http://localhost:54323"
-	@echo "  Legacy SQLite:     ~/.social-scheduler/posts.db"
 
 ip: ## Show local network IP for mobile access
 	@echo "$(GREEN)Your local IP: $(LOCAL_IP)$(RESET)"
