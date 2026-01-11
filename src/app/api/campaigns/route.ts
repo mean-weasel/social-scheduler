@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { transformCampaignFromDb } from '@/lib/utils'
 
 // GET /api/campaigns - List campaigns
 export async function GET(request: NextRequest) {
@@ -24,7 +25,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({ campaigns: data })
+    // Transform campaigns from snake_case to camelCase
+    const campaigns = (data || []).map(campaign => transformCampaignFromDb(campaign as Record<string, unknown>))
+    return NextResponse.json({ campaigns })
   } catch (error) {
     console.error('Error fetching campaigns:', error)
     return NextResponse.json({ error: 'Failed to fetch campaigns' }, { status: 500 })
@@ -59,7 +62,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({ campaign: data }, { status: 201 })
+    // Transform campaign from snake_case to camelCase
+    const campaign = transformCampaignFromDb(data as Record<string, unknown>)
+    return NextResponse.json({ campaign }, { status: 201 })
   } catch (error) {
     console.error('Error creating campaign:', error)
     return NextResponse.json({ error: 'Failed to create campaign' }, { status: 500 })

@@ -33,7 +33,7 @@ test.describe('Database State Verification', () => {
       await page.getByRole('button', { name: 'Twitter' }).click()
       await fillContent(page, 'Twitter draft content')
       await page.getByRole('button', { name: /save draft/i }).click()
-      await expect(page).toHaveURL('/')
+      await expect(page).toHaveURL('/dashboard')
 
       // Verify exactly 1 post in database
       expect(await getPostCount(page)).toBe(1)
@@ -51,7 +51,7 @@ test.describe('Database State Verification', () => {
       await page.getByRole('button', { name: 'LinkedIn' }).click()
       await fillContent(page, 'LinkedIn draft content')
       await page.getByRole('button', { name: /save draft/i }).click()
-      await expect(page).toHaveURL('/')
+      await expect(page).toHaveURL('/dashboard')
 
       expect(await getPostCount(page)).toBe(1)
 
@@ -68,7 +68,7 @@ test.describe('Database State Verification', () => {
       await fillContent(page, 'Reddit draft content')
       await fillRedditFields(page, { subreddit: 'test', title: 'Test Title' })
       await page.getByRole('button', { name: /save draft/i }).click()
-      await expect(page).toHaveURL('/')
+      await expect(page).toHaveURL('/dashboard')
 
       expect(await getPostCount(page)).toBe(1)
 
@@ -92,7 +92,7 @@ test.describe('Database State Verification', () => {
       await setSchedule(page, tomorrow)
 
       await page.getByRole('button', { name: /^schedule$/i }).click()
-      await expect(page).toHaveURL('/')
+      await expect(page).toHaveURL('/dashboard')
 
       expect(await getPostCount(page)).toBe(1)
 
@@ -117,7 +117,7 @@ test.describe('Database State Verification', () => {
       await waitForContentToLoad(page, 'Original content')
       await fillContent(page, 'Updated content')
       await page.getByRole('button', { name: /save draft/i }).click()
-      await expect(page).toHaveURL('/')
+      await expect(page).toHaveURL('/dashboard')
 
       // Should still have exactly 1 post
       expect(await getPostCount(page)).toBe(1)
@@ -139,7 +139,7 @@ test.describe('Database State Verification', () => {
       await waitForContentToLoad(page, 'Platform test')
       await switchPlatformWithConfirm(page, 'linkedin')
       await page.getByRole('button', { name: /save draft/i }).click()
-      await expect(page).toHaveURL('/')
+      await expect(page).toHaveURL('/dashboard')
 
       // Should still have exactly 1 post
       expect(await getPostCount(page)).toBe(1)
@@ -163,7 +163,7 @@ test.describe('Database State Verification', () => {
       tomorrow.setDate(tomorrow.getDate() + 1)
       await setSchedule(page, tomorrow)
       await page.getByRole('button', { name: /^schedule$/i }).click()
-      await expect(page).toHaveURL('/')
+      await expect(page).toHaveURL('/dashboard')
 
       // Should still have exactly 1 post
       expect(await getPostCount(page)).toBe(1)

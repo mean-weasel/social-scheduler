@@ -120,7 +120,7 @@ test.describe('Dashboard', () => {
       await deletePost(page)
 
       // Should navigate back to dashboard
-      await expect(page).toHaveURL('/')
+      await expect(page).toHaveURL('/dashboard')
     })
 
     test('should decrement count when post is archived', async ({ page }) => {

@@ -1313,8 +1313,7 @@ export default function EditorPage() {
                   return { ...prev, scheduledAt: localDate.toISOString() }
                 })
               }
-              className="absolute opacity-0"
-              tabIndex={-1}
+              className="mt-2 w-full px-3 py-2 rounded-lg bg-card border border-border text-sm"
             />
           </div>
           <div>
@@ -1351,8 +1350,7 @@ export default function EditorPage() {
                   return { ...prev, scheduledAt: localDate.toISOString() }
                 })
               }
-              className="absolute opacity-0"
-              tabIndex={-1}
+              className="mt-2 w-full px-3 py-2 rounded-lg bg-card border border-border text-sm"
             />
           </div>
         </div>

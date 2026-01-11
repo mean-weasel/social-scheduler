@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { transformPostFromDb } from '@/lib/utils'
 
 // GET /api/posts/search - Search posts
 export async function GET(request: NextRequest) {
@@ -44,7 +45,9 @@ export async function GET(request: NextRequest) {
              platformStr.includes(searchLower)
     })
 
-    return NextResponse.json({ posts: filtered })
+    // Transform posts from snake_case to camelCase
+    const posts = filtered.map(post => transformPostFromDb(post as Record<string, unknown>))
+    return NextResponse.json({ posts })
   } catch (error) {
     console.error('Error searching posts:', error)
     return NextResponse.json({ error: 'Failed to search posts' }, { status: 500 })

@@ -69,7 +69,7 @@ test.describe('Auto-save', () => {
       await textarea.press('End')
       await textarea.type(' - updated')
       await page.getByRole('button', { name: /save draft/i }).click()
-      await expect(page).toHaveURL('/')
+      await expect(page).toHaveURL('/dashboard')
 
       // Should STILL have exactly 1 post (no duplicates)
       expect(await getPostCount(page)).toBe(1)
@@ -103,7 +103,7 @@ test.describe('Auto-save', () => {
       await page.getByRole('button', { name: 'Twitter' }).click()
       await fillContent(page, 'Original draft content')
       await page.getByRole('button', { name: /save draft/i }).click()
-      await expect(page).toHaveURL('/')
+      await expect(page).toHaveURL('/dashboard')
 
       // Should have 1 post
       expect(await getPostCount(page)).toBe(1)
@@ -138,7 +138,7 @@ test.describe('Auto-save', () => {
       await page.getByRole('button', { name: 'Twitter' }).click()
       await fillContent(page, 'Platform switch test')
       await page.getByRole('button', { name: /save draft/i }).click()
-      await expect(page).toHaveURL('/')
+      await expect(page).toHaveURL('/dashboard')
 
       const originalPosts = await getAllPosts(page)
       const postId = originalPosts[0].id
@@ -165,7 +165,7 @@ test.describe('Auto-save', () => {
       await page.getByRole('button', { name: 'Twitter' }).click()
       await fillContent(page, 'No changes test')
       await page.getByRole('button', { name: /save draft/i }).click()
-      await expect(page).toHaveURL('/')
+      await expect(page).toHaveURL('/dashboard')
 
       const originalPosts = await getAllPosts(page)
       const postId = originalPosts[0].id
@@ -201,7 +201,7 @@ test.describe('Auto-save', () => {
 
       // Schedule the post
       await page.getByRole('button', { name: /^schedule$/i }).click()
-      await expect(page).toHaveURL('/')
+      await expect(page).toHaveURL('/dashboard')
 
       const originalPosts = await getAllPosts(page)
       expect(originalPosts[0].status).toBe('scheduled')

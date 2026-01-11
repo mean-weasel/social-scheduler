@@ -31,7 +31,7 @@ test.describe('Archive Post', () => {
     await archivePost(page)
 
     // Should navigate back to dashboard
-    await expect(page).toHaveURL('/')
+    await expect(page).toHaveURL('/dashboard')
   })
 
   test('should show archived posts in archived filter', async ({ page }, testInfo) => {
@@ -92,7 +92,7 @@ test.describe('Archive Post', () => {
     await restorePost(page)
 
     // Should navigate back to dashboard
-    await expect(page).toHaveURL('/')
+    await expect(page).toHaveURL('/dashboard')
 
     // Verify restored to drafts
     await goToPosts(page)
@@ -120,7 +120,7 @@ test.describe('Archive Post', () => {
     await deletePost(page)
 
     // Should navigate back
-    await expect(page).toHaveURL('/')
+    await expect(page).toHaveURL('/dashboard')
 
     // Verify gone - archived tab should be hidden since no archived posts remain
     await goToPosts(page)

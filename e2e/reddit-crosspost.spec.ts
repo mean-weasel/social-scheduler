@@ -174,8 +174,8 @@ test.describe('Reddit Cross-posting', () => {
       dayAfter.setDate(dayAfter.getDate() + 2)
       dayAfter.setHours(15, 0, 0, 0)
 
-      await page.locator('[data-testid="main-schedule-date"]').fill(dayAfter.toISOString().split('T')[0])
-      await page.locator('[data-testid="main-schedule-time"]').fill('15:00')
+      // Use setSchedule helper to update schedule
+      await setSchedule(page, dayAfter)
 
       await schedulePost(page)
       await waitForNavigation(page, '/')

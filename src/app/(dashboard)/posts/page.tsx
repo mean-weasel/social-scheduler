@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, isBefore, startOfDay } from 'date-fns'
@@ -37,8 +37,17 @@ const STATUS_CONFIG: Record<PostStatus, { label: string; icon: typeof FileText; 
 
 export default function PostsPage() {
   const allPosts = usePostsStore((state) => state.posts)
+  const fetchPosts = usePostsStore((state) => state.fetchPosts)
+  const initialized = usePostsStore((state) => state.initialized)
   const searchParams = useSearchParams()
   const router = useRouter()
+
+  // Fetch posts on mount if not already initialized
+  useEffect(() => {
+    if (!initialized) {
+      fetchPosts()
+    }
+  }, [initialized, fetchPosts])
 
   // Initialize filter from URL query param, default to 'all'
   const getFilterFromParams = useCallback((): FilterStatus => {

@@ -249,14 +249,20 @@ export async function setLinkedInVisibility(page: Page, visibility: 'public' | '
 
 /**
  * Set schedule date and time (main schedule, not per-subreddit)
+ * Uses Playwright's native fill with clear first
  */
 export async function setSchedule(page: Page, date: Date) {
   const dateStr = date.toISOString().split('T')[0]
   const timeStr = date.toTimeString().slice(0, 5)
 
-  // Use test-id to target the main schedule inputs specifically
-  await page.locator('[data-testid="main-schedule-date"]').fill(dateStr)
-  await page.locator('[data-testid="main-schedule-time"]').fill(timeStr)
+  // Use click + selectAll + fill to handle controlled inputs
+  const dateInput = page.locator('[data-testid="main-schedule-date"]')
+  await dateInput.click({ clickCount: 3 }) // Triple click to select all
+  await dateInput.fill(dateStr)
+
+  const timeInput = page.locator('[data-testid="main-schedule-time"]')
+  await timeInput.click({ clickCount: 3 })
+  await timeInput.fill(timeStr)
 }
 
 /**
@@ -290,6 +296,9 @@ export async function deletePost(page: Page) {
   // Wait for the confirmation dialog modal to appear and click Delete
   await page.getByRole('alertdialog').waitFor()
   await page.getByRole('alertdialog').getByRole('button', { name: 'Delete' }).click()
+
+  // Wait for navigation to dashboard after delete
+  await page.waitForURL(/\/(dashboard)?$/)
 }
 
 /**
@@ -327,9 +336,13 @@ export async function filterByStatus(page: Page, status: 'all' | 'draft' | 'sche
 
 /**
  * Get post cards from the posts list
+ * Waits for at least one card to be visible before returning
  */
 export async function getPostCards(page: Page) {
-  return page.locator('a[href^="/edit/"]')
+  const locator = page.locator('a[href^="/edit/"]')
+  // Wait for at least one post card to be visible
+  await locator.first().waitFor({ state: 'visible', timeout: 10000 })
+  return locator
 }
 
 /**
@@ -358,7 +371,9 @@ export async function verifyCharacterCount(page: Page, platform: 'twitter' | 'li
  * Wait for navigation after action
  */
 export async function waitForNavigation(page: Page, url: string | RegExp) {
-  await expect(page).toHaveURL(url)
+  // Normalize '/' to '/dashboard' since the root redirects to dashboard
+  const normalizedUrl = url === '/' ? '/dashboard' : url
+  await expect(page).toHaveURL(normalizedUrl)
 }
 
 /**
@@ -391,14 +406,13 @@ export async function createTestPost(
     // Set a schedule date in the future
     const tomorrow = new Date()
     tomorrow.setDate(tomorrow.getDate() + 1)
-    const dateStr = tomorrow.toISOString().split('T')[0]
-    await page.locator('[data-testid="main-schedule-date"]').fill(dateStr)
-    await page.locator('[data-testid="main-schedule-time"]').fill('12:00')
+    tomorrow.setHours(12, 0, 0, 0)
+    await setSchedule(page, tomorrow)
     await page.getByRole('button', { name: /^schedule$/i }).click()
   }
 
   // Wait for navigation back to dashboard
-  await expect(page).toHaveURL('/')
+  await expect(page).toHaveURL('/dashboard')
 }
 
 // ============================================

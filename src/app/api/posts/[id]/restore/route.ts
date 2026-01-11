@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { transformPostFromDb } from '@/lib/utils'
 
 // POST /api/posts/[id]/restore - Restore an archived post
 export async function POST(
@@ -39,7 +40,9 @@ export async function POST(
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({ post: data })
+    // Transform post from snake_case to camelCase
+    const post = transformPostFromDb(data as Record<string, unknown>)
+    return NextResponse.json({ post })
   } catch (error) {
     console.error('Error restoring post:', error)
     return NextResponse.json({ error: 'Failed to restore post' }, { status: 500 })
