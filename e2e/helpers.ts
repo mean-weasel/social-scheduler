@@ -1,7 +1,8 @@
 import { Page, expect, TestInfo } from '@playwright/test'
 
-// Use relative URL - the Next.js app serves API at /api
-const API_BASE = 'http://localhost:3000/api'
+// Use the same port as the test server (configured in playwright.config.ts)
+const PORT = process.env.TEST_PORT || 3000
+const API_BASE = `http://localhost:${PORT}/api`
 
 /**
  * Generate a unique test ID for content isolation in parallel tests.
@@ -101,6 +102,21 @@ export async function switchPlatformWithConfirm(
   const dialogVisible = await dialog.isVisible().catch(() => false)
   if (dialogVisible) {
     await dialog.getByRole('button', { name: 'Switch' }).click()
+  }
+}
+
+/**
+ * Wait for existing post content to load in the editor
+ * This is needed when editing an existing post because the store loads async
+ */
+export async function waitForContentToLoad(page: Page, expectedContent?: string) {
+  const textarea = page.locator('textarea').first()
+  if (expectedContent) {
+    // Wait for specific content to appear
+    await expect(textarea).toHaveValue(expectedContent, { timeout: 5000 })
+  } else {
+    // Just wait for any non-empty content (existing post loaded)
+    await expect(textarea).not.toHaveValue('', { timeout: 5000 })
   }
 }
 

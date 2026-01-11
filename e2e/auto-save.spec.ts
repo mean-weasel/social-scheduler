@@ -6,6 +6,7 @@ import {
   getAllPosts,
   extractPostIdFromUrl,
   switchPlatformWithConfirm,
+  waitForContentToLoad,
 } from './helpers'
 
 test.describe('Auto-save', () => {
@@ -113,6 +114,9 @@ test.describe('Auto-save', () => {
       await page.goto(`/edit/${postId}`)
       await expect(page.getByRole('heading', { name: /edit post/i })).toBeVisible()
 
+      // Wait for existing content to load before editing
+      await waitForContentToLoad(page, 'Original draft content')
+
       // Edit the content
       await fillContent(page, 'Modified draft content via auto-save')
 
@@ -142,6 +146,7 @@ test.describe('Auto-save', () => {
 
       // Edit and switch to LinkedIn (with confirmation dialog)
       await page.goto(`/edit/${postId}`)
+      await waitForContentToLoad(page, 'Platform switch test')
       await switchPlatformWithConfirm(page, 'linkedin')
 
       // Wait for auto-save
@@ -169,6 +174,9 @@ test.describe('Auto-save', () => {
       // Go to edit but don't change anything
       await page.goto(`/edit/${postId}`)
       await expect(page.getByRole('heading', { name: /edit post/i })).toBeVisible()
+
+      // Wait for content to load before checking auto-save behavior
+      await waitForContentToLoad(page, 'No changes test')
 
       // Wait longer than auto-save delay
       await page.waitForTimeout(4000)
@@ -201,6 +209,7 @@ test.describe('Auto-save', () => {
 
       // Edit the scheduled post
       await page.goto(`/edit/${postId}`)
+      await waitForContentToLoad(page, 'Scheduled post')
       await fillContent(page, 'Updated scheduled post content')
 
       // Wait for potential auto-save

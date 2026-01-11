@@ -13,6 +13,7 @@ import {
   filterByStatus,
   getPostCards,
   switchPlatformWithConfirm,
+  waitForContentToLoad,
 } from './helpers'
 
 /**
@@ -113,6 +114,7 @@ test.describe('Database State Verification', () => {
 
       // Edit the post
       await page.goto(`/edit/${postId}`)
+      await waitForContentToLoad(page, 'Original content')
       await fillContent(page, 'Updated content')
       await page.getByRole('button', { name: /save draft/i }).click()
       await expect(page).toHaveURL('/')
@@ -134,6 +136,7 @@ test.describe('Database State Verification', () => {
 
       // Edit and switch platform (with confirmation dialog)
       await page.goto(`/edit/${postId}`)
+      await waitForContentToLoad(page, 'Platform test')
       await switchPlatformWithConfirm(page, 'linkedin')
       await page.getByRole('button', { name: /save draft/i }).click()
       await expect(page).toHaveURL('/')
@@ -155,6 +158,7 @@ test.describe('Database State Verification', () => {
 
       // Edit and add schedule
       await page.goto(`/edit/${postId}`)
+      await waitForContentToLoad(page, 'Draft to schedule')
       const tomorrow = new Date()
       tomorrow.setDate(tomorrow.getDate() + 1)
       await setSchedule(page, tomorrow)
@@ -204,6 +208,7 @@ test.describe('Database State Verification', () => {
 
       // Archive the LinkedIn post
       await page.goto(`/edit/${postToDeleteId}`)
+      await waitForContentToLoad(page, 'Post to delete')
       await archivePost(page)
 
       // Delete the archived post
@@ -233,6 +238,7 @@ test.describe('Database State Verification', () => {
 
       // Archive the post
       await page.goto(`/edit/${postId}`)
+      await waitForContentToLoad(page, 'Post to archive')
       await archivePost(page)
 
       // Should still have exactly 1 post
@@ -251,6 +257,7 @@ test.describe('Database State Verification', () => {
 
       // Archive the post
       await page.goto(`/edit/${postId}`)
+      await waitForContentToLoad(page, 'Post to restore')
       await archivePost(page)
 
       // Restore the post
