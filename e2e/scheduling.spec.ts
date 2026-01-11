@@ -8,6 +8,7 @@ import {
   saveDraft,
   waitForNavigation,
   getAllPosts,
+  waitForContentToLoad,
 } from './helpers'
 
 test.describe('Scheduling', () => {
@@ -63,6 +64,7 @@ test.describe('Scheduling', () => {
       expect(posts.length).toBe(1)
 
       await page.goto(`/edit/${posts[0].id}`)
+      await waitForContentToLoad(page, 'Testing date persistence')
       await expect(page.locator('input[type="date"]')).toHaveValue(dateStr)
     })
   })
@@ -118,6 +120,7 @@ test.describe('Scheduling', () => {
       // Navigate back to edit
       const posts = await getAllPosts(page)
       await page.goto(`/edit/${posts[0].id}`)
+      await waitForContentToLoad(page, 'Testing time persistence')
 
       await expect(page.locator('input[type="date"]')).toHaveValue(dateStr)
       await expect(page.locator('input[type="time"]')).toHaveValue('09:15')
@@ -183,6 +186,7 @@ test.describe('Scheduling', () => {
       const posts = await getAllPosts(page)
       const originalScheduledAt = posts[0].scheduledAt
       await page.goto(`/edit/${posts[0].id}`)
+      await waitForContentToLoad(page, 'Post to reschedule')
 
       // Change date to day after tomorrow and time to 15:00
       const dayAfter = new Date()
@@ -201,6 +205,7 @@ test.describe('Scheduling', () => {
 
       // Verify the date/time shows correctly in the UI
       await page.goto(`/edit/${updatedPosts[0].id}`)
+      await waitForContentToLoad(page, 'Post to reschedule')
       await expect(page.locator('input[type="date"]')).toHaveValue(newDateStr)
       await expect(page.locator('input[type="time"]')).toHaveValue('15:00')
     })
@@ -222,6 +227,7 @@ test.describe('Scheduling', () => {
       // Edit and save as draft (which should clear schedule)
       const posts = await getAllPosts(page)
       await page.goto(`/edit/${posts[0].id}`)
+      await waitForContentToLoad(page, 'Scheduled then draft')
 
       await saveDraft(page)
       await waitForNavigation(page, '/')

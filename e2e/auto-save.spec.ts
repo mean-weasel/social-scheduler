@@ -6,6 +6,7 @@ import {
   getAllPosts,
   extractPostIdFromUrl,
   switchPlatformWithConfirm,
+  waitForContentToLoad,
 } from './helpers'
 
 test.describe('Auto-save', () => {
@@ -28,11 +29,9 @@ test.describe('Auto-save', () => {
       // Type content
       await fillContent(page, 'Auto-save test content')
 
-      // Wait for auto-save (delay is 2 seconds, add buffer)
-      await page.waitForTimeout(3000)
-
-      // URL should have changed to /edit/:id
-      await expect(page).toHaveURL(/\/edit\/[a-f0-9-]+/)
+      // Wait for auto-save to complete and URL to change
+      // Auto-save has 2s delay + API call time, so use 10s timeout for CI reliability
+      await expect(page).toHaveURL(/\/edit\/[a-f0-9-]+/, { timeout: 10000 })
 
       // Database should have exactly 1 post
       expect(await getPostCount(page)).toBe(1)
@@ -52,8 +51,8 @@ test.describe('Auto-save', () => {
       await page.getByRole('button', { name: 'Twitter' }).click()
       await fillContent(page, 'First content')
 
-      // Wait for first auto-save and URL change
-      await expect(page).toHaveURL(/\/edit\/[a-f0-9-]+/, { timeout: 5000 })
+      // Wait for first auto-save and URL change (10s timeout for CI reliability)
+      await expect(page).toHaveURL(/\/edit\/[a-f0-9-]+/, { timeout: 10000 })
 
       // Should have 1 post
       expect(await getPostCount(page)).toBe(1)
@@ -68,7 +67,7 @@ test.describe('Auto-save', () => {
       await textarea.press('End')
       await textarea.type(' - updated')
       await page.getByRole('button', { name: /save draft/i }).click()
-      await expect(page).toHaveURL('/')
+      await expect(page).toHaveURL('/dashboard')
 
       // Should STILL have exactly 1 post (no duplicates)
       expect(await getPostCount(page)).toBe(1)
@@ -87,11 +86,12 @@ test.describe('Auto-save', () => {
       // Type content
       await fillContent(page, 'Test for indicator')
 
-      // Wait for auto-save to complete and URL to change
-      await expect(page).toHaveURL(/\/edit\/[a-f0-9-]+/, { timeout: 5000 })
+      // First wait for URL to change - this confirms auto-save completed and created the post
+      // The URL change is the most reliable indicator that auto-save worked
+      await expect(page).toHaveURL(/\/edit\/[a-f0-9-]+/, { timeout: 10000 })
 
-      // Should show "Saved" indicator after auto-save completes
-      await expect(page.getByText(/saved/i)).toBeVisible({ timeout: 3000 })
+      // The "Saved" indicator should still be visible (shows for 5 seconds after save)
+      await expect(page.getByText(/saved/i)).toBeVisible({ timeout: 5000 })
     })
   })
 
@@ -102,7 +102,7 @@ test.describe('Auto-save', () => {
       await page.getByRole('button', { name: 'Twitter' }).click()
       await fillContent(page, 'Original draft content')
       await page.getByRole('button', { name: /save draft/i }).click()
-      await expect(page).toHaveURL('/')
+      await expect(page).toHaveURL('/dashboard')
 
       // Should have 1 post
       expect(await getPostCount(page)).toBe(1)
@@ -113,11 +113,14 @@ test.describe('Auto-save', () => {
       await page.goto(`/edit/${postId}`)
       await expect(page.getByRole('heading', { name: /edit post/i })).toBeVisible()
 
+      // Wait for existing content to load before editing
+      await waitForContentToLoad(page, 'Original draft content')
+
       // Edit the content
       await fillContent(page, 'Modified draft content via auto-save')
 
-      // Wait for auto-save
-      await page.waitForTimeout(3000)
+      // Wait for auto-save to complete by checking for "Saved" indicator
+      await expect(page.getByText(/saved/i)).toBeVisible({ timeout: 10000 })
 
       // Should still have exactly 1 post
       expect(await getPostCount(page)).toBe(1)
@@ -134,7 +137,7 @@ test.describe('Auto-save', () => {
       await page.getByRole('button', { name: 'Twitter' }).click()
       await fillContent(page, 'Platform switch test')
       await page.getByRole('button', { name: /save draft/i }).click()
-      await expect(page).toHaveURL('/')
+      await expect(page).toHaveURL('/dashboard')
 
       const originalPosts = await getAllPosts(page)
       const postId = originalPosts[0].id
@@ -142,10 +145,11 @@ test.describe('Auto-save', () => {
 
       // Edit and switch to LinkedIn (with confirmation dialog)
       await page.goto(`/edit/${postId}`)
+      await waitForContentToLoad(page, 'Platform switch test')
       await switchPlatformWithConfirm(page, 'linkedin')
 
-      // Wait for auto-save
-      await page.waitForTimeout(3000)
+      // Wait for auto-save to complete by checking for "Saved" indicator
+      await expect(page.getByText(/saved/i)).toBeVisible({ timeout: 10000 })
 
       // Verify platform was switched to LinkedIn
       const updatedPosts = await getAllPosts(page)
@@ -160,7 +164,7 @@ test.describe('Auto-save', () => {
       await page.getByRole('button', { name: 'Twitter' }).click()
       await fillContent(page, 'No changes test')
       await page.getByRole('button', { name: /save draft/i }).click()
-      await expect(page).toHaveURL('/')
+      await expect(page).toHaveURL('/dashboard')
 
       const originalPosts = await getAllPosts(page)
       const postId = originalPosts[0].id
@@ -170,15 +174,18 @@ test.describe('Auto-save', () => {
       await page.goto(`/edit/${postId}`)
       await expect(page.getByRole('heading', { name: /edit post/i })).toBeVisible()
 
-      // Wait longer than auto-save delay
-      await page.waitForTimeout(4000)
+      // Wait for content to load before checking auto-save behavior
+      await waitForContentToLoad(page, 'No changes test')
+
+      // Wait longer than auto-save delay (5s to be safe in CI)
+      await page.waitForTimeout(5000)
 
       // updatedAt should not have changed (no unnecessary saves)
       const currentPosts = await getAllPosts(page)
       expect(currentPosts[0].updatedAt).toBe(originalUpdatedAt)
     })
 
-    test('should auto-save scheduled post as scheduled (not convert to draft)', async ({ page }) => {
+    test('should keep scheduled status when editing and saving a scheduled post', async ({ page }) => {
       // Create a scheduled post
       await page.goto('/new')
       await page.getByRole('button', { name: 'Twitter' }).click()
@@ -193,7 +200,7 @@ test.describe('Auto-save', () => {
 
       // Schedule the post
       await page.getByRole('button', { name: /^schedule$/i }).click()
-      await expect(page).toHaveURL('/')
+      await expect(page).toHaveURL('/dashboard')
 
       const originalPosts = await getAllPosts(page)
       expect(originalPosts[0].status).toBe('scheduled')
@@ -201,15 +208,19 @@ test.describe('Auto-save', () => {
 
       // Edit the scheduled post
       await page.goto(`/edit/${postId}`)
+      await waitForContentToLoad(page, 'Scheduled post')
       await fillContent(page, 'Updated scheduled post content')
 
-      // Wait for potential auto-save
-      await page.waitForTimeout(3000)
+      // Note: Auto-save is disabled for scheduled posts (only works for drafts)
+      // Save manually by clicking "Update Schedule"
+      await page.getByRole('button', { name: /schedule/i }).click()
+      await expect(page).toHaveURL('/dashboard')
 
       // Post should remain scheduled (not converted to draft)
       const updatedPosts = await getAllPosts(page)
       expect(updatedPosts[0].status).toBe('scheduled')
       expect(updatedPosts[0].scheduledAt).toBeTruthy()
+      expect((updatedPosts[0].content as { text: string }).text).toBe('Updated scheduled post content')
     })
   })
 })

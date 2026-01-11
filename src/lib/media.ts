@@ -162,5 +162,6 @@ export async function deleteMedia(filename: string): Promise<boolean> {
  * @returns The full URL to access the media
  */
 export function getMediaUrl(filename: string): string {
-  return `${API_BASE}/media/${filename}`
+  // Files are stored in public/uploads and served directly by Next.js
+  return `/uploads/${filename}`
 }

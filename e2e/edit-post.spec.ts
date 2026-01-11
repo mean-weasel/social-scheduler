@@ -12,6 +12,7 @@ import {
   setSchedule,
   generateTestId,
   uniqueContent,
+  waitForContentToLoad,
 } from './helpers'
 
 test.describe('Edit Post', () => {
@@ -55,6 +56,9 @@ test.describe('Edit Post', () => {
 
       await goToPosts(page)
       await clickPost(page, 0)
+
+      // Wait for original content to load
+      await waitForContentToLoad(page, 'Original content')
 
       // Edit the content
       const newContent = 'Updated content from E2E test!'
@@ -184,6 +188,9 @@ test.describe('Edit Post', () => {
       await goToPosts(page)
       await clickPost(page, 0)
 
+      // Wait for original content to load
+      await waitForContentToLoad(page, 'Original')
+
       // Type some content
       const originalContent = 'Content that should persist'
       await fillContent(page, originalContent)
@@ -201,6 +208,9 @@ test.describe('Edit Post', () => {
 
       await goToPosts(page)
       await clickPost(page, 0)
+
+      // Wait for original content to load
+      await waitForContentToLoad(page, 'Original')
 
       // Make a change
       await fillContent(page, 'Modified content')

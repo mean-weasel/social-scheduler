@@ -218,6 +218,7 @@ export default function EditorPage() {
     },
     delay: 2000,
     enabled: (post.status === 'draft' || isNew) && !(isNew && hasMultipleSubreddits),
+    skipInitialChange: !isNew, // Skip first change for existing posts (async data loading)
   })
 
   // Load existing post data into form
@@ -1313,8 +1314,7 @@ export default function EditorPage() {
                   return { ...prev, scheduledAt: localDate.toISOString() }
                 })
               }
-              className="absolute opacity-0"
-              tabIndex={-1}
+              className="mt-2 w-full px-3 py-2 rounded-lg bg-card border border-border text-sm"
             />
           </div>
           <div>
@@ -1351,8 +1351,7 @@ export default function EditorPage() {
                   return { ...prev, scheduledAt: localDate.toISOString() }
                 })
               }
-              className="absolute opacity-0"
-              tabIndex={-1}
+              className="mt-2 w-full px-3 py-2 rounded-lg bg-card border border-border text-sm"
             />
           </div>
         </div>

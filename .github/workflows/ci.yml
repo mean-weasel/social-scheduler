@@ -110,11 +110,21 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install API server dependencies
-        run: cd api-server && npm ci
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
 
-      - name: Build API server
-        run: npm run api:build
+      - name: Start Supabase
+        run: |
+          supabase start
+          # Export keys to environment
+          echo "NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321" >> $GITHUB_ENV
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$(supabase status -o json | jq -r '.ANON_KEY')" >> $GITHUB_ENV
+          echo "SUPABASE_SERVICE_ROLE_KEY=$(supabase status -o json | jq -r '.SERVICE_ROLE_KEY')" >> $GITHUB_ENV
+
+      - name: Run migrations
+        run: supabase db push --local
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
@@ -123,6 +133,7 @@ jobs:
         run: npx playwright test --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
         env:
           CI: true
+          E2E_TEST_MODE: 'true'
 
       - name: Upload Playwright report
         uses: actions/upload-artifact@v4

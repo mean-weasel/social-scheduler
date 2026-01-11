@@ -13,6 +13,7 @@ import {
   filterByStatus,
   getPostCards,
   switchPlatformWithConfirm,
+  waitForContentToLoad,
 } from './helpers'
 
 /**
@@ -32,7 +33,7 @@ test.describe('Database State Verification', () => {
       await page.getByRole('button', { name: 'Twitter' }).click()
       await fillContent(page, 'Twitter draft content')
       await page.getByRole('button', { name: /save draft/i }).click()
-      await expect(page).toHaveURL('/')
+      await expect(page).toHaveURL('/dashboard')
 
       // Verify exactly 1 post in database
       expect(await getPostCount(page)).toBe(1)
@@ -50,7 +51,7 @@ test.describe('Database State Verification', () => {
       await page.getByRole('button', { name: 'LinkedIn' }).click()
       await fillContent(page, 'LinkedIn draft content')
       await page.getByRole('button', { name: /save draft/i }).click()
-      await expect(page).toHaveURL('/')
+      await expect(page).toHaveURL('/dashboard')
 
       expect(await getPostCount(page)).toBe(1)
 
@@ -67,7 +68,7 @@ test.describe('Database State Verification', () => {
       await fillContent(page, 'Reddit draft content')
       await fillRedditFields(page, { subreddit: 'test', title: 'Test Title' })
       await page.getByRole('button', { name: /save draft/i }).click()
-      await expect(page).toHaveURL('/')
+      await expect(page).toHaveURL('/dashboard')
 
       expect(await getPostCount(page)).toBe(1)
 
@@ -91,7 +92,7 @@ test.describe('Database State Verification', () => {
       await setSchedule(page, tomorrow)
 
       await page.getByRole('button', { name: /^schedule$/i }).click()
-      await expect(page).toHaveURL('/')
+      await expect(page).toHaveURL('/dashboard')
 
       expect(await getPostCount(page)).toBe(1)
 
@@ -113,9 +114,10 @@ test.describe('Database State Verification', () => {
 
       // Edit the post
       await page.goto(`/edit/${postId}`)
+      await waitForContentToLoad(page, 'Original content')
       await fillContent(page, 'Updated content')
       await page.getByRole('button', { name: /save draft/i }).click()
-      await expect(page).toHaveURL('/')
+      await expect(page).toHaveURL('/dashboard')
 
       // Should still have exactly 1 post
       expect(await getPostCount(page)).toBe(1)
@@ -134,9 +136,10 @@ test.describe('Database State Verification', () => {
 
       // Edit and switch platform (with confirmation dialog)
       await page.goto(`/edit/${postId}`)
+      await waitForContentToLoad(page, 'Platform test')
       await switchPlatformWithConfirm(page, 'linkedin')
       await page.getByRole('button', { name: /save draft/i }).click()
-      await expect(page).toHaveURL('/')
+      await expect(page).toHaveURL('/dashboard')
 
       // Should still have exactly 1 post
       expect(await getPostCount(page)).toBe(1)
@@ -155,11 +158,12 @@ test.describe('Database State Verification', () => {
 
       // Edit and add schedule
       await page.goto(`/edit/${postId}`)
+      await waitForContentToLoad(page, 'Draft to schedule')
       const tomorrow = new Date()
       tomorrow.setDate(tomorrow.getDate() + 1)
       await setSchedule(page, tomorrow)
       await page.getByRole('button', { name: /^schedule$/i }).click()
-      await expect(page).toHaveURL('/')
+      await expect(page).toHaveURL('/dashboard')
 
       // Should still have exactly 1 post
       expect(await getPostCount(page)).toBe(1)
@@ -204,6 +208,7 @@ test.describe('Database State Verification', () => {
 
       // Archive the LinkedIn post
       await page.goto(`/edit/${postToDeleteId}`)
+      await waitForContentToLoad(page, 'Post to delete')
       await archivePost(page)
 
       // Delete the archived post
@@ -233,6 +238,7 @@ test.describe('Database State Verification', () => {
 
       // Archive the post
       await page.goto(`/edit/${postId}`)
+      await waitForContentToLoad(page, 'Post to archive')
       await archivePost(page)
 
       // Should still have exactly 1 post
@@ -251,6 +257,7 @@ test.describe('Database State Verification', () => {
 
       // Archive the post
       await page.goto(`/edit/${postId}`)
+      await waitForContentToLoad(page, 'Post to restore')
       await archivePost(page)
 
       // Restore the post

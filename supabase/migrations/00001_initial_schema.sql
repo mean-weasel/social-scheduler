@@ -1,9 +1,6 @@
--- Enable UUID extension
-create extension if not exists "uuid-ossp";
-
 -- Posts table
 create table posts (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users(id) on delete cascade,
   created_at timestamptz default now(),
   updated_at timestamptz default now(),
@@ -20,7 +17,7 @@ create table posts (
 
 -- Campaigns table
 create table campaigns (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users(id) on delete cascade,
   name text not null,
   description text,
@@ -31,7 +28,7 @@ create table campaigns (
 
 -- Blog drafts table
 create table blog_drafts (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   user_id uuid references auth.users(id) on delete cascade,
   created_at timestamptz default now(),
   updated_at timestamptz default now(),

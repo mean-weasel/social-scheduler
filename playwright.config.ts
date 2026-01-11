@@ -1,17 +1,18 @@
 import { defineConfig, devices } from '@playwright/test'
-import { config } from './config/index.js'
+import * as dotenv from 'dotenv'
+import * as path from 'path'
 
-const PORT = process.env.TEST_PORT || config.test.port
-const API_PORT = config.api.port
+// Load environment variables from .env.local
+dotenv.config({ path: path.resolve(process.cwd(), '.env.local') })
+
+// Use port 3000 for Next.js (default) or TEST_PORT if specified
+const PORT = process.env.TEST_PORT || 3000
 
 export default defineConfig({
   testDir: './e2e',
-  // Disable parallel tests within files - tests share SQLite database
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  // Use 1 worker to avoid database race conditions with shared SQLite
-  // Sharding still provides parallelism across CI jobs
   workers: 1,
   reporter: 'html',
   use: {
@@ -25,18 +26,16 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
   ],
-  webServer: [
-    {
-      command: 'npm run api:start',
-      url: `http://localhost:${API_PORT}/api/posts`,
-      reuseExistingServer: !process.env.CI,
-      timeout: 30 * 1000,
+  webServer: {
+    command: `E2E_TEST_MODE=true npm run dev:next -- --port ${PORT}`,
+    url: `http://localhost:${PORT}`,
+    reuseExistingServer: !process.env.CI,
+    timeout: 120 * 1000,
+    env: {
+      E2E_TEST_MODE: 'true',
+      NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
+      SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
     },
-    {
-      command: `npm run dev -- --port ${PORT}`,
-      url: `http://localhost:${PORT}`,
-      reuseExistingServer: !process.env.CI,
-      timeout: 120 * 1000,
-    },
-  ],
+  },
 })

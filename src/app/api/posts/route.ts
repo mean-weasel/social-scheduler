@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { transformPostFromDb } from '@/lib/utils'
 
 // GET /api/posts - List posts with optional filters
 export async function GET(request: NextRequest) {
@@ -40,7 +41,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({ posts: data })
+    // Transform posts from snake_case to camelCase
+    const posts = (data || []).map(post => transformPostFromDb(post as Record<string, unknown>))
+    return NextResponse.json({ posts })
   } catch (error) {
     console.error('Error fetching posts:', error)
     return NextResponse.json({ error: 'Failed to fetch posts' }, { status: 500 })
@@ -53,12 +56,18 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient()
     const body = await request.json()
 
-    const { data: { user } } = await supabase.auth.getUser()
+    // In E2E test mode, skip user lookup since we bypass auth
+    // user_id is nullable, so we can leave it null for test posts
+    let userId: string | null = null
+    if (process.env.E2E_TEST_MODE !== 'true') {
+      const { data: { user } } = await supabase.auth.getUser()
+      userId = user?.id || null
+    }
 
     const { data, error } = await supabase
       .from('posts')
       .insert({
-        user_id: user?.id,
+        user_id: userId,
         platform: body.platform,
         content: body.content,
         status: body.status || 'draft',
@@ -75,7 +84,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({ post: data }, { status: 201 })
+    // Transform post from snake_case to camelCase
+    const post = transformPostFromDb(data as Record<string, unknown>)
+    return NextResponse.json({ post }, { status: 201 })
   } catch (error) {
     console.error('Error creating post:', error)
     return NextResponse.json({ error: 'Failed to create post' }, { status: 500 })

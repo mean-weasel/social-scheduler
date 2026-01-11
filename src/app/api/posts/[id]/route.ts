@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { transformPostFromDb } from '@/lib/utils'
 
 // Valid status transitions
 const validTransitions: Record<string, string[]> = {
@@ -32,7 +33,9 @@ export async function GET(
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({ post: data })
+    // Transform post from snake_case to camelCase
+    const post = transformPostFromDb(data as Record<string, unknown>)
+    return NextResponse.json({ post })
   } catch (error) {
     console.error('Error fetching post:', error)
     return NextResponse.json({ error: 'Failed to fetch post' }, { status: 500 })
@@ -107,7 +110,9 @@ export async function PATCH(
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({ post: data })
+    // Transform post from snake_case to camelCase
+    const post = transformPostFromDb(data as Record<string, unknown>)
+    return NextResponse.json({ post })
   } catch (error) {
     console.error('Error updating post:', error)
     return NextResponse.json({ error: 'Failed to update post' }, { status: 500 })
