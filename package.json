@@ -48,7 +48,6 @@
     "@vitejs/plugin-react": "^4.2.1",
     "@vitest/coverage-v8": "^4.0.16",
     "autoprefixer": "^10.4.17",
-    "concurrently": "^9.2.1",
     "dotenv": "^17.2.3",
     "eslint": "^8.56.0",
     "eslint-plugin-react-hooks": "^4.6.0",
@@ -56,14 +55,12 @@
     "gh-pages": "^6.3.0",
     "jsdom": "^27.4.0",
     "knip": "^5.79.0",
-    "local-cors-proxy": "^1.1.0",
     "postcss": "^8.4.33",
     "prettier": "^3.7.4",
     "tailwindcss": "^3.4.1",
     "tsx": "^4.7.0",
     "typescript": "^5.3.3",
     "vite": "^5.0.12",
-    "vite-plugin-pwa": "^1.2.0",
     "vitest": "^4.0.16"
   }
 }
