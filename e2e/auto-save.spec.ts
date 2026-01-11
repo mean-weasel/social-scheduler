@@ -86,12 +86,12 @@ test.describe('Auto-save', () => {
       // Type content
       await fillContent(page, 'Test for indicator')
 
-      // Wait for "Saved" indicator to appear (shown during and immediately after auto-save)
-      // The indicator only shows for ~2s before hiding, so we wait for it first
-      await expect(page.getByText(/saved/i)).toBeVisible({ timeout: 10000 })
+      // First wait for URL to change - this confirms auto-save completed and created the post
+      // The URL change is the most reliable indicator that auto-save worked
+      await expect(page).toHaveURL(/\/edit\/[a-f0-9-]+/, { timeout: 10000 })
 
-      // URL should also have changed to /edit/:id by now
-      await expect(page).toHaveURL(/\/edit\/[a-f0-9-]+/, { timeout: 5000 })
+      // The "Saved" indicator should still be visible (shows for 5 seconds after save)
+      await expect(page.getByText(/saved/i)).toBeVisible({ timeout: 5000 })
     })
   })
 
