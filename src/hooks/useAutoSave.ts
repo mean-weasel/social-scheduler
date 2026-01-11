@@ -28,8 +28,8 @@ export function useAutoSave({
     try {
       await onSave()
       setStatus('saved')
-      // Reset to idle after 2 seconds
-      setTimeout(() => setStatus('idle'), 2000)
+      // Reset to idle after 5 seconds (longer window for E2E tests to catch)
+      setTimeout(() => setStatus('idle'), 5000)
     } catch {
       setStatus('error')
     }
