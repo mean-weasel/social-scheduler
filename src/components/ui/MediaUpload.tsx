@@ -53,37 +53,7 @@ export function MediaUpload({
     setIsDragging(false)
   }, [])
 
-  const handleDrop = useCallback(
-    async (e: React.DragEvent) => {
-      e.preventDefault()
-      e.stopPropagation()
-      setIsDragging(false)
-
-      if (!canAddMore) return
-
-      const files = Array.from(e.dataTransfer.files)
-      if (files.length > 0) {
-        await handleFileUpload(files[0])
-      }
-    },
-    [canAddMore]
-  )
-
-  const handleFileSelect = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const files = e.target.files
-      if (files && files.length > 0) {
-        await handleFileUpload(files[0])
-      }
-      // Reset input so same file can be selected again
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ''
-      }
-    },
-    []
-  )
-
-  const handleFileUpload = async (file: File) => {
+  const handleFileUpload = useCallback(async (file: File) => {
     setError(null)
 
     // Validate file
@@ -110,7 +80,37 @@ export function MediaUpload({
     } else {
       setError(result.error || 'Upload failed')
     }
-  }
+  }, [existingMedia, onMediaChange])
+
+  const handleDrop = useCallback(
+    async (e: React.DragEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      setIsDragging(false)
+
+      if (!canAddMore) return
+
+      const files = Array.from(e.dataTransfer.files)
+      if (files.length > 0) {
+        await handleFileUpload(files[0])
+      }
+    },
+    [canAddMore, handleFileUpload]
+  )
+
+  const handleFileSelect = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = e.target.files
+      if (files && files.length > 0) {
+        await handleFileUpload(files[0])
+      }
+      // Reset input so same file can be selected again
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    },
+    [handleFileUpload]
+  )
 
   const handleRemove = async (index: number) => {
     const filename = existingMedia[index]
