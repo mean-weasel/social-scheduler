@@ -153,6 +153,12 @@ db-seed: ## Seed local database with test data
 		echo "$(YELLOW)No seed file found at supabase/seed.sql$(RESET)"; \
 	fi
 
+db-migrate-sqlite: ## Migrate data from SQLite to Supabase
+	@echo "$(BLUE)Migrating SQLite data to Supabase...$(RESET)"
+	@SUPABASE_URL=http://127.0.0.1:54321 \
+		SUPABASE_SERVICE_ROLE_KEY=$$(supabase status --output json 2>/dev/null | grep -o '"service_role_key":"[^"]*"' | cut -d'"' -f4) \
+		npx tsx scripts/migrate-sqlite-to-supabase.ts
+
 # =============================================================================
 # Build & Deploy
 # =============================================================================
