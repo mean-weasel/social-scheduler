@@ -218,6 +218,7 @@ export default function EditorPage() {
     },
     delay: 2000,
     enabled: (post.status === 'draft' || isNew) && !(isNew && hasMultipleSubreddits),
+    skipInitialChange: !isNew, // Skip first change for existing posts (async data loading)
   })
 
   // Load existing post data into form
