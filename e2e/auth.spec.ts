@@ -1,0 +1,167 @@
+import { test, expect } from '@playwright/test'
+
+test.describe('Authentication', () => {
+  test.describe('Login Page', () => {
+    test.beforeEach(async ({ page }) => {
+      await page.goto('/login')
+    })
+
+    test('should display login page with all elements', async ({ page }) => {
+      // Check heading
+      await expect(page.getByRole('heading', { name: 'Social Scheduler' })).toBeVisible()
+      await expect(page.getByText('Sign in to manage your social posts')).toBeVisible()
+
+      // Check email/password form
+      await expect(page.getByLabel('Email')).toBeVisible()
+      await expect(page.getByLabel('Password')).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Sign in' })).toBeVisible()
+
+      // Check Google OAuth button
+      await expect(page.getByRole('button', { name: /continue with google/i })).toBeVisible()
+
+      // Check sign up link
+      await expect(page.getByText("Don't have an account?")).toBeVisible()
+      await expect(page.getByRole('link', { name: 'Sign up' })).toBeVisible()
+    })
+
+    test('should show error for invalid credentials', async ({ page }) => {
+      // Fill in form with invalid credentials
+      await page.getByLabel('Email').fill('invalid@example.com')
+      await page.getByLabel('Password').fill('wrongpassword')
+
+      // Submit form
+      await page.getByRole('button', { name: 'Sign in' }).click()
+
+      // Wait for error message (Supabase returns "Invalid login credentials")
+      await expect(page.getByText(/invalid|error|failed/i)).toBeVisible({ timeout: 10000 })
+    })
+
+    test('should require email field', async ({ page }) => {
+      // Try to submit with only password
+      await page.getByLabel('Password').fill('somepassword')
+      await page.getByRole('button', { name: 'Sign in' }).click()
+
+      // Email field should show validation error (HTML5 validation)
+      const emailInput = page.getByLabel('Email')
+      await expect(emailInput).toHaveAttribute('required', '')
+    })
+
+    test('should require password field', async ({ page }) => {
+      // Try to submit with only email
+      await page.getByLabel('Email').fill('test@example.com')
+      await page.getByRole('button', { name: 'Sign in' }).click()
+
+      // Password field should have required attribute
+      const passwordInput = page.getByLabel('Password')
+      await expect(passwordInput).toHaveAttribute('required', '')
+    })
+
+    test('should navigate to signup page', async ({ page }) => {
+      await page.getByRole('link', { name: 'Sign up' }).click()
+      await expect(page).toHaveURL('/signup')
+    })
+
+    test('should show loading state when signing in', async ({ page }) => {
+      await page.getByLabel('Email').fill('test@example.com')
+      await page.getByLabel('Password').fill('password123')
+
+      // Click and immediately check for loading state
+      const signInButton = page.getByRole('button', { name: 'Sign in' })
+      await signInButton.click()
+
+      // Should show loading text briefly
+      await expect(page.getByRole('button', { name: 'Signing in...' })).toBeVisible()
+    })
+  })
+
+  test.describe('Signup Page', () => {
+    test.beforeEach(async ({ page }) => {
+      await page.goto('/signup')
+    })
+
+    test('should display signup page with all elements', async ({ page }) => {
+      // Check heading
+      await expect(page.getByRole('heading', { name: 'Create an account' })).toBeVisible()
+      await expect(page.getByText('Get started with Social Scheduler')).toBeVisible()
+
+      // Check form fields
+      await expect(page.getByLabel('Email')).toBeVisible()
+      await expect(page.getByLabel('Password', { exact: true })).toBeVisible()
+      await expect(page.getByLabel('Confirm Password')).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Create account' })).toBeVisible()
+
+      // Check Google OAuth button
+      await expect(page.getByRole('button', { name: /continue with google/i })).toBeVisible()
+
+      // Check login link
+      await expect(page.getByText('Already have an account?')).toBeVisible()
+      await expect(page.getByRole('link', { name: 'Sign in' })).toBeVisible()
+    })
+
+    test('should show error when passwords do not match', async ({ page }) => {
+      await page.getByLabel('Email').fill('newuser@example.com')
+      await page.getByLabel('Password', { exact: true }).fill('password123')
+      await page.getByLabel('Confirm Password').fill('differentpassword')
+
+      await page.getByRole('button', { name: 'Create account' }).click()
+
+      await expect(page.getByText('Passwords do not match')).toBeVisible()
+    })
+
+    test('should have password minimum length validation via HTML5', async ({ page }) => {
+      // Verify HTML5 minLength attribute is set for browser validation
+      const passwordInput = page.getByLabel('Password', { exact: true })
+      const confirmInput = page.getByLabel('Confirm Password')
+
+      await expect(passwordInput).toHaveAttribute('minLength', '6')
+      await expect(confirmInput).toHaveAttribute('minLength', '6')
+    })
+
+    test('should require all fields via HTML5', async ({ page }) => {
+      // Check that all fields have required attribute for browser validation
+      await expect(page.getByLabel('Email')).toHaveAttribute('required', '')
+      await expect(page.getByLabel('Password', { exact: true })).toHaveAttribute('required', '')
+      await expect(page.getByLabel('Confirm Password')).toHaveAttribute('required', '')
+    })
+
+    test('should navigate to login page', async ({ page }) => {
+      await page.getByRole('link', { name: 'Sign in' }).click()
+      await expect(page).toHaveURL('/login')
+    })
+
+    test('should show loading state when creating account', async ({ page }) => {
+      await page.getByLabel('Email').fill('newuser@example.com')
+      await page.getByLabel('Password', { exact: true }).fill('password123')
+      await page.getByLabel('Confirm Password').fill('password123')
+
+      const createButton = page.getByRole('button', { name: 'Create account' })
+      await createButton.click()
+
+      // Should show loading text briefly
+      await expect(page.getByRole('button', { name: 'Creating account...' })).toBeVisible()
+    })
+
+    test('should validate email format via HTML5', async ({ page }) => {
+      const emailInput = page.getByLabel('Email')
+      await expect(emailInput).toHaveAttribute('type', 'email')
+    })
+  })
+
+  test.describe('Navigation between auth pages', () => {
+    test('should navigate from login to signup and back', async ({ page }) => {
+      // Start at login
+      await page.goto('/login')
+      await expect(page.getByRole('heading', { name: 'Social Scheduler' })).toBeVisible()
+
+      // Go to signup
+      await page.getByRole('link', { name: 'Sign up' }).click()
+      await expect(page).toHaveURL('/signup')
+      await expect(page.getByRole('heading', { name: 'Create an account' })).toBeVisible()
+
+      // Go back to login
+      await page.getByRole('link', { name: 'Sign in' }).click()
+      await expect(page).toHaveURL('/login')
+      await expect(page.getByRole('heading', { name: 'Social Scheduler' })).toBeVisible()
+    })
+  })
+})
