@@ -17,8 +17,6 @@ const nextConfig = {
     ],
   },
 
-  // Note: src/pages contains the old Vite app components
-  // Next.js App Router in src/app takes precedence for routing
 }
 
 export default nextConfig
