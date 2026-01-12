@@ -10,8 +10,14 @@ import {
   FolderOpen,
   FileText,
 } from 'lucide-react'
+import { UserMenu } from './UserMenu'
 
-export function AppHeader() {
+interface AppHeaderProps {
+  userEmail?: string
+  userDisplayName?: string | null
+}
+
+export function AppHeader({ userEmail, userDisplayName }: AppHeaderProps) {
   const pathname = usePathname()
   const isEditorPage = pathname?.startsWith('/new') || pathname?.startsWith('/edit') || pathname?.startsWith('/blog/new') || pathname?.startsWith('/blog/edit')
 
@@ -80,13 +86,25 @@ export function AppHeader() {
           >
             <Settings className="w-5 h-5" />
           </Link>
-          <div className="ml-2 w-8 h-8 rounded-full bg-gradient-to-br from-[hsl(var(--gold))] to-[hsl(var(--gold-dark))] flex items-center justify-center text-xs font-semibold text-white">
-            U
+          <div className="ml-2">
+            {userEmail ? (
+              <UserMenu email={userEmail} displayName={userDisplayName} />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[hsl(var(--gold))] to-[hsl(var(--gold-dark))] flex items-center justify-center text-xs font-semibold text-white">
+                U
+              </div>
+            )}
           </div>
         </div>
         {/* Mobile user avatar only */}
-        <div className="md:hidden w-8 h-8 rounded-full bg-gradient-to-br from-[hsl(var(--gold))] to-[hsl(var(--gold-dark))] flex items-center justify-center text-xs font-semibold text-white">
-          U
+        <div className="md:hidden">
+          {userEmail ? (
+            <UserMenu email={userEmail} displayName={userDisplayName} />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[hsl(var(--gold))] to-[hsl(var(--gold-dark))] flex items-center justify-center text-xs font-semibold text-white">
+              U
+            </div>
+          )}
         </div>
       </div>
       {/* Gold accent line under header */}
