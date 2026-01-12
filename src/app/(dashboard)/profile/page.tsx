@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Check, AlertCircle, Trash2, Eye, EyeOff } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { getInitials, UserProfile } from '@/lib/profile'
+import { getInitials } from '@/lib/profile'
 import { createClient } from '@/lib/supabase/client'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 
@@ -19,10 +19,8 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true)
 
   // Password change
-  const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
@@ -129,7 +127,6 @@ export default function ProfilePage() {
 
       if (error) throw error
 
-      setCurrentPassword('')
       setNewPassword('')
       setConfirmPassword('')
       setPasswordSuccess('Password updated successfully')

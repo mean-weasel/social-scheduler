@@ -1,19 +1,5 @@
 // User profile type definitions and utilities
 
-export interface UserProfile {
-  id: string
-  display_name: string | null
-  avatar_url: string | null
-  created_at: string
-  updated_at: string
-}
-
-export interface UserData {
-  id: string
-  email: string
-  profile: UserProfile | null
-}
-
 /**
  * Get initials for avatar display
  * Prioritizes display_name, falls back to email, then 'U'
