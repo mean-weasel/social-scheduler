@@ -61,6 +61,15 @@ test.describe('Authentication', () => {
       await expect(page).toHaveURL('/signup')
     })
 
+    test('should have forgot password link', async ({ page }) => {
+      await expect(page.getByRole('link', { name: 'Forgot password?' })).toBeVisible()
+    })
+
+    test('should navigate to forgot password page', async ({ page }) => {
+      await page.getByRole('link', { name: 'Forgot password?' }).click()
+      await expect(page).toHaveURL('/forgot-password')
+    })
+
     test('should show loading state when signing in', async ({ page }) => {
       await page.getByLabel('Email').fill('test@example.com')
       await page.getByLabel('Password').fill('password123')
@@ -147,6 +156,65 @@ test.describe('Authentication', () => {
     })
   })
 
+  test.describe('Forgot Password Page', () => {
+    test.beforeEach(async ({ page }) => {
+      await page.goto('/forgot-password')
+    })
+
+    test('should display forgot password page with all elements', async ({ page }) => {
+      // Check heading
+      await expect(page.getByRole('heading', { name: 'Reset your password' })).toBeVisible()
+      await expect(page.getByText("Enter your email and we'll send you a reset link")).toBeVisible()
+
+      // Check form
+      await expect(page.getByLabel('Email')).toBeVisible()
+      await expect(page.getByRole('button', { name: 'Send reset link' })).toBeVisible()
+
+      // Check login link
+      await expect(page.getByText('Remember your password?')).toBeVisible()
+      await expect(page.getByRole('link', { name: 'Sign in' })).toBeVisible()
+    })
+
+    test('should require email field', async ({ page }) => {
+      const emailInput = page.getByLabel('Email')
+      await expect(emailInput).toHaveAttribute('required', '')
+      await expect(emailInput).toHaveAttribute('type', 'email')
+    })
+
+    test('should show loading state when sending reset link', async ({ page }) => {
+      await page.getByLabel('Email').fill('test@example.com')
+
+      const submitButton = page.getByRole('button', { name: 'Send reset link' })
+      await submitButton.click()
+
+      // Should show loading text briefly
+      await expect(page.getByRole('button', { name: 'Sending...' })).toBeVisible()
+    })
+
+    test('should navigate back to login page', async ({ page }) => {
+      await page.getByRole('link', { name: 'Sign in' }).click()
+      await expect(page).toHaveURL('/login')
+    })
+  })
+
+  test.describe('Reset Password Page', () => {
+    test.beforeEach(async ({ page }) => {
+      await page.goto('/reset-password')
+    })
+
+    test('should show invalid/expired link message when accessed directly', async ({ page }) => {
+      // When accessed without a valid recovery session, should show error
+      await expect(page.getByText(/invalid or expired link/i)).toBeVisible({ timeout: 10000 })
+      await expect(page.getByRole('link', { name: 'Request new reset link' })).toBeVisible()
+    })
+
+    test('should navigate to forgot password from invalid session', async ({ page }) => {
+      await expect(page.getByText(/invalid or expired link/i)).toBeVisible({ timeout: 10000 })
+      await page.getByRole('link', { name: 'Request new reset link' }).click()
+      await expect(page).toHaveURL('/forgot-password')
+    })
+  })
+
   test.describe('Navigation between auth pages', () => {
     test('should navigate from login to signup and back', async ({ page }) => {
       // Start at login
@@ -162,6 +230,20 @@ test.describe('Authentication', () => {
       await page.getByRole('link', { name: 'Sign in' }).click()
       await expect(page).toHaveURL('/login')
       await expect(page.getByRole('heading', { name: 'Social Scheduler' })).toBeVisible()
+    })
+
+    test('should navigate through forgot password flow', async ({ page }) => {
+      // Start at login
+      await page.goto('/login')
+
+      // Go to forgot password
+      await page.getByRole('link', { name: 'Forgot password?' }).click()
+      await expect(page).toHaveURL('/forgot-password')
+      await expect(page.getByRole('heading', { name: 'Reset your password' })).toBeVisible()
+
+      // Go back to login
+      await page.getByRole('link', { name: 'Sign in' }).click()
+      await expect(page).toHaveURL('/login')
     })
   })
 })
