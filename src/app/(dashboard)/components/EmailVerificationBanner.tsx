@@ -1,0 +1,122 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { Mail, X, RefreshCw, CheckCircle } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { createClient } from '@/lib/supabase/client'
+
+interface EmailVerificationBannerProps {
+  email: string
+}
+
+export function EmailVerificationBanner({ email }: EmailVerificationBannerProps) {
+  const [dismissed, setDismissed] = useState(false)
+  const [resending, setResending] = useState(false)
+  const [resendSuccess, setResendSuccess] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // Check sessionStorage for dismissed state
+  useEffect(() => {
+    const isDismissed = sessionStorage.getItem('email-verification-dismissed')
+    if (isDismissed === 'true') {
+      setDismissed(true)
+    }
+  }, [])
+
+  const handleDismiss = () => {
+    setDismissed(true)
+    sessionStorage.setItem('email-verification-dismissed', 'true')
+  }
+
+  const handleResend = async () => {
+    setResending(true)
+    setError(null)
+
+    try {
+      const supabase = createClient()
+      const { error: resendError } = await supabase.auth.resend({
+        type: 'signup',
+        email: email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`
+        }
+      })
+
+      if (resendError) {
+        // Handle rate limiting
+        if (resendError.message.includes('rate') || resendError.message.includes('limit')) {
+          setError('Please wait a moment before requesting another email.')
+        } else {
+          setError(resendError.message)
+        }
+        return
+      }
+
+      setResendSuccess(true)
+      // Auto-dismiss success after 5 seconds
+      setTimeout(() => {
+        setResendSuccess(false)
+      }, 5000)
+    } catch (err) {
+      setError('Failed to send verification email. Please try again.')
+    } finally {
+      setResending(false)
+    }
+  }
+
+  // Show resend success banner
+  if (resendSuccess) {
+    return (
+      <div className="flex items-center gap-3 px-4 py-3 bg-green-500/10 text-green-600 dark:text-green-500 border-b border-green-500/20">
+        <CheckCircle className="w-5 h-5 flex-shrink-0" />
+        <p className="flex-1 text-sm font-medium">Verification email sent! Check your inbox.</p>
+        <button
+          onClick={() => setResendSuccess(false)}
+          className="p-1 hover:bg-green-500/10 rounded transition-colors"
+          aria-label="Dismiss"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+    )
+  }
+
+  // Don't show if dismissed
+  if (dismissed) {
+    return null
+  }
+
+  return (
+    <div className="flex items-center gap-3 px-4 py-3 bg-yellow-500/10 text-yellow-700 dark:text-yellow-500 border-b border-yellow-500/20">
+      <Mail className="w-5 h-5 flex-shrink-0" />
+      <p className="flex-1 text-sm">
+        Please verify your email address to ensure account security.
+      </p>
+
+      {error && (
+        <span className="text-xs text-red-500">{error}</span>
+      )}
+
+      <button
+        onClick={handleResend}
+        disabled={resending}
+        className={cn(
+          'flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg',
+          'bg-yellow-500/20 hover:bg-yellow-500/30 transition-colors',
+          'disabled:opacity-50 disabled:cursor-not-allowed'
+        )}
+      >
+        <RefreshCw className={cn('w-3.5 h-3.5', resending && 'animate-spin')} />
+        {resending ? 'Sending...' : 'Resend'}
+      </button>
+
+      <button
+        onClick={handleDismiss}
+        className="p-1 hover:bg-yellow-500/20 rounded transition-colors"
+        aria-label="Dismiss"
+      >
+        <X className="w-4 h-4" />
+      </button>
+    </div>
+  )
+}

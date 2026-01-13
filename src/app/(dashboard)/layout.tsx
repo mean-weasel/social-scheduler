@@ -2,6 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { AppHeader, FloatingActionButton } from './components/AppHeader'
 import { BottomNav } from './components/BottomNav'
+import { EmailVerificationBanner } from './components/EmailVerificationBanner'
+import { VerificationSuccessBanner } from './components/VerificationSuccessBanner'
 
 export default async function DashboardLayout({
   children,
@@ -10,6 +12,8 @@ export default async function DashboardLayout({
 }) {
   let userEmail: string | undefined
   let userDisplayName: string | null | undefined
+  let isEmailVerified = true
+  let isOAuthUser = false
 
   // Skip auth check in E2E test mode
   if (process.env.E2E_TEST_MODE !== 'true') {
@@ -21,6 +25,8 @@ export default async function DashboardLayout({
     }
 
     userEmail = user.email
+    isEmailVerified = !!user.email_confirmed_at
+    isOAuthUser = user.app_metadata?.provider === 'google'
 
     // Fetch user profile for display name
     const { data: profile } = await supabase
@@ -35,6 +41,14 @@ export default async function DashboardLayout({
   return (
     <div className="min-h-screen flex flex-col">
       <AppHeader userEmail={userEmail} userDisplayName={userDisplayName} />
+
+      {/* Email verification success banner - always rendered to catch ?verified=true */}
+      <VerificationSuccessBanner />
+
+      {/* Email verification banner - shown for unverified non-OAuth users */}
+      {userEmail && !isEmailVerified && !isOAuthUser && (
+        <EmailVerificationBanner email={userEmail} />
+      )}
 
       {/* Main content - bottom padding for mobile nav */}
       <main className="flex-1 pb-20 md:pb-0">
