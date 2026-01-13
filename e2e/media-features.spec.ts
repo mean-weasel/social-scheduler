@@ -312,4 +312,94 @@ test.describe('Media Features', () => {
       await expect(page.locator('input[type="file"]').first()).toBeAttached()
     })
   })
+
+  test.describe('Multiple File Uploads', () => {
+    test('should allow uploading up to 4 images for Twitter', async ({ page }) => {
+      await goToNewPost(page)
+      await selectPlatform(page, 'twitter')
+      await fillContent(page, 'Post with multiple images')
+
+      // Open media section
+      await page.locator('button[title="Add media (images/videos)"]').click()
+
+      // Upload 4 images sequentially
+      const fileInput = page.locator('input[type="file"]').first()
+      for (let i = 0; i < 4; i++) {
+        await fileInput.setInputFiles(TEST_IMAGE_PATH)
+        await expect(page.locator(`img[alt="Media ${i + 1}"]`).first()).toBeVisible({ timeout: 10000 })
+      }
+
+      // Verify all 4 previews are visible
+      for (let i = 1; i <= 4; i++) {
+        await expect(page.locator(`img[alt="Media ${i}"]`).first()).toBeVisible()
+      }
+
+      // Close media section and verify count badge shows "4"
+      await page.locator('button[title="Add media (images/videos)"]').click()
+      const mediaButton = page.locator('button[title="Add media (images/videos)"]')
+      await expect(mediaButton).toContainText('4')
+    })
+
+    test('should hide upload zone when Twitter 4-image limit reached', async ({ page }) => {
+      await goToNewPost(page)
+      await selectPlatform(page, 'twitter')
+
+      // Open media section
+      await page.locator('button[title="Add media (images/videos)"]').click()
+
+      // Upload 4 images
+      const fileInput = page.locator('input[type="file"]').first()
+      for (let i = 0; i < 4; i++) {
+        await fileInput.setInputFiles(TEST_IMAGE_PATH)
+        await expect(page.locator(`img[alt="Media ${i + 1}"]`).first()).toBeVisible({ timeout: 10000 })
+      }
+
+      // The "Drag & drop" zone should be hidden after reaching limit
+      await expect(page.getByText('Drag & drop or click to upload')).not.toBeVisible()
+    })
+
+    test('should enforce single media limit for LinkedIn', async ({ page }) => {
+      await goToNewPost(page)
+      await selectPlatform(page, 'linkedin')
+      await fillContent(page, 'LinkedIn post with media')
+
+      // Open media section
+      await page.locator('button[title="Add media (images/videos)"]').click()
+
+      // Upload first image
+      const fileInput = page.locator('input[type="file"]').first()
+      await fileInput.setInputFiles(TEST_IMAGE_PATH)
+      await expect(page.locator('img[alt="Media 1"]').first()).toBeVisible({ timeout: 10000 })
+
+      // Upload zone should be hidden after first upload for LinkedIn (limit 1)
+      await expect(page.getByText('Drag & drop or click to upload')).not.toBeVisible()
+    })
+
+    test('should allow replacing media on LinkedIn after removal', async ({ page }) => {
+      await goToNewPost(page)
+      await selectPlatform(page, 'linkedin')
+
+      // Open media section
+      await page.locator('button[title="Add media (images/videos)"]').click()
+
+      // Upload first image
+      const fileInput = page.locator('input[type="file"]').first()
+      await fileInput.setInputFiles(TEST_IMAGE_PATH)
+      const mediaPreview = page.locator('img[alt="Media 1"]').first()
+      await expect(mediaPreview).toBeVisible({ timeout: 10000 })
+
+      // Remove the image
+      const mediaItem = page.locator('.relative.group').first()
+      await mediaItem.hover()
+      await mediaItem.locator('button').click()
+
+      // Image should be removed and upload zone visible again
+      await expect(mediaPreview).not.toBeVisible()
+      await expect(page.getByText('Drag & drop or click to upload')).toBeVisible()
+
+      // Upload another image
+      await fileInput.setInputFiles(TEST_IMAGE_PATH)
+      await expect(page.locator('img[alt="Media 1"]').first()).toBeVisible({ timeout: 10000 })
+    })
+  })
 })

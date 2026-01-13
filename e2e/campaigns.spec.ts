@@ -565,4 +565,98 @@ test.describe('Campaigns', () => {
       await expect(page.getByText('Second Campaign')).toBeVisible()
     })
   })
+
+  test.describe('Empty States', () => {
+    test('should show empty state when no campaigns exist', async ({ page }) => {
+      // Navigate to campaigns page with fresh database (reset in beforeEach)
+      await page.goto('/campaigns')
+
+      // Should show empty state message "No campaigns yet"
+      await expect(page.getByText('No campaigns yet')).toBeVisible()
+
+      // Should have "Create Your First Campaign" button
+      await expect(page.getByRole('button', { name: /create your first campaign/i })).toBeVisible()
+    })
+
+    test('should show empty state for campaign with no posts', async ({ page }) => {
+      // Create a new campaign
+      await page.goto('/campaigns')
+      await page.getByRole('button', { name: /new campaign|new$/i }).click()
+      await page.getByPlaceholder(/enter campaign name/i).fill('Empty Campaign')
+      await page.getByRole('button', { name: /create campaign/i }).click()
+
+      // Wait for navigation to detail page
+      await page.waitForURL(/\/campaigns\//)
+
+      // Should show empty posts message "No posts yet"
+      await expect(page.getByText('No posts yet')).toBeVisible()
+
+      // Should have "Create First Post" link (exact match to avoid multiple matches)
+      await expect(page.getByRole('link', { name: 'Create First Post' })).toBeVisible()
+    })
+  })
+
+  test.describe('Campaign Post Count', () => {
+    test('should display post count on campaign detail page', async ({ page }) => {
+      // Create a campaign
+      await page.goto('/campaigns')
+      await page.getByRole('button', { name: /new campaign|new$/i }).click()
+      await page.getByPlaceholder(/enter campaign name/i).fill('Count Test Campaign')
+      await page.getByRole('button', { name: /create campaign/i }).click()
+      await page.waitForURL(/\/campaigns\//)
+
+      // Should initially show "0 posts"
+      await expect(page.getByText('0 posts')).toBeVisible()
+
+      const campaignId = page.url().split('/campaigns/')[1]
+
+      // Create 2 posts in this campaign
+      for (let i = 0; i < 2; i++) {
+        await goToNewPost(page)
+        await selectPlatform(page, 'twitter')
+        await fillContent(page, `Post ${i + 1} for count test`)
+        await page.getByRole('button', { name: /no campaign|select campaign/i }).click()
+        await page.getByText('Count Test Campaign').click()
+        await saveDraft(page)
+        await waitForNavigation(page, '/')
+      }
+
+      // Go back to campaign detail page
+      await page.goto(`/campaigns/${campaignId}`)
+
+      // Should now show "2 posts"
+      await expect(page.getByText('2 posts')).toBeVisible()
+    })
+
+    test('should update post count when posts are removed from campaign', async ({ page }) => {
+      // Create a campaign with 2 posts
+      await page.goto('/campaigns')
+      await page.getByRole('button', { name: /new campaign|new$/i }).click()
+      await page.getByPlaceholder(/enter campaign name/i).fill('Update Count Campaign')
+      await page.getByRole('button', { name: /create campaign/i }).click()
+      await page.waitForURL(/\/campaigns\//)
+      const campaignId = page.url().split('/campaigns/')[1]
+
+      // Create 2 posts
+      for (let i = 0; i < 2; i++) {
+        await goToNewPost(page)
+        await selectPlatform(page, 'twitter')
+        await fillContent(page, `Removable post ${i + 1}`)
+        await page.getByRole('button', { name: /no campaign|select campaign/i }).click()
+        await page.getByText('Update Count Campaign').click()
+        await saveDraft(page)
+        await waitForNavigation(page, '/')
+      }
+
+      // Go to campaign detail - should show "2 posts"
+      await page.goto(`/campaigns/${campaignId}`)
+      await expect(page.getByText('2 posts')).toBeVisible()
+
+      // Remove one post via the X button
+      await page.locator('button').filter({ has: page.locator('svg.lucide-x') }).first().click()
+
+      // Wait for UI to update and verify count changed to "1 post"
+      await expect(page.getByText('1 post')).toBeVisible({ timeout: 5000 })
+    })
+  })
 })
