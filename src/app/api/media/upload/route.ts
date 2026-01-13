@@ -6,6 +6,15 @@ import crypto from 'crypto'
 // Media upload directory (in public folder for easy serving)
 const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads')
 
+// Allowed file types (MIME types)
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/quicktime', 'video/webm']
+const ALLOWED_TYPES = [...ALLOWED_IMAGE_TYPES, ...ALLOWED_VIDEO_TYPES]
+
+// File size limits
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024  // 10MB
+const MAX_VIDEO_SIZE = 100 * 1024 * 1024 // 100MB
+
 // Generate a unique ID using crypto (built-in Node.js module)
 function generateId(): string {
   return crypto.randomUUID()
@@ -30,6 +39,25 @@ export async function POST(request: NextRequest) {
     if (!file) {
       return NextResponse.json(
         { success: false, error: 'No file provided' },
+        { status: 400 }
+      )
+    }
+
+    // Server-side file type validation
+    if (!ALLOWED_TYPES.includes(file.type)) {
+      return NextResponse.json(
+        { success: false, error: 'Unsupported file type. Allowed: JPG, PNG, GIF, WebP, MP4, MOV, WebM' },
+        { status: 400 }
+      )
+    }
+
+    // Server-side file size validation
+    const isVideo = ALLOWED_VIDEO_TYPES.includes(file.type)
+    const maxSize = isVideo ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE
+    if (file.size > maxSize) {
+      const maxSizeMB = maxSize / (1024 * 1024)
+      return NextResponse.json(
+        { success: false, error: `File too large. Maximum size: ${maxSizeMB}MB` },
         { status: 400 }
       )
     }

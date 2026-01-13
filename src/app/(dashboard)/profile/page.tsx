@@ -36,6 +36,15 @@ export default function ProfilePage() {
 
   // Load user data
   useEffect(() => {
+    // E2E Test Mode - use mock data
+    if (process.env.NEXT_PUBLIC_E2E_TEST_MODE === 'true') {
+      setEmail('test@example.com')
+      setDisplayName('Test User')
+      setOriginalDisplayName('Test User')
+      setLoading(false)
+      return
+    }
+
     async function loadUser() {
       try {
         const { data: { user } } = await supabase.auth.getUser()
@@ -73,6 +82,16 @@ export default function ProfilePage() {
     setSaving(true)
     setError(null)
     setSuccess(null)
+
+    // E2E Test Mode - simulate success
+    if (process.env.NEXT_PUBLIC_E2E_TEST_MODE === 'true') {
+      await new Promise(resolve => setTimeout(resolve, 500))
+      setOriginalDisplayName(displayName)
+      setSuccess('Profile updated successfully')
+      setTimeout(() => setSuccess(null), 3000)
+      setSaving(false)
+      return
+    }
 
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -120,6 +139,17 @@ export default function ProfilePage() {
 
     setChangingPassword(true)
 
+    // E2E Test Mode - simulate success
+    if (process.env.NEXT_PUBLIC_E2E_TEST_MODE === 'true') {
+      await new Promise(resolve => setTimeout(resolve, 500))
+      setNewPassword('')
+      setConfirmPassword('')
+      setPasswordSuccess('Password updated successfully')
+      setTimeout(() => setPasswordSuccess(null), 3000)
+      setChangingPassword(false)
+      return
+    }
+
     try {
       const { error } = await supabase.auth.updateUser({
         password: newPassword
@@ -144,6 +174,14 @@ export default function ProfilePage() {
   const handleDeleteAccount = async () => {
     setDeleting(true)
     setError(null)
+
+    // E2E Test Mode - simulate deletion and redirect
+    if (process.env.NEXT_PUBLIC_E2E_TEST_MODE === 'true') {
+      await new Promise(resolve => setTimeout(resolve, 500))
+      setShowDeleteDialog(false)
+      router.push('/login')
+      return
+    }
 
     try {
       // Note: Full account deletion requires admin privileges

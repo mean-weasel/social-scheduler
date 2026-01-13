@@ -632,3 +632,68 @@ export async function deleteCampaign(page: Page) {
   await page.getByRole('alertdialog').getByRole('button', { name: 'Delete' }).click()
 }
 
+// ============================================
+// Profile Page Helpers
+// ============================================
+
+/**
+ * Navigate to profile page
+ */
+export async function goToProfile(page: Page) {
+  await page.goto('/profile')
+  await expect(page.getByRole('heading', { name: 'Profile', exact: true })).toBeVisible()
+}
+
+/**
+ * Fill display name on profile page
+ */
+export async function fillDisplayName(page: Page, name: string) {
+  await page.getByLabel('Display Name').fill(name)
+}
+
+/**
+ * Fill password change fields
+ */
+export async function fillPasswordChange(page: Page, newPassword: string, confirmPassword: string) {
+  await page.getByLabel('New Password', { exact: true }).fill(newPassword)
+  await page.getByLabel('Confirm New Password', { exact: true }).fill(confirmPassword)
+}
+
+/**
+ * Save profile changes
+ */
+export async function saveProfile(page: Page) {
+  await page.getByRole('button', { name: 'Save Changes' }).click()
+}
+
+/**
+ * Update password
+ */
+export async function updatePassword(page: Page) {
+  await page.getByRole('button', { name: 'Update Password' }).click()
+}
+
+/**
+ * Open delete account dialog
+ */
+export async function openDeleteAccountDialog(page: Page) {
+  await page.getByRole('button', { name: /delete account/i }).click()
+  await page.getByRole('alertdialog').waitFor()
+}
+
+/**
+ * Confirm delete account (in dialog)
+ */
+export async function confirmDeleteAccount(page: Page) {
+  const dialog = page.getByRole('alertdialog')
+  await dialog.getByRole('button', { name: /delete account/i }).click()
+}
+
+/**
+ * Cancel delete account dialog
+ */
+export async function cancelDeleteAccount(page: Page) {
+  const dialog = page.getByRole('alertdialog')
+  await dialog.getByRole('button', { name: 'Cancel' }).click()
+}
+
