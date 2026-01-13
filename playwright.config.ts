@@ -27,12 +27,13 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `E2E_TEST_MODE=true npm run dev -- --port ${PORT}`,
+    command: `E2E_TEST_MODE=true NEXT_PUBLIC_E2E_TEST_MODE=true npm run dev -- --port ${PORT}`,
     url: `http://localhost:${PORT}`,
     reuseExistingServer: !process.env.CI,
     timeout: 120 * 1000,
     env: {
       E2E_TEST_MODE: 'true',
+      NEXT_PUBLIC_E2E_TEST_MODE: 'true',
       NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || '',
       NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
       SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || '',
