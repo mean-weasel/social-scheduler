@@ -273,4 +273,127 @@ test.describe('Scheduling', () => {
       expect(box!.height).toBeGreaterThan(20)
     })
   })
+
+  test.describe('Date and Time Selection', () => {
+    test('should enable schedule button when date and time are set', async ({ page }) => {
+      await goToNewPost(page)
+      await selectPlatform(page, 'twitter')
+      await fillContent(page, 'Post with future date')
+
+      // Set tomorrow's date with a time
+      const tomorrow = new Date()
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      const dateStr = tomorrow.toISOString().split('T')[0]
+
+      await page.locator('input[type="date"]').fill(dateStr)
+      await page.locator('input[type="time"]').fill('14:00')
+
+      // Schedule button should be enabled
+      const scheduleButton = page.getByRole('button', { name: /^schedule$/i })
+      await expect(scheduleButton).toBeEnabled()
+    })
+
+    test('should enable schedule button for today with future time', async ({ page }) => {
+      await goToNewPost(page)
+      await selectPlatform(page, 'twitter')
+      await fillContent(page, 'Post scheduled for later today')
+
+      // Set today's date
+      const today = new Date()
+      const dateStr = today.toISOString().split('T')[0]
+
+      // Calculate a time 2 hours from now
+      const futureTime = new Date(today.getTime() + 2 * 60 * 60 * 1000)
+      const hours = futureTime.getHours().toString().padStart(2, '0')
+      const minutes = futureTime.getMinutes().toString().padStart(2, '0')
+      const timeStr = `${hours}:${minutes}`
+
+      await page.locator('input[type="date"]').fill(dateStr)
+      await page.locator('input[type="time"]').fill(timeStr)
+
+      // Schedule button should be enabled for future time today
+      const scheduleButton = page.getByRole('button', { name: /^schedule$/i })
+      await expect(scheduleButton).toBeEnabled()
+    })
+
+    test('should allow selecting any date in the date picker', async ({ page }) => {
+      await goToNewPost(page)
+      await selectPlatform(page, 'twitter')
+      await fillContent(page, 'Testing date selection')
+
+      // Set a week from now
+      const nextWeek = new Date()
+      nextWeek.setDate(nextWeek.getDate() + 7)
+      const dateStr = nextWeek.toISOString().split('T')[0]
+
+      await page.locator('input[type="date"]').fill(dateStr)
+      await expect(page.locator('input[type="date"]')).toHaveValue(dateStr)
+    })
+  })
+
+  test.describe('Scheduled Posts Display', () => {
+    test('should show all scheduled posts in the scheduled filter', async ({ page }) => {
+      // Create 3 scheduled posts
+      const baseTomorrow = new Date()
+      baseTomorrow.setDate(baseTomorrow.getDate() + 1)
+
+      const times = ['09:00', '15:00', '12:00']
+
+      for (const time of times) {
+        await goToNewPost(page)
+        await selectPlatform(page, 'twitter')
+        await fillContent(page, `Post scheduled at ${time}`)
+
+        await page.locator('input[type="date"]').fill(baseTomorrow.toISOString().split('T')[0])
+        await page.locator('input[type="time"]').fill(time)
+
+        await schedulePost(page)
+        await waitForNavigation(page, '/')
+      }
+
+      // Navigate to posts and filter by scheduled
+      await page.goto('/posts')
+      await page.getByRole('button', { name: /scheduled/i }).click()
+
+      // Wait for posts to load
+      await page.waitForTimeout(500)
+
+      // Verify all 3 posts are visible
+      const postCards = page.locator('a[href^="/edit/"]')
+      const count = await postCards.count()
+      expect(count).toBe(3)
+
+      // Verify each post content is present
+      await expect(page.getByText('Post scheduled at 09:00')).toBeVisible()
+      await expect(page.getByText('Post scheduled at 15:00')).toBeVisible()
+      await expect(page.getByText('Post scheduled at 12:00')).toBeVisible()
+    })
+
+    test('should display schedule datetime on post card', async ({ page }) => {
+      // Create a scheduled post for a specific date/time
+      const tomorrow = new Date()
+      tomorrow.setDate(tomorrow.getDate() + 1)
+      const dateStr = tomorrow.toISOString().split('T')[0]
+
+      await goToNewPost(page)
+      await selectPlatform(page, 'twitter')
+      await fillContent(page, 'Post with visible schedule')
+
+      await page.locator('input[type="date"]').fill(dateStr)
+      await page.locator('input[type="time"]').fill('10:30')
+
+      await schedulePost(page)
+      await waitForNavigation(page, '/')
+
+      // Go to posts list
+      await page.goto('/posts')
+
+      // Find the post card
+      const postCard = page.locator('a[href^="/edit/"]').filter({ hasText: 'Post with visible schedule' })
+      await expect(postCard).toBeVisible()
+
+      // Should show the schedule time somewhere (10:30 AM formatted)
+      await expect(postCard.getByText(/10:30/i)).toBeVisible()
+    })
+  })
 })
