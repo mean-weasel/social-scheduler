@@ -317,7 +317,7 @@ export default function DashboardPage() {
           <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-[hsl(var(--gold))]/20 to-[hsl(var(--gold))]/5 flex items-center justify-center">
             <Sparkles className="w-10 h-10 text-[hsl(var(--gold-dark))]" />
           </div>
-          <h2 className="text-2xl font-display font-bold mb-2">Welcome to Social Scheduler</h2>
+          <h2 className="text-2xl font-display font-bold mb-2">Welcome to Bullhorn</h2>
           <p className="text-muted-foreground mb-6 max-w-md mx-auto">
             Create your first post to get started. Schedule content for Twitter, LinkedIn, and Reddit all in one place.
           </p>

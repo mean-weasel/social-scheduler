@@ -45,7 +45,7 @@ export async function enterDemoMode(page: Page) {
 
   await page.goto('/')
   // Wait for the dashboard to load - look for the header
-  await expect(page.getByRole('link', { name: 'Social Scheduler', exact: true })).toBeVisible()
+  await expect(page.getByRole('link', { name: 'Bullhorn', exact: true })).toBeVisible()
 }
 
 /**

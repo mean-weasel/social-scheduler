@@ -70,10 +70,10 @@ Configure Google OAuth for production use (currently only works in development).
    - Application type: Web application
    - Name: "Social Scheduler"
    - Authorized JavaScript origins:
-     - `https://social-scheduler-dusky.vercel.app`
+     - `https://social-scheduler-548i.vercel.app`
      - `http://localhost:3000` (for dev)
    - Authorized redirect URIs:
-     - `https://urwubimnwczrtpifetvo.supabase.co/auth/v1/callback`
+     - `https://cgxkfwiytkpctsfvyvwh.supabase.co/auth/v1/callback`
      - `http://127.0.0.1:54321/auth/v1/callback` (for local dev)
 
 3. **Configure Supabase**
@@ -85,7 +85,7 @@ Configure Google OAuth for production use (currently only works in development).
    - App name: "Social Scheduler"
    - User support email: your email
    - App logo (optional)
-   - App domain: `social-scheduler-dusky.vercel.app`
+   - App domain: `social-scheduler-548i.vercel.app`
    - Authorized domains: `vercel.app`, `supabase.co`
    - Developer contact email
 

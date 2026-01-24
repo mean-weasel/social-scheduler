@@ -3,7 +3,7 @@ import '../index.css'
 
 // eslint-disable-next-line react-refresh/only-export-components -- metadata export is required by Next.js App Router
 export const metadata: Metadata = {
-  title: 'Social Scheduler',
+  title: 'Bullhorn',
   description: 'Schedule and manage your social media posts',
 }
 
