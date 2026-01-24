@@ -156,7 +156,7 @@ test.describe('Dashboard', () => {
   // Empty state tests need serial execution to ensure no posts exist
   test.describe.serial('Empty State', () => {
     test('should show welcome message when no posts exist', async ({ page }) => {
-      await expect(page.getByRole('heading', { name: /welcome to social scheduler/i })).toBeVisible()
+      await expect(page.getByRole('heading', { name: /welcome to bullhorn/i })).toBeVisible()
       // The paragraph contains more text, so use partial match
       await expect(page.getByText('Create your first post to get started')).toBeVisible()
     })
@@ -177,7 +177,7 @@ test.describe('Dashboard', () => {
       await page.goto('/')
 
       // Empty state should not be visible
-      await expect(page.getByRole('heading', { name: /welcome to social scheduler/i })).not.toBeVisible()
+      await expect(page.getByRole('heading', { name: /welcome to bullhorn/i })).not.toBeVisible()
     })
   })
 

@@ -89,7 +89,7 @@ export default function SignUpPage() {
             Create an account
           </h1>
           <p className="mt-2 text-gray-600 dark:text-gray-400">
-            Get started with Social Scheduler
+            Get started with Bullhorn
           </p>
         </div>
 

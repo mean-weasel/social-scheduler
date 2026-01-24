@@ -31,7 +31,7 @@ export const useNotificationStore = create<NotificationState & NotificationActio
         })),
     }),
     {
-      name: 'social-scheduler-notifications',
+      name: 'bullhorn-notifications',
     }
   )
 )

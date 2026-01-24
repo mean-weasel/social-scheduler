@@ -49,7 +49,7 @@ export function AppHeader({ userEmail, userDisplayName }: AppHeaderProps) {
               <Calendar className="w-5 h-5 text-white" />
             </div>
             <span className="font-display font-bold text-xl md:text-2xl tracking-tight">
-              Social Scheduler
+              Bullhorn
             </span>
           </Link>
         </div>

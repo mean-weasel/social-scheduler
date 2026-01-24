@@ -55,7 +55,7 @@ import {
 // Create MCP server
 const server = new Server(
   {
-    name: 'social-scheduler',
+    name: 'bullhorn',
     version: '1.0.0',
   },
   {
@@ -1350,7 +1350,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 async function main() {
   const transport = new StdioServerTransport()
   await server.connect(transport)
-  console.error('Social Scheduler MCP Server running on stdio')
+  console.error('Bullhorn MCP Server running on stdio')
 }
 
 main().catch(console.error)

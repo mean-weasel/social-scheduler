@@ -1,4 +1,4 @@
-# Social Scheduler - Makefile
+# Bullhorn - Makefile
 # Run `make help` to see available commands
 
 .PHONY: help install dev dev-full build test test-e2e lint typecheck knip format check fix clean all
@@ -17,7 +17,7 @@ RESET := \033[0m
 LOCAL_IP = $(shell /sbin/ifconfig en0 2>/dev/null | grep "inet " | awk '{print $$2}' || /sbin/ifconfig en1 2>/dev/null | grep "inet " | awk '{print $$2}' || hostname -I 2>/dev/null | awk '{print $$1}' || echo "localhost")
 
 help: ## Show this help message
-	@echo "$(BLUE)Social Scheduler$(RESET) - Available commands:"
+	@echo "$(BLUE)Bullhorn$(RESET) - Available commands:"
 	@echo ""
 	@echo "$(YELLOW)Development (Next.js + Supabase)$(RESET)"
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | grep -E '(dev|supabase|db-)' | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(GREEN)%-20s$(RESET) %s\n", $$1, $$2}'

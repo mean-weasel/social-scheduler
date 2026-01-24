@@ -1,7 +1,7 @@
 {
-  "name": "@social-scheduler/mcp-server",
+  "name": "@bullhorn/mcp-server",
   "version": "1.0.0",
-  "description": "MCP server for Social Scheduler post management",
+  "description": "MCP server for Bullhorn post management",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {

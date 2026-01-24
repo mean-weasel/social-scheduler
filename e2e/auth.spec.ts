@@ -8,7 +8,7 @@ test.describe('Authentication', () => {
 
     test('should display login page with all elements', async ({ page }) => {
       // Check heading
-      await expect(page.getByRole('heading', { name: 'Social Scheduler' })).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Bullhorn' })).toBeVisible()
       await expect(page.getByText('Sign in to manage your social posts')).toBeVisible()
 
       // Check email/password form
@@ -91,7 +91,7 @@ test.describe('Authentication', () => {
     test('should display signup page with all elements', async ({ page }) => {
       // Check heading
       await expect(page.getByRole('heading', { name: 'Create an account' })).toBeVisible()
-      await expect(page.getByText('Get started with Social Scheduler')).toBeVisible()
+      await expect(page.getByText('Get started with Bullhorn')).toBeVisible()
 
       // Check form fields
       await expect(page.getByLabel('Email')).toBeVisible()
@@ -219,7 +219,7 @@ test.describe('Authentication', () => {
     test('should navigate from login to signup and back', async ({ page }) => {
       // Start at login
       await page.goto('/login')
-      await expect(page.getByRole('heading', { name: 'Social Scheduler' })).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Bullhorn' })).toBeVisible()
 
       // Go to signup
       await page.getByRole('link', { name: 'Sign up' }).click()
@@ -229,7 +229,7 @@ test.describe('Authentication', () => {
       // Go back to login
       await page.getByRole('link', { name: 'Sign in' }).click()
       await expect(page).toHaveURL('/login')
-      await expect(page.getByRole('heading', { name: 'Social Scheduler' })).toBeVisible()
+      await expect(page.getByRole('heading', { name: 'Bullhorn' })).toBeVisible()
     })
 
     test('should navigate through forgot password flow', async ({ page }) => {
