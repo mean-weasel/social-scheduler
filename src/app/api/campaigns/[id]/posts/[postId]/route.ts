@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth } from '@/lib/auth'
 
 // DELETE /api/campaigns/[id]/posts/[postId] - Remove post from campaign
 export async function DELETE(
@@ -7,14 +8,36 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string; postId: string }> }
 ) {
   try {
+    // Require authentication
+    let userId: string
+    try {
+      const auth = await requireAuth()
+      userId = auth.userId
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { id, postId } = await params
     const supabase = await createClient()
 
-    // Verify the post belongs to this campaign
+    // CRITICAL: Verify user owns the campaign
+    const { data: campaign, error: campaignError } = await supabase
+      .from('campaigns')
+      .select('id')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .single()
+
+    if (campaignError || !campaign) {
+      return NextResponse.json({ error: 'Campaign not found' }, { status: 404 })
+    }
+
+    // Verify the post belongs to this campaign AND user owns it
     const { data: post, error: fetchError } = await supabase
       .from('posts')
       .select('campaign_id')
       .eq('id', postId)
+      .eq('user_id', userId)
       .single()
 
     if (fetchError) {
@@ -28,11 +51,12 @@ export async function DELETE(
       return NextResponse.json({ error: 'Post does not belong to this campaign' }, { status: 400 })
     }
 
-    // Remove campaign association
+    // Remove campaign association (with ownership check)
     const { data, error } = await supabase
       .from('posts')
       .update({ campaign_id: null })
       .eq('id', postId)
+      .eq('user_id', userId)
       .select()
       .single()
 

@@ -2,6 +2,14 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
 export async function POST() {
+  // SECURITY: Never allow reset in production environment
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json(
+      { error: 'Reset endpoint is disabled in production' },
+      { status: 403 }
+    )
+  }
+
   // Only allow in E2E test mode
   if (process.env.E2E_TEST_MODE !== 'true') {
     return NextResponse.json(
