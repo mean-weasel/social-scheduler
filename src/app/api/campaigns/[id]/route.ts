@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { transformCampaignFromDb, transformPostFromDb } from '@/lib/utils'
+import { requireAuth } from '@/lib/auth'
 
 // GET /api/campaigns/[id] - Get single campaign with posts
 export async function GET(
@@ -8,14 +9,24 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Require authentication
+    let userId: string
+    try {
+      const auth = await requireAuth()
+      userId = auth.userId
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { id } = await params
     const supabase = await createClient()
 
-    // Get campaign
+    // Get campaign (with ownership check)
     const { data: campaign, error: campaignError } = await supabase
       .from('campaigns')
       .select('*')
       .eq('id', id)
+      .eq('user_id', userId)
       .single()
 
     if (campaignError) {
@@ -25,11 +36,12 @@ export async function GET(
       return NextResponse.json({ error: campaignError.message }, { status: 500 })
     }
 
-    // Get posts for this campaign
+    // Get posts for this campaign (with ownership check)
     const { data: posts, error: postsError } = await supabase
       .from('posts')
       .select('*')
       .eq('campaign_id', id)
+      .eq('user_id', userId)
       .order('updated_at', { ascending: false })
 
     if (postsError) {
@@ -52,6 +64,15 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Require authentication
+    let userId: string
+    try {
+      const auth = await requireAuth()
+      userId = auth.userId
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { id } = await params
     const supabase = await createClient()
     const body = await request.json()
@@ -65,6 +86,7 @@ export async function PATCH(
       .from('campaigns')
       .update(updates)
       .eq('id', id)
+      .eq('user_id', userId)
       .select()
       .single()
 
@@ -90,20 +112,43 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Require authentication
+    let userId: string
+    try {
+      const auth = await requireAuth()
+      userId = auth.userId
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { id } = await params
     const supabase = await createClient()
 
-    // Remove campaign_id from associated posts
+    // Verify user owns this campaign first
+    const { data: campaign, error: checkError } = await supabase
+      .from('campaigns')
+      .select('id')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .single()
+
+    if (checkError || !campaign) {
+      return NextResponse.json({ error: 'Campaign not found' }, { status: 404 })
+    }
+
+    // Remove campaign_id from associated posts (only user's posts)
     await supabase
       .from('posts')
       .update({ campaign_id: null })
       .eq('campaign_id', id)
+      .eq('user_id', userId)
 
     // Delete the campaign
     const { error } = await supabase
       .from('campaigns')
       .delete()
       .eq('id', id)
+      .eq('user_id', userId)
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })

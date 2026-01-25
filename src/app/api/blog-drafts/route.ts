@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth } from '@/lib/auth'
 
 // Calculate word count from markdown content
 function calculateWordCount(content: string): number {
@@ -60,10 +61,17 @@ export async function GET(request: NextRequest) {
 // POST /api/blog-drafts - Create blog draft
 export async function POST(request: NextRequest) {
   try {
+    // Require authentication - throws if not authenticated
+    let userId: string
+    try {
+      const auth = await requireAuth()
+      userId = auth.userId
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const supabase = await createClient()
     const body = await request.json()
-
-    const { data: { user } } = await supabase.auth.getUser()
 
     const content = body.content || ''
     const wordCount = calculateWordCount(content)
@@ -71,7 +79,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabase
       .from('blog_drafts')
       .insert({
-        user_id: user?.id,
+        user_id: userId,
         title: body.title,
         content: content,
         date: body.date,

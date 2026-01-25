@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { transformPostFromDb } from '@/lib/utils'
+import { requireAuth } from '@/lib/auth'
 
 // GET /api/posts - List posts with optional filters
 export async function GET(request: NextRequest) {
@@ -53,16 +54,17 @@ export async function GET(request: NextRequest) {
 // POST /api/posts - Create new post
 export async function POST(request: NextRequest) {
   try {
+    // Require authentication - throws if not authenticated
+    let userId: string
+    try {
+      const auth = await requireAuth()
+      userId = auth.userId
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const supabase = await createClient()
     const body = await request.json()
-
-    // In E2E test mode, skip user lookup since we bypass auth
-    // user_id is nullable, so we can leave it null for test posts
-    let userId: string | null = null
-    if (process.env.E2E_TEST_MODE !== 'true') {
-      const { data: { user } } = await supabase.auth.getUser()
-      userId = user?.id || null
-    }
 
     const { data, error } = await supabase
       .from('posts')

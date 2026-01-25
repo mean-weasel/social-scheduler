@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { transformCampaignFromDb } from '@/lib/utils'
+import { requireAuth } from '@/lib/auth'
 
 // GET /api/campaigns - List campaigns
 export async function GET(request: NextRequest) {
@@ -37,15 +38,17 @@ export async function GET(request: NextRequest) {
 // POST /api/campaigns - Create campaign
 export async function POST(request: NextRequest) {
   try {
+    // Require authentication - throws if not authenticated
+    let userId: string
+    try {
+      const auth = await requireAuth()
+      userId = auth.userId
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const supabase = await createClient()
     const body = await request.json()
-
-    // In E2E test mode, skip user lookup since we bypass auth
-    let userId: string | null = null
-    if (process.env.E2E_TEST_MODE !== 'true') {
-      const { data: { user } } = await supabase.auth.getUser()
-      userId = user?.id || null
-    }
 
     const { data, error } = await supabase
       .from('campaigns')

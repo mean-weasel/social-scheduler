@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth } from '@/lib/auth'
 
 // GET /api/blog-drafts/[id]/images - List images for a blog draft
 export async function GET(
@@ -7,13 +8,24 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Require authentication
+    let userId: string
+    try {
+      const auth = await requireAuth()
+      userId = auth.userId
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { id } = await params
     const supabase = await createClient()
 
+    // Defense-in-depth: filter by user_id
     const { data: draft, error } = await supabase
       .from('blog_drafts')
       .select('images')
       .eq('id', id)
+      .eq('user_id', userId)
       .single()
 
     if (error) {
@@ -36,6 +48,15 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Require authentication
+    let userId: string
+    try {
+      const auth = await requireAuth()
+      userId = auth.userId
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { id } = await params
     const supabase = await createClient()
     const body = await request.json()
@@ -49,11 +70,12 @@ export async function POST(
       )
     }
 
-    // Get current draft
+    // Get current draft (with ownership check)
     const { data: draft, error: fetchError } = await supabase
       .from('blog_drafts')
       .select('images')
       .eq('id', id)
+      .eq('user_id', userId)
       .single()
 
     if (fetchError) {
@@ -72,11 +94,12 @@ export async function POST(
     }
     images.push(newImage)
 
-    // Update draft
+    // Update draft (with ownership check)
     const { data, error } = await supabase
       .from('blog_drafts')
       .update({ images })
       .eq('id', id)
+      .eq('user_id', userId)
       .select()
       .single()
 

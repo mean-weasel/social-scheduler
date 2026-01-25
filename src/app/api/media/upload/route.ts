@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { writeFile, mkdir } from 'fs/promises'
 import path from 'path'
 import crypto from 'crypto'
+import { requireAuth } from '@/lib/auth'
 
 // Media upload directory (in public folder for easy serving)
 const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads')
@@ -31,6 +32,16 @@ async function ensureUploadDir() {
 
 export async function POST(request: NextRequest) {
   try {
+    // Require authentication for media uploads
+    try {
+      await requireAuth()
+    } catch {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
     await ensureUploadDir()
 
     const formData = await request.formData()

@@ -4,7 +4,15 @@ import { cookies } from 'next/headers'
 
 export async function createClient() {
   // In E2E test mode, use service role key to bypass RLS
-  if (process.env.E2E_TEST_MODE === 'true' && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  // SECURITY: Only allow in non-production environments
+  if (
+    process.env.E2E_TEST_MODE === 'true' &&
+    process.env.SUPABASE_SERVICE_ROLE_KEY &&
+    process.env.NODE_ENV !== 'production'
+  ) {
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('[Supabase] E2E test mode active - RLS bypassed')
+    }
     return createSupabaseJsClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY

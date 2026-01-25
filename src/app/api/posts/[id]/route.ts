@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { transformPostFromDb } from '@/lib/utils'
+import { requireAuth } from '@/lib/auth'
 
 // Valid status transitions
 const validTransitions: Record<string, string[]> = {
@@ -17,13 +18,24 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Require authentication
+    let userId: string
+    try {
+      const auth = await requireAuth()
+      userId = auth.userId
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { id } = await params
     const supabase = await createClient()
 
+    // Defense-in-depth: filter by user_id even though RLS should handle this
     const { data, error } = await supabase
       .from('posts')
       .select('*')
       .eq('id', id)
+      .eq('user_id', userId)
       .single()
 
     if (error) {
@@ -48,15 +60,25 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Require authentication
+    let userId: string
+    try {
+      const auth = await requireAuth()
+      userId = auth.userId
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { id } = await params
     const supabase = await createClient()
     const body = await request.json()
 
-    // Get current post to validate status transition
+    // Get current post to validate status transition (with ownership check)
     const { data: currentPost, error: fetchError } = await supabase
       .from('posts')
       .select('status')
       .eq('id', id)
+      .eq('user_id', userId)
       .single()
 
     if (fetchError) {
@@ -103,10 +125,14 @@ export async function PATCH(
       .from('posts')
       .update(updates)
       .eq('id', id)
+      .eq('user_id', userId)
       .select()
       .single()
 
     if (error) {
+      if (error.code === 'PGRST116') {
+        return NextResponse.json({ error: 'Post not found' }, { status: 404 })
+      }
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
@@ -125,6 +151,15 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Require authentication
+    let userId: string
+    try {
+      const auth = await requireAuth()
+      userId = auth.userId
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { id } = await params
     const supabase = await createClient()
 
@@ -132,6 +167,7 @@ export async function DELETE(
       .from('posts')
       .delete()
       .eq('id', id)
+      .eq('user_id', userId)
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })

@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth } from '@/lib/auth'
 
 // Calculate word count from markdown content
 function calculateWordCount(content: string): number {
@@ -28,13 +29,24 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Require authentication
+    let userId: string
+    try {
+      const auth = await requireAuth()
+      userId = auth.userId
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { id } = await params
     const supabase = await createClient()
 
+    // Defense-in-depth: filter by user_id even though RLS should handle this
     const { data, error } = await supabase
       .from('blog_drafts')
       .select('*')
       .eq('id', id)
+      .eq('user_id', userId)
       .single()
 
     if (error) {
@@ -57,15 +69,25 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Require authentication
+    let userId: string
+    try {
+      const auth = await requireAuth()
+      userId = auth.userId
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { id } = await params
     const supabase = await createClient()
     const body = await request.json()
 
-    // Get current draft to validate status transition
+    // Get current draft to validate status transition (with ownership check)
     const { data: currentDraft, error: fetchError } = await supabase
       .from('blog_drafts')
       .select('status')
       .eq('id', id)
+      .eq('user_id', userId)
       .single()
 
     if (fetchError) {
@@ -108,10 +130,14 @@ export async function PATCH(
       .from('blog_drafts')
       .update(updates)
       .eq('id', id)
+      .eq('user_id', userId)
       .select()
       .single()
 
     if (error) {
+      if (error.code === 'PGRST116') {
+        return NextResponse.json({ error: 'Blog draft not found' }, { status: 404 })
+      }
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
@@ -128,6 +154,15 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Require authentication
+    let userId: string
+    try {
+      const auth = await requireAuth()
+      userId = auth.userId
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { id } = await params
     const supabase = await createClient()
 
@@ -135,6 +170,7 @@ export async function DELETE(
       .from('blog_drafts')
       .delete()
       .eq('id', id)
+      .eq('user_id', userId)
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
