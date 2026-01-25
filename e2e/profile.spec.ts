@@ -220,6 +220,27 @@ test.describe('User Profile Page', () => {
       // Should show "Updating..." text briefly
       await expect(page.getByRole('button', { name: 'Updating...' })).toBeVisible()
     })
+
+    test('should show password strength indicator when typing new password', async ({ page }) => {
+      await goToProfile(page)
+
+      const newPasswordInput = page.getByLabel('New Password', { exact: true })
+
+      // No indicator when empty
+      await expect(page.getByText('Weak')).not.toBeVisible()
+
+      // Type a short weak password
+      await newPasswordInput.fill('abc')
+      await expect(page.getByText('Weak')).toBeVisible()
+
+      // Type a password with mixed case and numbers
+      await newPasswordInput.fill('Password123')
+      await expect(page.getByText('Good')).toBeVisible()
+
+      // Type a strong password with special chars
+      await newPasswordInput.fill('Password123!')
+      await expect(page.getByText('Strong')).toBeVisible()
+    })
   })
 
   test.describe('Account Deletion Flow', () => {

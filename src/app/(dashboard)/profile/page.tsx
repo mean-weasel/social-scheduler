@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { getInitials } from '@/lib/profile'
 import { createClient } from '@/lib/supabase/client'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import PasswordStrength from '@/components/ui/PasswordStrength'
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -371,6 +372,7 @@ export default function ProfilePage() {
                   {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+              <PasswordStrength password={newPassword} />
             </div>
 
             {/* Confirm Password */}
