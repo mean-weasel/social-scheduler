@@ -154,6 +154,37 @@ test.describe('Authentication', () => {
       const emailInput = page.getByLabel('Email')
       await expect(emailInput).toHaveAttribute('type', 'email')
     })
+
+    test('should show password strength indicator when typing password', async ({ page }) => {
+      const passwordInput = page.getByLabel('Password', { exact: true })
+
+      // No indicator when empty
+      await expect(page.getByText('Weak')).not.toBeVisible()
+
+      // Type a short weak password
+      await passwordInput.fill('abc')
+      await expect(page.getByText('Weak')).toBeVisible()
+
+      // Type a longer password
+      await passwordInput.fill('password')
+      await expect(page.getByText('Fair')).toBeVisible()
+
+      // Type a password with mixed case and numbers
+      await passwordInput.fill('Password123')
+      await expect(page.getByText('Good')).toBeVisible()
+
+      // Type a strong password with special chars
+      await passwordInput.fill('Password123!')
+      await expect(page.getByText('Strong')).toBeVisible()
+    })
+
+    test('should show helpful tips for weak passwords', async ({ page }) => {
+      const passwordInput = page.getByLabel('Password', { exact: true })
+
+      await passwordInput.fill('weak')
+      // Should show tip about improving password
+      await expect(page.getByText(/Try adding/)).toBeVisible()
+    })
   })
 
   test.describe('Forgot Password Page', () => {

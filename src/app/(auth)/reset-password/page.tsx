@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import PasswordStrength from '@/components/ui/PasswordStrength'
 
 export default function ResetPasswordPage() {
   const router = useRouter()
@@ -154,6 +155,7 @@ export default function ResetPasswordPage() {
               className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
               placeholder="••••••••"
             />
+            <PasswordStrength password={password} />
           </div>
 
           <div>
