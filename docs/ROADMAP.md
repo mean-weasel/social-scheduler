@@ -436,9 +436,9 @@ Protect API routes from abuse with rate limiting.
 3. ✅ **Multi-User RLS** - Security critical (PR #55)
 4. ✅ **User Profile/Settings** - User management
 5. ✅ **Analytics & Monitoring** - Production visibility (Vercel Analytics + Speed Insights)
-6. **Rate Limiting** - Security hardening
-7. **Email Notifications** - Nice to have
-8. **Custom Domain** - Branding (when ready)
+6. ✅ **Custom Domain** - bullhorn.to configured (Cloudflare DNS + Vercel)
+7. **Rate Limiting** - Security hardening
+8. **Email Notifications** - Nice to have
 
 ---
 
