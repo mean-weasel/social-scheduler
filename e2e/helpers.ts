@@ -492,6 +492,10 @@ interface PostFromAPI {
  */
 export async function getAllPosts(page: Page): Promise<PostFromAPI[]> {
   const response = await page.request.get(`${API_BASE}/posts`)
+  if (!response.ok()) {
+    const errorData = await response.json().catch(() => ({}))
+    throw new Error(`Failed to get posts: ${response.status()} - ${errorData.error || response.statusText()}`)
+  }
   const data = await response.json()
   return data.posts
 }
@@ -531,6 +535,7 @@ interface CampaignFromAPI {
   name: string
   description?: string
   status: 'draft' | 'active' | 'completed' | 'archived'
+  projectId?: string
   createdAt: string
   updatedAt: string
 }
@@ -582,6 +587,10 @@ export async function createCampaign(page: Page, options: { name: string; descri
  */
 export async function getAllCampaigns(page: Page): Promise<CampaignFromAPI[]> {
   const response = await page.request.get(`${API_BASE}/campaigns`)
+  if (!response.ok()) {
+    const errorData = await response.json().catch(() => ({}))
+    throw new Error(`Failed to get campaigns: ${response.status()} - ${errorData.error || response.statusText()}`)
+  }
   const data = await response.json()
   return data.campaigns
 }
@@ -601,6 +610,10 @@ export async function getCampaignById(page: Page, id: string): Promise<CampaignF
  */
 export async function getCampaignPosts(page: Page, campaignId: string): Promise<PostFromAPI[]> {
   const response = await page.request.get(`${API_BASE}/campaigns/${campaignId}/posts`)
+  if (!response.ok()) {
+    const errorData = await response.json().catch(() => ({}))
+    throw new Error(`Failed to get campaign posts: ${response.status()} - ${errorData.error || response.statusText()}`)
+  }
   const data = await response.json()
   return data.posts
 }
@@ -725,5 +738,125 @@ export async function getMediaCount(page: Page): Promise<number> {
 export async function openMediaSection(page: Page) {
   await page.locator('button[title="Add media (images/videos)"]').click()
   await expect(page.getByText('Media Attachments')).toBeVisible()
+}
+
+// ============================================
+// Project Helpers
+// ============================================
+
+interface ProjectFromAPI {
+  id: string
+  name: string
+  description?: string
+  hashtags: string[]
+  brandColors: Record<string, string>
+  logoUrl?: string
+  createdAt: string
+  updatedAt: string
+}
+
+interface ProjectListResponse {
+  projects: ProjectFromAPI[]
+  meta: {
+    count: number
+    softLimit: number
+    atLimit: boolean
+  }
+}
+
+/**
+ * Navigate to projects list
+ */
+export async function goToProjects(page: Page) {
+  await page.goto('/projects')
+  await expect(page.getByRole('heading', { name: 'Projects', exact: true })).toBeVisible()
+}
+
+/**
+ * Get all projects from the database via API
+ */
+export async function getAllProjects(page: Page): Promise<ProjectFromAPI[]> {
+  const response = await page.request.get(`${API_BASE}/projects`)
+  if (!response.ok()) {
+    const errorData = await response.json().catch(() => ({}))
+    throw new Error(`Failed to get projects: ${response.status()} - ${errorData.error || response.statusText()}`)
+  }
+  const data = await response.json() as ProjectListResponse
+  return data.projects
+}
+
+/**
+ * Get project metadata (count, limit info) from the database via API
+ */
+export async function getProjectsMeta(page: Page): Promise<ProjectListResponse['meta']> {
+  const response = await page.request.get(`${API_BASE}/projects`)
+  if (!response.ok()) {
+    const errorData = await response.json().catch(() => ({}))
+    throw new Error(`Failed to get projects meta: ${response.status()} - ${errorData.error || response.statusText()}`)
+  }
+  const data = await response.json() as ProjectListResponse
+  return data.meta
+}
+
+/**
+ * Get project by ID from the database via API
+ */
+export async function getProjectById(page: Page, id: string): Promise<ProjectFromAPI | null> {
+  const response = await page.request.get(`${API_BASE}/projects/${id}`)
+  if (!response.ok()) return null
+  const data = await response.json()
+  return data.project
+}
+
+/**
+ * Get campaigns for a specific project
+ */
+export async function getProjectCampaigns(page: Page, projectId: string): Promise<CampaignFromAPI[]> {
+  const response = await page.request.get(`${API_BASE}/projects/${projectId}/campaigns`)
+  if (!response.ok()) {
+    const errorData = await response.json().catch(() => ({}))
+    throw new Error(`Failed to get project campaigns: ${response.status()} - ${errorData.error || response.statusText()}`)
+  }
+  const data = await response.json()
+  return data.campaigns
+}
+
+/**
+ * Create a project via API (for test setup)
+ */
+export async function createProjectViaAPI(
+  page: Page,
+  options: { name: string; description?: string }
+): Promise<ProjectFromAPI> {
+  const response = await page.request.post(`${API_BASE}/projects`, {
+    data: {
+      name: options.name,
+      description: options.description,
+    },
+  })
+  if (!response.ok()) {
+    const errorData = await response.json().catch(() => ({}))
+    throw new Error(`Failed to create project: ${response.status()} - ${errorData.error || response.statusText()}`)
+  }
+  const data = await response.json()
+  return data.project
+}
+
+/**
+ * Create a project via UI
+ */
+export async function createProject(page: Page, options: { name: string; description?: string }) {
+  await goToProjects(page)
+  await page.getByRole('button', { name: /new project|new$/i }).click()
+
+  // Fill in the modal form
+  await page.getByPlaceholder(/enter project name/i).fill(options.name)
+  if (options.description) {
+    await page.getByPlaceholder(/describe this project/i).fill(options.description)
+  }
+
+  // Submit and wait for navigation to project detail
+  await page.getByRole('button', { name: /create project/i }).click()
+  await page.waitForURL(/\/projects\//)
 }
 

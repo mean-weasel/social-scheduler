@@ -229,16 +229,16 @@ test.describe('User Profile Page', () => {
       // No indicator when empty
       await expect(page.getByText('Weak')).not.toBeVisible()
 
-      // Type a short weak password
-      await newPasswordInput.fill('abc')
+      // Score 1 (Weak): 6+ chars, one criterion met
+      await newPasswordInput.fill('abcdef')
       await expect(page.getByText('Weak')).toBeVisible()
 
-      // Type a password with mixed case and numbers
-      await newPasswordInput.fill('Password123')
+      // Score 3 (Good): 10+ chars with mixed case (three criteria)
+      await newPasswordInput.fill('Abcdefghij')
       await expect(page.getByText('Good')).toBeVisible()
 
-      // Type a strong password with special chars
-      await newPasswordInput.fill('Password123!')
+      // Score 4 (Strong): 10+ chars, mixed case, and numbers
+      await newPasswordInput.fill('Abcdefgh12')
       await expect(page.getByText('Strong')).toBeVisible()
     })
   })

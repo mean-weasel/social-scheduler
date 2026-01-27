@@ -81,6 +81,7 @@ export async function PATCH(
     if (body.name !== undefined) updates.name = body.name
     if (body.description !== undefined) updates.description = body.description
     if (body.status !== undefined) updates.status = body.status
+    if (body.projectId !== undefined) updates.project_id = body.projectId || null
 
     const { data, error } = await supabase
       .from('campaigns')

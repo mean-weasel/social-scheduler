@@ -80,7 +80,37 @@ export function transformCampaignFromDb(dbCampaign: Record<string, unknown>): Re
     name: dbCampaign.name,
     description: dbCampaign.description,
     status: dbCampaign.status,
+    projectId: dbCampaign.project_id,
     createdAt: dbCampaign.created_at,
     updatedAt: dbCampaign.updated_at,
   }
+}
+
+/**
+ * Transform a project from Supabase format (snake_case) to frontend format (camelCase)
+ */
+export function transformProjectFromDb(dbProject: Record<string, unknown>): Record<string, unknown> {
+  return {
+    id: dbProject.id,
+    name: dbProject.name,
+    description: dbProject.description,
+    hashtags: dbProject.hashtags || [],
+    brandColors: dbProject.brand_colors || {},
+    logoUrl: dbProject.logo_url,
+    createdAt: dbProject.created_at,
+    updatedAt: dbProject.updated_at,
+  }
+}
+
+/**
+ * Transform a project from frontend format (camelCase) to Supabase format (snake_case)
+ */
+export function transformProjectToDb(project: Record<string, unknown>): Record<string, unknown> {
+  const result: Record<string, unknown> = {}
+  if (project.name !== undefined) result.name = project.name
+  if (project.description !== undefined) result.description = project.description
+  if (project.hashtags !== undefined) result.hashtags = project.hashtags
+  if (project.brandColors !== undefined) result.brand_colors = project.brandColors
+  if (project.logoUrl !== undefined) result.logo_url = project.logoUrl
+  return result
 }

@@ -4,12 +4,14 @@ import { transformCampaignFromDb } from '@/lib/utils'
 import { requireAuth } from '@/lib/auth'
 
 // GET /api/campaigns - List campaigns
+// Supports filtering: ?status=active&projectId=uuid (or projectId=unassigned for null)
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient()
     const { searchParams } = new URL(request.url)
 
     const status = searchParams.get('status')
+    const projectId = searchParams.get('projectId')
 
     let query = supabase
       .from('campaigns')
@@ -18,6 +20,13 @@ export async function GET(request: NextRequest) {
 
     if (status && status !== 'all') {
       query = query.eq('status', status)
+    }
+
+    // Filter by project
+    if (projectId === 'unassigned') {
+      query = query.is('project_id', null)
+    } else if (projectId) {
+      query = query.eq('project_id', projectId)
     }
 
     const { data, error } = await query
@@ -57,6 +66,7 @@ export async function POST(request: NextRequest) {
         name: body.name,
         description: body.description,
         status: body.status || 'active',
+        project_id: body.projectId || null,
       })
       .select()
       .single()

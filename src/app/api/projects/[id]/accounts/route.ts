@@ -1,0 +1,147 @@
+import { createClient } from '@/lib/supabase/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth } from '@/lib/auth'
+
+interface RouteContext {
+  params: Promise<{ id: string }>
+}
+
+// GET /api/projects/[id]/accounts - List accounts associated with project
+export async function GET(_request: NextRequest, context: RouteContext) {
+  try {
+    const { id: projectId } = await context.params
+    const supabase = await createClient()
+
+    // Verify project exists (RLS handles auth)
+    const { data: project, error: projectError } = await supabase
+      .from('projects')
+      .select('id')
+      .eq('id', projectId)
+      .single()
+
+    if (projectError || !project) {
+      return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+    }
+
+    // Fetch account associations
+    const { data, error } = await supabase
+      .from('project_accounts')
+      .select('*')
+      .eq('project_id', projectId)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    // Transform to camelCase
+    const accounts = (data || []).map(pa => ({
+      id: pa.id,
+      projectId: pa.project_id,
+      accountId: pa.account_id,
+      createdAt: pa.created_at,
+    }))
+
+    return NextResponse.json({ accounts })
+  } catch (error) {
+    console.error('Error fetching project accounts:', error)
+    return NextResponse.json({ error: 'Failed to fetch accounts' }, { status: 500 })
+  }
+}
+
+// POST /api/projects/[id]/accounts - Add account to project
+export async function POST(request: NextRequest, context: RouteContext) {
+  try {
+    // Require authentication
+    try {
+      await requireAuth()
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { id: projectId } = await context.params
+    const supabase = await createClient()
+    const body = await request.json()
+
+    if (!body.accountId) {
+      return NextResponse.json({ error: 'accountId is required' }, { status: 400 })
+    }
+
+    // Verify project exists (RLS handles ownership)
+    const { data: project, error: projectError } = await supabase
+      .from('projects')
+      .select('id')
+      .eq('id', projectId)
+      .single()
+
+    if (projectError || !project) {
+      return NextResponse.json({ error: 'Project not found' }, { status: 404 })
+    }
+
+    // Create association
+    const { data, error } = await supabase
+      .from('project_accounts')
+      .insert({
+        project_id: projectId,
+        account_id: body.accountId,
+      })
+      .select()
+      .single()
+
+    if (error) {
+      if (error.code === '23505') { // Unique violation
+        return NextResponse.json({ error: 'Account already associated with project' }, { status: 409 })
+      }
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    return NextResponse.json({
+      account: {
+        id: data.id,
+        projectId: data.project_id,
+        accountId: data.account_id,
+        createdAt: data.created_at,
+      }
+    }, { status: 201 })
+  } catch (error) {
+    console.error('Error adding account to project:', error)
+    return NextResponse.json({ error: 'Failed to add account' }, { status: 500 })
+  }
+}
+
+// DELETE /api/projects/[id]/accounts - Remove account from project
+export async function DELETE(request: NextRequest, context: RouteContext) {
+  try {
+    // Require authentication
+    try {
+      await requireAuth()
+    } catch {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { id: projectId } = await context.params
+    const supabase = await createClient()
+    const { searchParams } = new URL(request.url)
+    const accountId = searchParams.get('accountId')
+
+    if (!accountId) {
+      return NextResponse.json({ error: 'accountId query parameter is required' }, { status: 400 })
+    }
+
+    // Delete association (RLS handles ownership via project)
+    const { error } = await supabase
+      .from('project_accounts')
+      .delete()
+      .eq('project_id', projectId)
+      .eq('account_id', accountId)
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Error removing account from project:', error)
+    return NextResponse.json({ error: 'Failed to remove account' }, { status: 500 })
+  }
+}

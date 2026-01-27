@@ -1,13 +1,17 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { format, formatDistanceToNow } from 'date-fns'
-import { Calendar, FileText, Clock, ChevronRight, Plus, Sparkles, FolderOpen, CheckCircle } from 'lucide-react'
+import { Calendar, FileText, Clock, ChevronRight, Plus, Sparkles, FolderOpen, CheckCircle, FolderKanban } from 'lucide-react'
 import { usePostsStore } from '@/lib/storage'
 import { useCampaignsStore } from '@/lib/campaigns'
-import { Post, getPostPreviewText, PLATFORM_INFO, Campaign } from '@/lib/posts'
+import { useProjectsStore } from '@/lib/projects'
+import { Post, getPostPreviewText, PLATFORM_INFO, Campaign, Project } from '@/lib/posts'
 import { cn } from '@/lib/utils'
+import { ProjectSelector } from '@/components/projects/ProjectSelector'
+import { CreateProjectModal } from '@/components/projects/CreateProjectModal'
 
 // Platform icon component
 function PlatformIcon({ platform }: { platform: string }) {
@@ -86,6 +90,39 @@ const CAMPAIGN_STATUS_STYLES: Record<string, string> = {
   active: 'bg-green-500/10 text-green-600 dark:text-green-400',
   completed: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
   archived: 'bg-gray-500/10 text-gray-500',
+}
+
+// Mini project card for dashboard
+function ProjectMiniCard({ project, campaignCount }: { project: Project; campaignCount: number }) {
+  return (
+    <Link
+      href={`/projects/${project.id}`}
+      className={cn(
+        'block p-4 rounded-xl border border-border bg-card',
+        'hover:border-[hsl(var(--gold))]/50 hover:shadow-md',
+        'transition-all duration-200',
+        'group'
+      )}
+    >
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-lg bg-[hsl(var(--gold))]/10 flex items-center justify-center flex-shrink-0">
+          <FolderKanban className="w-5 h-5 text-[hsl(var(--gold-dark))]" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold text-sm truncate group-hover:text-[hsl(var(--gold-dark))] transition-colors">
+            {project.name}
+          </h3>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span>{campaignCount} campaign{campaignCount !== 1 ? 's' : ''}</span>
+            {project.hashtags.length > 0 && (
+              <span className="text-[hsl(var(--gold-dark))]">#{project.hashtags.length} tags</span>
+            )}
+          </div>
+        </div>
+        <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+      </div>
+    </Link>
+  )
 }
 
 // Campaign card component
@@ -199,12 +236,18 @@ function Section({
 }
 
 export default function DashboardPage() {
+  const router = useRouter()
   const allPosts = usePostsStore((state) => state.posts)
   const fetchPosts = usePostsStore((state) => state.fetchPosts)
   const postsInitialized = usePostsStore((state) => state.initialized)
-  const { campaigns, fetchCampaigns, initialized: campaignsInitialized } = useCampaignsStore()
+  const { campaigns, fetchCampaigns, initialized: campaignsInitialized, getCampaignsByProject } = useCampaignsStore()
+  const { projects, fetchProjects, initialized: projectsInitialized } = useProjectsStore()
 
-  // Fetch posts and campaigns on mount
+  // Project filter state
+  const [selectedProject, setSelectedProject] = useState<'all' | 'unassigned' | string>('all')
+  const [showCreateProjectModal, setShowCreateProjectModal] = useState(false)
+
+  // Fetch posts, campaigns, and projects on mount
   useEffect(() => {
     if (!postsInitialized) {
       fetchPosts()
@@ -216,6 +259,12 @@ export default function DashboardPage() {
       fetchCampaigns()
     }
   }, [campaignsInitialized, fetchCampaigns])
+
+  useEffect(() => {
+    if (!projectsInitialized) {
+      fetchProjects()
+    }
+  }, [projectsInitialized, fetchProjects])
 
   // Exclude archived posts
   const activePosts = allPosts.filter((p) => p.status !== 'archived')
@@ -238,11 +287,27 @@ export default function DashboardPage() {
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
     .slice(0, 5)
 
-  // Recent campaigns (exclude archived, sorted by updated)
-  const recentCampaigns = campaigns
-    .filter((c) => c.status !== 'archived')
+  // Filter campaigns by project if selected
+  const filteredCampaigns = selectedProject === 'all'
+    ? campaigns.filter((c) => c.status !== 'archived')
+    : selectedProject === 'unassigned'
+      ? getCampaignsByProject(null).filter((c) => c.status !== 'archived')
+      : getCampaignsByProject(selectedProject).filter((c) => c.status !== 'archived')
+
+  // Recent campaigns (sorted by updated)
+  const recentCampaigns = filteredCampaigns
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
     .slice(0, 4)
+
+  // Recent projects (sorted by updated)
+  const recentProjects = [...projects]
+    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+    .slice(0, 4)
+
+  // Get campaign count per project
+  const getCampaignCountForProject = (projectId: string) => {
+    return campaigns.filter((c) => c.projectId === projectId && c.status !== 'archived').length
+  }
 
   // Stats
   const stats = {
@@ -250,6 +315,7 @@ export default function DashboardPage() {
     drafts: activePosts.filter((p) => p.status === 'draft').length,
     published: activePosts.filter((p) => p.status === 'published').length,
     campaigns: campaigns.filter((c) => c.status !== 'archived').length,
+    projects: projects.length,
   }
 
   const totalPosts = stats.scheduled + stats.drafts + stats.published
@@ -258,9 +324,9 @@ export default function DashboardPage() {
   return (
     <div className="min-h-[calc(100vh-4rem)] p-4 md:p-6 max-w-5xl mx-auto">
       {/* Stats bar */}
-      <div className="flex items-center gap-4 mb-6 p-4 rounded-xl bg-gradient-to-r from-[hsl(var(--gold))]/5 via-transparent to-[hsl(var(--gold))]/5 border border-[hsl(var(--gold))]/20">
-        <div className="flex-1 flex items-center gap-6">
-          <div className="text-center">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 mb-6 p-4 rounded-xl bg-gradient-to-r from-[hsl(var(--gold))]/5 via-transparent to-[hsl(var(--gold))]/5 border border-[hsl(var(--gold))]/20">
+        <div className="flex-1 flex items-center gap-4 sm:gap-6 overflow-x-auto">
+          <div className="text-center flex-shrink-0">
             <div className="text-2xl font-display font-bold text-[hsl(var(--gold-dark))]">
               {stats.scheduled}
             </div>
@@ -268,8 +334,8 @@ export default function DashboardPage() {
               Scheduled
             </div>
           </div>
-          <div className="w-px h-8 bg-border" />
-          <div className="text-center">
+          <div className="w-px h-8 bg-border flex-shrink-0" />
+          <div className="text-center flex-shrink-0">
             <div className="text-2xl font-display font-bold text-[hsl(var(--gold-dark))]">
               {stats.drafts}
             </div>
@@ -277,8 +343,8 @@ export default function DashboardPage() {
               Drafts
             </div>
           </div>
-          <div className="w-px h-8 bg-border" />
-          <div className="text-center">
+          <div className="w-px h-8 bg-border flex-shrink-0" />
+          <div className="text-center flex-shrink-0">
             <div className="text-2xl font-display font-bold text-[hsl(var(--gold-dark))]">
               {stats.published}
             </div>
@@ -286,29 +352,39 @@ export default function DashboardPage() {
               Published
             </div>
           </div>
-          <div className="w-px h-8 bg-border hidden sm:block" />
-          <div className="text-center hidden sm:block">
+          <div className="w-px h-8 bg-border hidden sm:block flex-shrink-0" />
+          <div className="text-center hidden sm:block flex-shrink-0">
             <div className="text-2xl font-display font-bold text-[hsl(var(--gold-dark))]">
-              {stats.campaigns}
+              {stats.projects}
             </div>
             <div className="text-[10px] uppercase tracking-widest text-muted-foreground font-medium">
-              Campaigns
+              Projects
             </div>
           </div>
         </div>
-        <Link
-          href="/new"
-          className={cn(
-            'hidden md:flex items-center gap-2 px-4 py-2.5 rounded-lg',
-            'bg-gradient-to-br from-[hsl(var(--gold))] to-[hsl(var(--gold-dark))]',
-            'text-white font-medium text-sm',
-            'hover:shadow-lg hover:shadow-[hsl(var(--gold))]/30',
-            'transition-all duration-200'
-          )}
-        >
-          <Plus className="w-4 h-4" />
-          New Post
-        </Link>
+        {/* Project filter */}
+        <div className="flex items-center gap-2">
+          <ProjectSelector
+            value={selectedProject}
+            onChange={(value) => setSelectedProject(value)}
+            showAllOption={true}
+            showUnassignedOption={true}
+            className="w-full sm:w-48"
+          />
+          <Link
+            href="/new"
+            className={cn(
+              'hidden md:flex items-center gap-2 px-4 py-2.5 rounded-lg',
+              'bg-gradient-to-br from-[hsl(var(--gold))] to-[hsl(var(--gold-dark))]',
+              'text-white font-medium text-sm',
+              'hover:shadow-lg hover:shadow-[hsl(var(--gold))]/30',
+              'transition-all duration-200'
+            )}
+          >
+            <Plus className="w-4 h-4" />
+            New Post
+          </Link>
+        </div>
       </div>
 
       {/* Empty state when no posts at all */}
@@ -386,17 +462,85 @@ export default function DashboardPage() {
             ))}
           </Section>
 
+          {/* Projects section - full width */}
+          <div className="lg:col-span-2 xl:col-span-3">
+            <section className="animate-fade-in">
+              {/* Section header */}
+              <div className="flex items-center justify-between gap-2 mb-4">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="p-2 rounded-lg bg-[hsl(var(--gold))]/10 shrink-0">
+                    <FolderKanban className="w-4 h-4 text-[hsl(var(--gold-dark))]" />
+                  </div>
+                  <h2 className="text-sm font-bold uppercase tracking-widest text-[hsl(var(--gold-dark))] truncate">
+                    Projects
+                  </h2>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowCreateProjectModal(true)}
+                    className="text-xs font-medium text-[hsl(var(--gold-dark))] hover:text-[hsl(var(--gold))] transition-colors flex items-center gap-1 whitespace-nowrap shrink-0"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    New
+                  </button>
+                  {recentProjects.length > 0 && (
+                    <Link
+                      href="/projects"
+                      className="text-xs font-medium text-muted-foreground hover:text-[hsl(var(--gold-dark))] transition-colors flex items-center gap-1 whitespace-nowrap shrink-0"
+                    >
+                      View all
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </Link>
+                  )}
+                </div>
+              </div>
+
+              {/* Content or empty state */}
+              {recentProjects.length === 0 ? (
+                <div className="text-center py-8 px-4 rounded-xl border border-dashed border-border bg-card/50">
+                  <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-[hsl(var(--gold))]/10 flex items-center justify-center">
+                    <FolderKanban className="w-6 h-6 text-[hsl(var(--gold-dark))]" />
+                  </div>
+                  <p className="text-sm font-medium mb-1">No projects yet</p>
+                  <p className="text-xs text-muted-foreground mb-4">Create a project to organize campaigns and brand assets</p>
+                  <button
+                    onClick={() => setShowCreateProjectModal(true)}
+                    className={cn(
+                      'inline-flex items-center gap-2 px-4 py-2 rounded-lg',
+                      'bg-[hsl(var(--gold))]/10 text-[hsl(var(--gold-dark))]',
+                      'text-sm font-medium',
+                      'hover:bg-[hsl(var(--gold))]/20 transition-colors'
+                    )}
+                  >
+                    <Plus className="w-4 h-4" />
+                    Create Project
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {recentProjects.map((project) => (
+                    <ProjectMiniCard
+                      key={project.id}
+                      project={project}
+                      campaignCount={getCampaignCountForProject(project.id)}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+          </div>
+
           {/* Campaigns section - full width */}
           <div className="lg:col-span-2 xl:col-span-3">
             <Section
-              title="Campaigns"
+              title={selectedProject === 'all' ? 'Campaigns' : selectedProject === 'unassigned' ? 'Unassigned Campaigns' : 'Project Campaigns'}
               icon={FolderOpen}
               viewAllLink="/campaigns"
               viewAllLabel="View all campaigns"
               isEmpty={recentCampaigns.length === 0}
               emptyIcon={FolderOpen}
-              emptyTitle="No campaigns yet"
-              emptyDescription="Create a campaign to group related posts"
+              emptyTitle={selectedProject === 'all' ? 'No campaigns yet' : 'No campaigns in this project'}
+              emptyDescription={selectedProject === 'all' ? 'Create a campaign to group related posts' : 'Add campaigns to this project'}
             >
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {recentCampaigns.map((campaign) => (
@@ -407,6 +551,15 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      {/* Create Project Modal */}
+      <CreateProjectModal
+        open={showCreateProjectModal}
+        onClose={() => setShowCreateProjectModal(false)}
+        onSuccess={(projectId) => {
+          router.push(`/projects/${projectId}`)
+        }}
+      />
     </div>
   )
 }

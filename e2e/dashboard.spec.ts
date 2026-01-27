@@ -13,7 +13,8 @@ test.describe('Dashboard', () => {
   test.describe.serial('Stats Bar', () => {
     test('should show zero stats when no posts exist', async ({ page }) => {
       // Verify all stats show 0
-      const statsBar = page.locator('.flex-1.flex.items-center.gap-6')
+      // The stats bar uses 'flex-1 flex items-center gap-4 sm:gap-6'
+      const statsBar = page.locator('.flex-1.flex.items-center')
 
       // Check Scheduled count
       await expect(statsBar.locator('text=Scheduled').locator('..').locator('.text-2xl')).toHaveText('0')

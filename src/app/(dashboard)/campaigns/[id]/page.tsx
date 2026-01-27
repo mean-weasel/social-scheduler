@@ -18,11 +18,15 @@ import {
   Clock,
   Calendar,
   AlertCircle,
+  FolderKanban,
 } from 'lucide-react'
 import { useCampaignsStore } from '@/lib/campaigns'
 import { usePostsStore } from '@/lib/storage'
+import { useProjectsStore } from '@/lib/projects'
 import { Campaign, CampaignStatus, Post, PostStatus, getPostPreviewText, PLATFORM_INFO } from '@/lib/posts'
 import { cn } from '@/lib/utils'
+import { getMediaUrl } from '@/lib/media'
+import { MoveCampaignModal } from '@/components/campaigns/MoveCampaignModal'
 
 const CAMPAIGN_STATUS_CONFIG: Record<CampaignStatus, { label: string; icon: typeof FileText; color: string }> = {
   draft: { label: 'Draft', icon: FileText, color: 'text-muted-foreground' },
@@ -44,6 +48,7 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
   const router = useRouter()
   const { getCampaignWithPosts, updateCampaign, deleteCampaign, removePostFromCampaign } = useCampaignsStore()
   const { posts: allPosts, fetchPosts, initialized: postsInitialized, updatePost } = usePostsStore()
+  const { projects, fetchProjects, initialized: projectsInitialized } = useProjectsStore()
 
   const [campaign, setCampaign] = useState<Campaign | null>(null)
   const [campaignPosts, setCampaignPosts] = useState<Post[]>([])
@@ -52,12 +57,16 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
   const [editName, setEditName] = useState('')
   const [editDescription, setEditDescription] = useState('')
   const [showAddPostModal, setShowAddPostModal] = useState(false)
+  const [showMoveModal, setShowMoveModal] = useState(false)
 
   useEffect(() => {
     if (!postsInitialized) {
       fetchPosts()
     }
-  }, [postsInitialized, fetchPosts])
+    if (!projectsInitialized) {
+      fetchProjects()
+    }
+  }, [postsInitialized, fetchPosts, projectsInitialized, fetchProjects])
 
   useEffect(() => {
     async function loadCampaign() {
@@ -223,6 +232,46 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
                     Updated {format(new Date(campaign.updatedAt), 'MMM d, yyyy')}
                   </span>
                 </div>
+                {/* Project info */}
+                <div className="flex items-center gap-2 mt-3">
+                  {campaign.projectId ? (
+                    <>
+                      {(() => {
+                        const project = projects.find(p => p.id === campaign.projectId)
+                        return (
+                          <Link
+                            href={`/projects/${campaign.projectId}`}
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[hsl(var(--gold))]/10 text-sm hover:bg-[hsl(var(--gold))]/20 transition-colors"
+                          >
+                            {project?.logoUrl ? (
+                              <img
+                                src={getMediaUrl(project.logoUrl)}
+                                alt=""
+                                className="w-4 h-4 rounded object-contain"
+                              />
+                            ) : (
+                              <FolderKanban className="w-4 h-4 text-[hsl(var(--gold-dark))]" />
+                            )}
+                            <span className="text-[hsl(var(--gold-dark))] font-medium">
+                              {project?.name || 'Project'}
+                            </span>
+                          </Link>
+                        )
+                      })()}
+                    </>
+                  ) : (
+                    <span className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted text-sm text-muted-foreground">
+                      <FolderKanban className="w-4 h-4" />
+                      Unassigned
+                    </span>
+                  )}
+                  <button
+                    onClick={() => setShowMoveModal(true)}
+                    className="text-sm text-muted-foreground hover:text-[hsl(var(--gold-dark))] transition-colors"
+                  >
+                    Move
+                  </button>
+                </div>
               </>
             )}
           </div>
@@ -331,6 +380,21 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
           posts={availablePosts}
           onClose={() => setShowAddPostModal(false)}
           onAdd={handleAddPost}
+        />
+      )}
+
+      {/* Move Campaign Modal */}
+      {showMoveModal && campaign && (
+        <MoveCampaignModal
+          campaign={campaign}
+          onClose={() => setShowMoveModal(false)}
+          onMoved={async () => {
+            // Refresh campaign data
+            const data = await getCampaignWithPosts(campaign.id)
+            if (data) {
+              setCampaign(data.campaign)
+            }
+          }}
         />
       )}
     </div>

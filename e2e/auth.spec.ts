@@ -161,27 +161,28 @@ test.describe('Authentication', () => {
       // No indicator when empty
       await expect(page.getByText('Weak')).not.toBeVisible()
 
-      // Type a short weak password
-      await passwordInput.fill('abc')
+      // Score 1 (Weak): 6+ chars, one criterion met
+      await passwordInput.fill('abcdef')
       await expect(page.getByText('Weak')).toBeVisible()
 
-      // Type a longer password
-      await passwordInput.fill('password')
+      // Score 2 (Fair): 10+ chars (two criteria: length >= 6 and length >= 10)
+      await passwordInput.fill('abcdefghij')
       await expect(page.getByText('Fair')).toBeVisible()
 
-      // Type a password with mixed case and numbers
-      await passwordInput.fill('Password123')
+      // Score 3 (Good): 10+ chars with mixed case (three criteria)
+      await passwordInput.fill('Abcdefghij')
       await expect(page.getByText('Good')).toBeVisible()
 
-      // Type a strong password with special chars
-      await passwordInput.fill('Password123!')
+      // Score 4 (Strong): 10+ chars, mixed case, and numbers (four criteria, capped at 4)
+      await passwordInput.fill('Abcdefgh12')
       await expect(page.getByText('Strong')).toBeVisible()
     })
 
     test('should show helpful tips for weak passwords', async ({ page }) => {
       const passwordInput = page.getByLabel('Password', { exact: true })
 
-      await passwordInput.fill('weak')
+      // Must be >= 6 chars to show tip (score 1-2)
+      await passwordInput.fill('abcdef')
       // Should show tip about improving password
       await expect(page.getByText(/Try adding/)).toBeVisible()
     })
