@@ -31,10 +31,6 @@ export interface Project {
   updatedAt: string
 }
 
-export interface ProjectWithCampaigns extends Project {
-  campaigns: Campaign[]
-}
-
 export interface ProjectAnalytics {
   totalCampaigns: number
   totalPosts: number
