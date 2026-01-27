@@ -1,6 +1,10 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
+// Test user ID - must match the one in auth.ts
+const TEST_USER_ID = '00000000-0000-0000-0000-000000000001'
+const TEST_USER_EMAIL = 'test@example.com'
+
 export async function POST() {
   // SECURITY: Never allow reset in production environment
   if (process.env.NODE_ENV === 'production') {
@@ -21,11 +25,26 @@ export async function POST() {
   try {
     const supabase = await createClient()
 
-    // Delete all posts, campaigns, and blog_drafts for testing
+    // Ensure test user exists in auth.users (required for foreign key constraints)
+    // Use admin API to create user if it doesn't exist
+    const { data: existingUser } = await supabase.auth.admin.getUserById(TEST_USER_ID)
+    if (!existingUser?.user) {
+      await supabase.auth.admin.createUser({
+        email: TEST_USER_EMAIL,
+        email_confirm: true,
+        user_metadata: { name: 'Test User' },
+        // Set specific ID for the test user
+        id: TEST_USER_ID,
+      })
+    }
+
+    // Delete all test data (order matters due to foreign keys)
     // Note: In test mode, RLS is bypassed so this works without auth
     await supabase.from('posts').delete().neq('id', '00000000-0000-0000-0000-000000000000')
     await supabase.from('campaigns').delete().neq('id', '00000000-0000-0000-0000-000000000000')
     await supabase.from('blog_drafts').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+    await supabase.from('project_accounts').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+    await supabase.from('projects').delete().neq('id', '00000000-0000-0000-0000-000000000000')
 
     return NextResponse.json({ success: true })
   } catch (error) {

@@ -16,8 +16,40 @@ export interface Campaign {
   name: string
   description?: string
   status: CampaignStatus
+  projectId?: string
   createdAt: string
   updatedAt: string
+}
+
+export interface Project {
+  id: string
+  name: string
+  description?: string
+  hashtags: string[]
+  brandColors: {
+    primary?: string
+    secondary?: string
+    accent?: string
+  }
+  logoUrl?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ProjectAccount {
+  id: string
+  projectId: string
+  accountId: string
+  createdAt: string
+}
+
+export interface ProjectAnalytics {
+  totalCampaigns: number
+  totalPosts: number
+  scheduledPosts: number
+  publishedPosts: number
+  draftPosts: number
+  failedPosts: number
 }
 
 export interface TwitterContent {
@@ -108,8 +140,28 @@ interface DbCampaign {
   name: string
   description: string | null
   status: CampaignStatus
+  project_id: string | null
   created_at: string
   updated_at: string
+}
+
+interface DbProject {
+  id: string
+  user_id: string | null
+  name: string
+  description: string | null
+  hashtags: string[]
+  brand_colors: Record<string, string>
+  logo_url: string | null
+  created_at: string
+  updated_at: string
+}
+
+interface DbProjectAccount {
+  id: string
+  project_id: string
+  account_id: string
+  created_at: string
 }
 
 interface DbBlogDraft {
@@ -152,8 +204,31 @@ function toCampaign(row: DbCampaign): Campaign {
     name: row.name,
     description: row.description || undefined,
     status: row.status,
+    projectId: row.project_id || undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+  }
+}
+
+function toProject(row: DbProject): Project {
+  return {
+    id: row.id,
+    name: row.name,
+    description: row.description || undefined,
+    hashtags: row.hashtags || [],
+    brandColors: row.brand_colors || {},
+    logoUrl: row.logo_url || undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  }
+}
+
+function toProjectAccount(row: DbProjectAccount): ProjectAccount {
+  return {
+    id: row.id,
+    projectId: row.project_id,
+    accountId: row.account_id,
+    createdAt: row.created_at,
   }
 }
 
@@ -753,4 +828,345 @@ export async function getDraftImages(draftId: string): Promise<string[]> {
     throw new Error(`Blog draft with ID ${draftId} not found`)
   }
   return draft.images
+}
+
+// ==================
+// Project Operations
+// ==================
+
+const PROJECT_SOFT_LIMIT = 3
+
+export async function createProject(data: {
+  name: string
+  description?: string
+  hashtags?: string[]
+  brandColors?: Record<string, string>
+  logoUrl?: string
+}): Promise<{ project: Project; atLimit: boolean }> {
+  const db = getSupabase()
+
+  // Check current count for soft limit
+  const { count } = await db
+    .from('projects')
+    .select('*', { count: 'exact', head: true })
+
+  const atLimit = (count || 0) >= PROJECT_SOFT_LIMIT
+
+  const { data: row, error } = await db
+    .from('projects')
+    .insert({
+      name: data.name,
+      description: data.description || null,
+      hashtags: data.hashtags || [],
+      brand_colors: data.brandColors || {},
+      logo_url: data.logoUrl || null,
+    })
+    .select()
+    .single()
+
+  if (error) {
+    throw new Error(`Failed to create project: ${error.message}`)
+  }
+
+  return { project: toProject(row), atLimit }
+}
+
+export async function getProject(id: string): Promise<Project | undefined> {
+  const db = getSupabase()
+
+  const { data: row, error } = await db
+    .from('projects')
+    .select()
+    .eq('id', id)
+    .single()
+
+  if (error) {
+    if (error.code === 'PGRST116') return undefined
+    throw new Error(`Failed to get project: ${error.message}`)
+  }
+
+  return toProject(row)
+}
+
+export async function updateProject(
+  id: string,
+  updates: Partial<Omit<Project, 'id' | 'createdAt'>>
+): Promise<Project | undefined> {
+  const db = getSupabase()
+
+  const dbUpdates: Record<string, unknown> = {}
+  if (updates.name !== undefined) dbUpdates.name = updates.name
+  if (updates.description !== undefined) dbUpdates.description = updates.description
+  if (updates.hashtags !== undefined) dbUpdates.hashtags = updates.hashtags
+  if (updates.brandColors !== undefined) dbUpdates.brand_colors = updates.brandColors
+  if (updates.logoUrl !== undefined) dbUpdates.logo_url = updates.logoUrl
+
+  const { data: row, error } = await db
+    .from('projects')
+    .update(dbUpdates)
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) {
+    if (error.code === 'PGRST116') return undefined
+    throw new Error(`Failed to update project: ${error.message}`)
+  }
+
+  return toProject(row)
+}
+
+export async function deleteProject(id: string): Promise<{ success: boolean; campaignsDeleted: number }> {
+  const db = getSupabase()
+
+  // Get count of campaigns that will be affected
+  const { count: campaignCount } = await db
+    .from('campaigns')
+    .select('*', { count: 'exact', head: true })
+    .eq('project_id', id)
+
+  // Delete project (cascading delete will handle campaigns via ON DELETE SET NULL)
+  // Note: Campaigns become unassigned, not deleted. Posts within those campaigns remain.
+  const { error } = await db
+    .from('projects')
+    .delete()
+    .eq('id', id)
+
+  if (error) {
+    throw new Error(`Failed to delete project: ${error.message}`)
+  }
+
+  return { success: true, campaignsDeleted: campaignCount || 0 }
+}
+
+export async function listProjects(options?: {
+  limit?: number
+  offset?: number
+}): Promise<{ projects: Project[]; total: number; softLimit: number; atLimit: boolean }> {
+  const db = getSupabase()
+
+  let query = db
+    .from('projects')
+    .select('*', { count: 'exact' })
+    .order('created_at', { ascending: false })
+
+  if (options?.limit) {
+    query = query.limit(options.limit)
+  }
+  if (options?.offset) {
+    query = query.range(options.offset, options.offset + (options.limit || 100) - 1)
+  }
+
+  const { data, error, count } = await query
+
+  if (error) {
+    throw new Error(`Failed to list projects: ${error.message}`)
+  }
+
+  const total = count || 0
+  return {
+    projects: (data || []).map(toProject),
+    total,
+    softLimit: PROJECT_SOFT_LIMIT,
+    atLimit: total >= PROJECT_SOFT_LIMIT,
+  }
+}
+
+export async function getProjectWithCampaigns(id: string): Promise<{ project: Project; campaigns: Campaign[] } | undefined> {
+  const project = await getProject(id)
+  if (!project) return undefined
+
+  const db = getSupabase()
+  const { data: campaigns, error } = await db
+    .from('campaigns')
+    .select()
+    .eq('project_id', id)
+    .order('updated_at', { ascending: false })
+
+  if (error) {
+    throw new Error(`Failed to get project campaigns: ${error.message}`)
+  }
+
+  return {
+    project,
+    campaigns: (campaigns || []).map(toCampaign),
+  }
+}
+
+export async function getProjectAnalytics(id: string): Promise<ProjectAnalytics | undefined> {
+  const project = await getProject(id)
+  if (!project) return undefined
+
+  const db = getSupabase()
+
+  // Get campaign IDs
+  const { data: campaigns } = await db
+    .from('campaigns')
+    .select('id')
+    .eq('project_id', id)
+
+  const campaignIds = (campaigns || []).map(c => c.id)
+  const totalCampaigns = campaignIds.length
+
+  if (totalCampaigns === 0) {
+    return {
+      totalCampaigns: 0,
+      totalPosts: 0,
+      scheduledPosts: 0,
+      publishedPosts: 0,
+      draftPosts: 0,
+      failedPosts: 0,
+    }
+  }
+
+  // Get post statuses
+  const { data: posts } = await db
+    .from('posts')
+    .select('status')
+    .in('campaign_id', campaignIds)
+
+  const postStatuses = posts || []
+
+  return {
+    totalCampaigns,
+    totalPosts: postStatuses.length,
+    scheduledPosts: postStatuses.filter(p => p.status === 'scheduled').length,
+    publishedPosts: postStatuses.filter(p => p.status === 'published').length,
+    draftPosts: postStatuses.filter(p => p.status === 'draft').length,
+    failedPosts: postStatuses.filter(p => p.status === 'failed').length,
+  }
+}
+
+// ==================
+// Project Account Operations
+// ==================
+
+export async function addAccountToProject(projectId: string, accountId: string): Promise<ProjectAccount> {
+  const db = getSupabase()
+
+  // Verify project exists
+  const project = await getProject(projectId)
+  if (!project) {
+    throw new Error(`Project with ID ${projectId} not found`)
+  }
+
+  const { data: row, error } = await db
+    .from('project_accounts')
+    .insert({
+      project_id: projectId,
+      account_id: accountId,
+    })
+    .select()
+    .single()
+
+  if (error) {
+    if (error.code === '23505') {
+      throw new Error('Account is already associated with this project')
+    }
+    throw new Error(`Failed to add account to project: ${error.message}`)
+  }
+
+  return toProjectAccount(row)
+}
+
+export async function removeAccountFromProject(projectId: string, accountId: string): Promise<boolean> {
+  const db = getSupabase()
+
+  const { error, count } = await db
+    .from('project_accounts')
+    .delete()
+    .eq('project_id', projectId)
+    .eq('account_id', accountId)
+
+  if (error) {
+    throw new Error(`Failed to remove account from project: ${error.message}`)
+  }
+
+  return count !== null && count > 0
+}
+
+export async function getProjectAccounts(projectId: string): Promise<ProjectAccount[]> {
+  const db = getSupabase()
+
+  const { data, error } = await db
+    .from('project_accounts')
+    .select()
+    .eq('project_id', projectId)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    throw new Error(`Failed to get project accounts: ${error.message}`)
+  }
+
+  return (data || []).map(toProjectAccount)
+}
+
+// ==================
+// Campaign-Project Operations
+// ==================
+
+export async function moveCampaignToProject(
+  campaignId: string,
+  targetProjectId: string | null
+): Promise<Campaign | undefined> {
+  const db = getSupabase()
+
+  // Verify campaign exists
+  const campaignResult = await getCampaign(campaignId)
+  if (!campaignResult) return undefined
+
+  // If targeting a project, verify it exists
+  if (targetProjectId) {
+    const project = await getProject(targetProjectId)
+    if (!project) {
+      throw new Error(`Target project with ID ${targetProjectId} not found`)
+    }
+  }
+
+  const { data: row, error } = await db
+    .from('campaigns')
+    .update({ project_id: targetProjectId })
+    .eq('id', campaignId)
+    .select()
+    .single()
+
+  if (error) {
+    if (error.code === 'PGRST116') return undefined
+    throw new Error(`Failed to move campaign: ${error.message}`)
+  }
+
+  return toCampaign(row)
+}
+
+export async function listCampaignsByProject(
+  projectId: string | null,
+  options?: { status?: CampaignStatus | 'all'; limit?: number }
+): Promise<Campaign[]> {
+  const db = getSupabase()
+
+  let query = db
+    .from('campaigns')
+    .select()
+    .order('updated_at', { ascending: false })
+
+  if (projectId === null) {
+    query = query.is('project_id', null)
+  } else {
+    query = query.eq('project_id', projectId)
+  }
+
+  if (options?.status && options.status !== 'all') {
+    query = query.eq('status', options.status)
+  }
+  if (options?.limit) {
+    query = query.limit(options.limit)
+  }
+
+  const { data, error } = await query
+
+  if (error) {
+    throw new Error(`Failed to list campaigns by project: ${error.message}`)
+  }
+
+  return (data || []).map(toCampaign)
 }

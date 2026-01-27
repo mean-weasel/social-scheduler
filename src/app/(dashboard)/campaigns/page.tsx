@@ -14,10 +14,14 @@ import {
   Edit2,
   Trash2,
   MoreVertical,
+  FolderKanban,
 } from 'lucide-react'
 import { useCampaignsStore } from '@/lib/campaigns'
-import { Campaign, CampaignStatus } from '@/lib/posts'
+import { useProjectsStore } from '@/lib/projects'
+import { Campaign, CampaignStatus, Project } from '@/lib/posts'
 import { cn } from '@/lib/utils'
+import { getMediaUrl } from '@/lib/media'
+import { MoveCampaignModal } from '@/components/campaigns/MoveCampaignModal'
 
 type FilterStatus = 'all' | CampaignStatus
 
@@ -30,15 +34,20 @@ const STATUS_CONFIG: Record<CampaignStatus, { label: string; icon: typeof FileTe
 
 export default function CampaignsPage() {
   const { campaigns, fetchCampaigns, initialized, addCampaign, deleteCampaign } = useCampaignsStore()
+  const { projects, fetchProjects, initialized: projectsInitialized } = useProjectsStore()
   const [filter, setFilter] = useState<FilterStatus>('all')
   const [showNewModal, setShowNewModal] = useState(false)
+  const [movingCampaign, setMovingCampaign] = useState<Campaign | null>(null)
   const router = useRouter()
 
   useEffect(() => {
     if (!initialized) {
       fetchCampaigns()
     }
-  }, [initialized, fetchCampaigns])
+    if (!projectsInitialized) {
+      fetchProjects()
+    }
+  }, [initialized, fetchCampaigns, projectsInitialized, fetchProjects])
 
   // Filter campaigns
   const filteredCampaigns =
@@ -176,7 +185,9 @@ export default function CampaignsPage() {
               key={campaign.id}
               campaign={campaign}
               index={i}
+              project={projects.find(p => p.id === campaign.projectId)}
               onDelete={(e) => handleDeleteCampaign(campaign.id, e)}
+              onMove={() => setMovingCampaign(campaign)}
             />
           ))}
         </div>
@@ -186,6 +197,15 @@ export default function CampaignsPage() {
       {showNewModal && (
         <NewCampaignModal onClose={() => setShowNewModal(false)} onCreate={handleCreateCampaign} />
       )}
+
+      {/* Move Campaign Modal */}
+      {movingCampaign && (
+        <MoveCampaignModal
+          campaign={movingCampaign}
+          onClose={() => setMovingCampaign(null)}
+          onMoved={() => fetchCampaigns()}
+        />
+      )}
     </div>
   )
 }
@@ -193,11 +213,15 @@ export default function CampaignsPage() {
 function CampaignCard({
   campaign,
   index,
+  project,
   onDelete,
+  onMove,
 }: {
   campaign: Campaign
   index: number
+  project?: Project
   onDelete: (e: React.MouseEvent) => void
+  onMove: () => void
 }) {
   const statusConfig = STATUS_CONFIG[campaign.status]
   const StatusIcon = statusConfig.icon
@@ -233,6 +257,22 @@ function CampaignCard({
               {statusConfig.label}
             </span>
 
+            {/* Project */}
+            {project && (
+              <span className="flex items-center gap-1.5">
+                {project.logoUrl ? (
+                  <img
+                    src={getMediaUrl(project.logoUrl)}
+                    alt=""
+                    className="w-3.5 h-3.5 rounded object-contain"
+                  />
+                ) : (
+                  <FolderKanban className="w-3.5 h-3.5" />
+                )}
+                {project.name}
+              </span>
+            )}
+
             {/* Last updated */}
             <span className="flex items-center gap-1.5">Updated {format(new Date(campaign.updatedAt), 'MMM d')}</span>
           </div>
@@ -253,7 +293,7 @@ function CampaignCard({
           {showMenu && (
             <>
               <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
-              <div className="absolute right-0 top-full mt-1 z-20 bg-card border border-border rounded-lg shadow-lg py-1 min-w-[140px]">
+              <div className="absolute right-0 top-full mt-1 z-20 bg-card border border-border rounded-lg shadow-lg py-1 min-w-[160px]">
                 <Link
                   href={`/campaigns/${campaign.id}`}
                   className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent transition-colors"
@@ -262,6 +302,18 @@ function CampaignCard({
                   <Edit2 className="w-4 h-4" />
                   Edit
                 </Link>
+                <button
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setShowMenu(false)
+                    onMove()
+                  }}
+                  className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent transition-colors w-full text-left"
+                >
+                  <FolderKanban className="w-4 h-4" />
+                  Move to Project
+                </button>
                 <button
                   onClick={(e) => {
                     setShowMenu(false)

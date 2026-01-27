@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, ReactNode } from 'react'
 import { AlertTriangle, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -11,6 +11,7 @@ interface ConfirmDialogProps {
   confirmText?: string
   cancelText?: string
   variant?: 'danger' | 'warning' | 'default'
+  children?: ReactNode
 }
 
 export function ConfirmDialog({
@@ -22,6 +23,7 @@ export function ConfirmDialog({
   confirmText = 'Confirm',
   cancelText = 'Cancel',
   variant = 'default',
+  children,
 }: ConfirmDialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null)
   const confirmButtonRef = useRef<HTMLButtonElement>(null)
@@ -109,10 +111,13 @@ export function ConfirmDialog({
           </h2>
           <p
             id="confirm-description"
-            className="text-sm text-muted-foreground mb-6"
+            className="text-sm text-muted-foreground mb-4"
           >
             {description}
           </p>
+
+          {/* Additional content */}
+          {children && <div className="mb-6">{children}</div>}
 
           {/* Actions */}
           <div className="flex gap-3">

@@ -10,8 +10,32 @@ export interface Campaign {
   name: string
   description?: string
   status: CampaignStatus
+  projectId?: string  // Reference to parent project
   createdAt: string
   updatedAt: string
+}
+
+// Project interface - organizational unit above campaigns
+export interface Project {
+  id: string
+  name: string
+  description?: string
+  hashtags: string[]
+  brandColors: {
+    primary?: string
+    secondary?: string
+    accent?: string
+  }
+  logoUrl?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface ProjectAnalytics {
+  totalCampaigns: number
+  totalPosts: number
+  scheduledPosts: number
+  publishedPosts: number
 }
 
 export interface TwitterContent {

@@ -9,6 +9,7 @@ import {
   Plus,
   FolderOpen,
   FileText,
+  FolderKanban,
 } from 'lucide-react'
 import { UserMenu } from './UserMenu'
 
@@ -56,6 +57,16 @@ export function AppHeader({ userEmail, userDisplayName }: AppHeaderProps) {
 
         {/* Desktop nav icons - hidden on mobile */}
         <div className="hidden md:flex items-center gap-2">
+          <Link
+            href="/projects"
+            className={cn(
+              'p-2 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors',
+              pathname?.startsWith('/projects') && 'bg-accent text-foreground'
+            )}
+            title="Projects"
+          >
+            <FolderKanban className="w-5 h-5" />
+          </Link>
           <Link
             href="/campaigns"
             className={cn(

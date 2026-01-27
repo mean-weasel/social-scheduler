@@ -12,15 +12,17 @@ interface CampaignsState {
 }
 
 interface CampaignsActions {
-  fetchCampaigns: () => Promise<void>
-  addCampaign: (campaign: { name: string; description?: string; status?: CampaignStatus }) => Promise<Campaign>
+  fetchCampaigns: (options?: { projectId?: string | 'unassigned' }) => Promise<void>
+  addCampaign: (campaign: { name: string; description?: string; status?: CampaignStatus; projectId?: string }) => Promise<Campaign>
   updateCampaign: (id: string, updates: Partial<Campaign>) => Promise<void>
   deleteCampaign: (id: string) => Promise<void>
   getCampaign: (id: string) => Campaign | undefined
   getCampaignsByStatus: (status?: CampaignStatus) => Campaign[]
+  getCampaignsByProject: (projectId: string | null) => Campaign[]
   getCampaignWithPosts: (id: string) => Promise<{ campaign: Campaign; posts: Post[] } | undefined>
   addPostToCampaign: (campaignId: string, postId: string) => Promise<void>
   removePostFromCampaign: (campaignId: string, postId: string) => Promise<void>
+  moveCampaignToProject: (campaignId: string, projectId: string | null) => Promise<void>
 }
 
 export const useCampaignsStore = create<CampaignsState & CampaignsActions>()((set, get) => ({
@@ -29,10 +31,14 @@ export const useCampaignsStore = create<CampaignsState & CampaignsActions>()((se
   error: null,
   initialized: false,
 
-  fetchCampaigns: async () => {
+  fetchCampaigns: async (options) => {
     set({ loading: true, error: null })
     try {
-      const res = await fetch(`${API_BASE}/campaigns`)
+      let url = `${API_BASE}/campaigns`
+      if (options?.projectId) {
+        url += `?projectId=${encodeURIComponent(options.projectId)}`
+      }
+      const res = await fetch(url)
       if (!res.ok) throw new Error('Failed to fetch campaigns')
       const data = await res.json()
       set({ campaigns: data.campaigns || [], loading: false, initialized: true })
@@ -142,6 +148,36 @@ export const useCampaignsStore = create<CampaignsState & CampaignsActions>()((se
       if (!res.ok) throw new Error('Failed to remove post from campaign')
     } catch (error) {
       set({ error: (error as Error).message })
+      throw error
+    }
+  },
+
+  getCampaignsByProject: (projectId) => {
+    const campaigns = get().campaigns
+    if (projectId === null) {
+      // Return campaigns without a project (unassigned)
+      return campaigns.filter((c) => !c.projectId)
+    }
+    return campaigns.filter((c) => c.projectId === projectId)
+  },
+
+  moveCampaignToProject: async (campaignId, projectId) => {
+    set({ loading: true, error: null })
+    try {
+      const res = await fetch(`${API_BASE}/campaigns/${campaignId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId }),
+      })
+      if (!res.ok) throw new Error('Failed to move campaign to project')
+      const data = await res.json()
+      const updatedCampaign = data.campaign as Campaign
+      set((state) => ({
+        campaigns: state.campaigns.map((c) => (c.id === campaignId ? updatedCampaign : c)),
+        loading: false,
+      }))
+    } catch (error) {
+      set({ error: (error as Error).message, loading: false })
       throw error
     }
   },

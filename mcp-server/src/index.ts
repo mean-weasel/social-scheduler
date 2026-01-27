@@ -42,6 +42,19 @@ import {
   searchBlogDrafts,
   addImageToBlogDraft,
   getDraftImages,
+  // Project functions
+  createProject,
+  getProject,
+  updateProject,
+  deleteProject,
+  listProjects,
+  getProjectWithCampaigns,
+  getProjectAnalytics,
+  addAccountToProject,
+  removeAccountFromProject,
+  getProjectAccounts,
+  moveCampaignToProject,
+  listCampaignsByProject,
   type Platform,
   type PostStatus,
   type Post,
@@ -50,6 +63,7 @@ import {
   type GroupType,
   type BlogDraft,
   type BlogDraftStatus,
+  type Project,
 } from './storage.js'
 
 // Create MCP server
@@ -593,6 +607,201 @@ const TOOLS = [
         },
       },
       required: ['draftId'],
+    },
+  },
+  // ==================
+  // Project tools
+  // ==================
+  {
+    name: 'create_project',
+    description: 'Create a new project to organize campaigns. Projects can have a brand kit (hashtags, colors, logo) and preferred social accounts.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        name: {
+          type: 'string',
+          description: 'Project name (required)',
+        },
+        description: {
+          type: 'string',
+          description: 'Project description (optional)',
+        },
+        hashtags: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Default hashtags for posts in this project (optional)',
+        },
+        brandColors: {
+          type: 'object',
+          description: 'Brand colors object with primary, secondary, accent keys (optional)',
+        },
+        logoUrl: {
+          type: 'string',
+          description: 'URL to project logo (optional)',
+        },
+      },
+      required: ['name'],
+    },
+  },
+  {
+    name: 'get_project',
+    description: 'Get a project by ID, including its brand kit and settings',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        id: { type: 'string', description: 'Project ID' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'update_project',
+    description: 'Update a project name, description, or brand kit',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        id: { type: 'string', description: 'Project ID to update' },
+        name: { type: 'string', description: 'New project name' },
+        description: { type: 'string', description: 'New description' },
+        hashtags: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Updated default hashtags',
+        },
+        brandColors: {
+          type: 'object',
+          description: 'Updated brand colors',
+        },
+        logoUrl: { type: 'string', description: 'Updated logo URL' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'delete_project',
+    description: 'Delete a project. Campaigns in the project will become unassigned (not deleted). Please confirm with the user before calling this.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        id: { type: 'string', description: 'Project ID to delete' },
+        confirmed: {
+          type: 'boolean',
+          description: 'Set to true to confirm deletion',
+        },
+      },
+      required: ['id', 'confirmed'],
+    },
+  },
+  {
+    name: 'list_projects',
+    description: 'List all projects with optional pagination',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        limit: {
+          type: 'number',
+          description: 'Maximum number of projects to return (default: 50)',
+        },
+        offset: {
+          type: 'number',
+          description: 'Number of projects to skip (for pagination)',
+        },
+      },
+    },
+  },
+  {
+    name: 'get_project_campaigns',
+    description: 'Get a project with all its campaigns',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        id: { type: 'string', description: 'Project ID' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'get_project_analytics',
+    description: 'Get rolled-up analytics for a project (campaign count, post counts by status)',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        id: { type: 'string', description: 'Project ID' },
+      },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'add_account_to_project',
+    description: 'Associate a social account with a project as a preferred account',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        projectId: { type: 'string', description: 'Project ID' },
+        accountId: { type: 'string', description: 'Social account ID to add' },
+      },
+      required: ['projectId', 'accountId'],
+    },
+  },
+  {
+    name: 'remove_account_from_project',
+    description: 'Remove a social account association from a project',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        projectId: { type: 'string', description: 'Project ID' },
+        accountId: { type: 'string', description: 'Social account ID to remove' },
+      },
+      required: ['projectId', 'accountId'],
+    },
+  },
+  {
+    name: 'get_project_accounts',
+    description: 'Get all social accounts associated with a project',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        projectId: { type: 'string', description: 'Project ID' },
+      },
+      required: ['projectId'],
+    },
+  },
+  {
+    name: 'move_campaign_to_project',
+    description: 'Move a campaign to a different project or make it unassigned. Note: project defaults will not apply retroactively to existing posts.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        campaignId: { type: 'string', description: 'Campaign ID to move' },
+        targetProjectId: {
+          type: 'string',
+          description: 'Target project ID, or null/omit to make unassigned',
+        },
+      },
+      required: ['campaignId'],
+    },
+  },
+  {
+    name: 'list_campaigns_by_project',
+    description: 'List campaigns filtered by project. Use projectId=null to get unassigned campaigns.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        projectId: {
+          type: 'string',
+          description: 'Project ID to filter by, or "unassigned" for campaigns without a project',
+        },
+        status: {
+          type: 'string',
+          enum: ['all', 'draft', 'active', 'completed', 'archived'],
+          description: 'Filter by status (default: all)',
+        },
+        limit: {
+          type: 'number',
+          description: 'Maximum number of campaigns to return',
+        },
+      },
+      required: ['projectId'],
     },
   },
 ]
@@ -1321,6 +1530,325 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 count: images.length,
                 images,
                 markdownRefs: images.map(img => `![image](/api/blog-media/${img})`),
+              }, null, 2),
+            },
+          ],
+        }
+      }
+
+      // ==================
+      // Project handlers
+      // ==================
+
+      case 'create_project': {
+        const { name, description, hashtags, brandColors, logoUrl } = args as {
+          name: string
+          description?: string
+          hashtags?: string[]
+          brandColors?: Record<string, string>
+          logoUrl?: string
+        }
+
+        if (!name || typeof name !== 'string' || name.trim() === '') {
+          return {
+            content: [{ type: 'text', text: 'Error: name is required' }],
+            isError: true,
+          }
+        }
+
+        const result = await createProject({
+          name: name.trim(),
+          description,
+          hashtags,
+          brandColors,
+          logoUrl,
+        })
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                success: true,
+                project: result.project,
+                atLimit: result.atLimit,
+                message: result.atLimit
+                  ? 'Project created. Note: You have reached the soft limit of 3 projects.'
+                  : 'Project created successfully.',
+              }, null, 2),
+            },
+          ],
+        }
+      }
+
+      case 'get_project': {
+        const { id } = args as { id: string }
+        const project = await getProject(id)
+
+        if (!project) {
+          return {
+            content: [{ type: 'text', text: `Error: Project with ID ${id} not found` }],
+            isError: true,
+          }
+        }
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({ success: true, project }, null, 2),
+            },
+          ],
+        }
+      }
+
+      case 'update_project': {
+        const { id, ...updates } = args as { id: string } & Partial<Project>
+        const project = await updateProject(id, updates)
+
+        if (!project) {
+          return {
+            content: [{ type: 'text', text: `Error: Project with ID ${id} not found` }],
+            isError: true,
+          }
+        }
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({ success: true, project }, null, 2),
+            },
+          ],
+        }
+      }
+
+      case 'delete_project': {
+        const { id, confirmed } = args as { id: string; confirmed: boolean }
+
+        if (!confirmed) {
+          return {
+            content: [{ type: 'text', text: 'Error: Deletion not confirmed. Please set confirmed=true after confirming with the user.' }],
+            isError: true,
+          }
+        }
+
+        const result = await deleteProject(id)
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                success: true,
+                message: `Project deleted. ${result.campaignsDeleted} campaigns became unassigned.`,
+              }, null, 2),
+            },
+          ],
+        }
+      }
+
+      case 'list_projects': {
+        const { limit, offset } = args as { limit?: number; offset?: number }
+        const result = await listProjects({ limit: limit || 50, offset })
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                success: true,
+                ...result,
+              }, null, 2),
+            },
+          ],
+        }
+      }
+
+      case 'get_project_campaigns': {
+        const { id } = args as { id: string }
+        const result = await getProjectWithCampaigns(id)
+
+        if (!result) {
+          return {
+            content: [{ type: 'text', text: `Error: Project with ID ${id} not found` }],
+            isError: true,
+          }
+        }
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                success: true,
+                project: result.project,
+                campaigns: result.campaigns,
+                campaignCount: result.campaigns.length,
+              }, null, 2),
+            },
+          ],
+        }
+      }
+
+      case 'get_project_analytics': {
+        const { id } = args as { id: string }
+        const analytics = await getProjectAnalytics(id)
+
+        if (!analytics) {
+          return {
+            content: [{ type: 'text', text: `Error: Project with ID ${id} not found` }],
+            isError: true,
+          }
+        }
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({ success: true, analytics }, null, 2),
+            },
+          ],
+        }
+      }
+
+      case 'add_account_to_project': {
+        const { projectId, accountId } = args as { projectId: string; accountId: string }
+
+        if (!projectId || !accountId) {
+          return {
+            content: [{ type: 'text', text: 'Error: projectId and accountId are required' }],
+            isError: true,
+          }
+        }
+
+        const association = await addAccountToProject(projectId, accountId)
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                success: true,
+                association,
+                message: 'Account added to project.',
+              }, null, 2),
+            },
+          ],
+        }
+      }
+
+      case 'remove_account_from_project': {
+        const { projectId, accountId } = args as { projectId: string; accountId: string }
+
+        if (!projectId || !accountId) {
+          return {
+            content: [{ type: 'text', text: 'Error: projectId and accountId are required' }],
+            isError: true,
+          }
+        }
+
+        const success = await removeAccountFromProject(projectId, accountId)
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                success,
+                message: success ? 'Account removed from project.' : 'Association not found.',
+              }, null, 2),
+            },
+          ],
+        }
+      }
+
+      case 'get_project_accounts': {
+        const { projectId } = args as { projectId: string }
+
+        if (!projectId) {
+          return {
+            content: [{ type: 'text', text: 'Error: projectId is required' }],
+            isError: true,
+          }
+        }
+
+        const accounts = await getProjectAccounts(projectId)
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                success: true,
+                accounts,
+                count: accounts.length,
+              }, null, 2),
+            },
+          ],
+        }
+      }
+
+      case 'move_campaign_to_project': {
+        const { campaignId, targetProjectId } = args as { campaignId: string; targetProjectId?: string }
+
+        if (!campaignId) {
+          return {
+            content: [{ type: 'text', text: 'Error: campaignId is required' }],
+            isError: true,
+          }
+        }
+
+        const campaign = await moveCampaignToProject(campaignId, targetProjectId || null)
+
+        if (!campaign) {
+          return {
+            content: [{ type: 'text', text: `Error: Campaign with ID ${campaignId} not found` }],
+            isError: true,
+          }
+        }
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                success: true,
+                campaign,
+                message: targetProjectId
+                  ? `Campaign moved to project. Note: Project defaults will not apply retroactively to existing posts.`
+                  : 'Campaign is now unassigned.',
+              }, null, 2),
+            },
+          ],
+        }
+      }
+
+      case 'list_campaigns_by_project': {
+        const { projectId, status, limit } = args as {
+          projectId: string
+          status?: CampaignStatus | 'all'
+          limit?: number
+        }
+
+        if (!projectId) {
+          return {
+            content: [{ type: 'text', text: 'Error: projectId is required' }],
+            isError: true,
+          }
+        }
+
+        const filterProjectId = projectId === 'unassigned' ? null : projectId
+        const campaigns = await listCampaignsByProject(filterProjectId, { status, limit })
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify({
+                success: true,
+                campaigns,
+                count: campaigns.length,
               }, null, 2),
             },
           ],
