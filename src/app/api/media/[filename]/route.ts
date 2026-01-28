@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { readFile, unlink, stat } from 'fs/promises'
 import path from 'path'
+import { requireAuth } from '@/lib/auth'
 
 // Media upload directory (in public folder)
 const UPLOAD_DIR = path.join(process.cwd(), 'public', 'uploads')
@@ -59,6 +60,8 @@ export async function DELETE(
   { params }: { params: Promise<{ filename: string }> }
 ) {
   try {
+    // Require authentication to delete files
+    await requireAuth()
     const { filename } = await params
 
     // Sanitize filename to prevent path traversal
@@ -74,6 +77,9 @@ export async function DELETE(
 
     return NextResponse.json({ success: true })
   } catch (error) {
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     console.error('Error deleting file:', error)
     return NextResponse.json({ error: 'Failed to delete file' }, { status: 500 })
   }

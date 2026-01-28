@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth } from '@/lib/auth'
 
 // POST /api/blog-drafts/[id]/archive - Archive a blog draft
 export async function POST(
@@ -7,13 +8,16 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { userId } = await requireAuth()
     const { id } = await params
     const supabase = await createClient()
 
+    // Defense-in-depth: filter by user_id alongside RLS
     const { data: currentDraft, error: fetchError } = await supabase
       .from('blog_drafts')
       .select('status')
       .eq('id', id)
+      .eq('user_id', userId)
       .single()
 
     if (fetchError) {
@@ -31,6 +35,7 @@ export async function POST(
       .from('blog_drafts')
       .update({ status: 'archived' })
       .eq('id', id)
+      .eq('user_id', userId)
       .select()
       .single()
 
@@ -40,6 +45,9 @@ export async function POST(
 
     return NextResponse.json({ draft: data })
   } catch (error) {
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     console.error('Error archiving blog draft:', error)
     return NextResponse.json({ error: 'Failed to archive blog draft' }, { status: 500 })
   }

@@ -1,9 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth } from '@/lib/auth'
 
 // GET /api/blog-drafts/search - Search blog drafts
 export async function GET(request: NextRequest) {
   try {
+    const { userId } = await requireAuth()
     const supabase = await createClient()
     const { searchParams } = new URL(request.url)
 
@@ -16,9 +18,11 @@ export async function GET(request: NextRequest) {
 
     const searchPattern = `%${query}%`
 
+    // Defense-in-depth: filter by user_id alongside RLS
     const { data, error } = await supabase
       .from('blog_drafts')
       .select('*')
+      .eq('user_id', userId)
       .neq('status', 'archived')
       .or(`title.ilike.${searchPattern},content.ilike.${searchPattern},notes.ilike.${searchPattern}`)
       .order('updated_at', { ascending: false })
@@ -30,6 +34,9 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ drafts: data })
   } catch (error) {
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     console.error('Error searching blog drafts:', error)
     return NextResponse.json({ error: 'Failed to search blog drafts' }, { status: 500 })
   }
