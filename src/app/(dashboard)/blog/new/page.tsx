@@ -116,7 +116,7 @@ export default function BlogEditorPage() {
           scheduledAt: null,
         })
         setMessage({ type: 'success', text: 'Draft created' })
-        router.replace(`/blog/edit/${newDraft.id}`)
+        router.replace(`/blog/${newDraft.id}`)
       }
     } catch (error) {
       setMessage({ type: 'error', text: 'Failed to save draft' })
