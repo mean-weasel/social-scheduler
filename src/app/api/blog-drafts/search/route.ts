@@ -2,6 +2,24 @@ import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
 
+// Transform snake_case Supabase response to camelCase for frontend
+function transformDraft(draft: Record<string, unknown>) {
+  return {
+    id: draft.id,
+    createdAt: draft.created_at,
+    updatedAt: draft.updated_at,
+    scheduledAt: draft.scheduled_at,
+    status: draft.status,
+    title: draft.title,
+    date: draft.date,
+    content: draft.content,
+    notes: draft.notes,
+    wordCount: draft.word_count,
+    campaignId: draft.campaign_id,
+    images: draft.images || [],
+  }
+}
+
 // GET /api/blog-drafts/search - Search blog drafts
 export async function GET(request: NextRequest) {
   try {
@@ -32,7 +50,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({ drafts: data })
+    // Transform to camelCase for frontend
+    const drafts = (data || []).map(transformDraft)
+    return NextResponse.json({ drafts })
   } catch (error) {
     if (error instanceof Error && error.message === 'Unauthorized') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

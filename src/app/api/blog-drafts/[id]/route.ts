@@ -2,6 +2,24 @@ import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
 
+// Transform snake_case Supabase response to camelCase for frontend
+function transformDraft(draft: Record<string, unknown>) {
+  return {
+    id: draft.id,
+    createdAt: draft.created_at,
+    updatedAt: draft.updated_at,
+    scheduledAt: draft.scheduled_at,
+    status: draft.status,
+    title: draft.title,
+    date: draft.date,
+    content: draft.content,
+    notes: draft.notes,
+    wordCount: draft.word_count,
+    campaignId: draft.campaign_id,
+    images: draft.images || [],
+  }
+}
+
 // Calculate word count from markdown content
 function calculateWordCount(content: string): number {
   if (!content) return 0
@@ -56,7 +74,8 @@ export async function GET(
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({ draft: data })
+    // Transform to camelCase for frontend
+    return NextResponse.json({ draft: transformDraft(data) })
   } catch (error) {
     console.error('Error fetching blog draft:', error)
     return NextResponse.json({ error: 'Failed to fetch blog draft' }, { status: 500 })
@@ -141,7 +160,8 @@ export async function PATCH(
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({ draft: data })
+    // Transform to camelCase for frontend
+    return NextResponse.json({ draft: transformDraft(data) })
   } catch (error) {
     console.error('Error updating blog draft:', error)
     return NextResponse.json({ error: 'Failed to update blog draft' }, { status: 500 })
