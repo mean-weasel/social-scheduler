@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import Image from 'next/image'
 import { ChevronDown, FolderKanban, Layers, FolderX, Check } from 'lucide-react'
 import { useProjectsStore } from '@/lib/projects'
 import { Project } from '@/lib/posts'
@@ -104,10 +105,12 @@ export function ProjectSelector({
       >
         {/* Icon */}
         {selectedProject?.logoUrl ? (
-          <img
+          <Image
             src={getMediaUrl(selectedProject.logoUrl)}
             alt=""
-            className="w-5 h-5 rounded object-contain"
+            width={20}
+            height={20}
+            className="rounded object-contain"
           />
         ) : value === 'all' ? (
           <Layers className="w-4 h-4 text-muted-foreground" />
@@ -197,10 +200,12 @@ export function ProjectSelector({
               >
                 {/* Logo or icon */}
                 {project.logoUrl ? (
-                  <img
+                  <Image
                     src={getMediaUrl(project.logoUrl)}
                     alt=""
-                    className="w-5 h-5 rounded object-contain"
+                    width={20}
+                    height={20}
+                    className="rounded object-contain"
                   />
                 ) : (
                   <FolderKanban className="w-4 h-4 text-[hsl(var(--gold-dark))]" />
@@ -263,10 +268,12 @@ export function ProjectSelector({
             value: project.id as SelectionValue,
             label: project.name,
             icon: project.logoUrl ? (
-              <img
+              <Image
                 src={getMediaUrl(project.logoUrl)}
                 alt=""
-                className="w-5 h-5 rounded object-contain"
+                width={20}
+                height={20}
+                className="rounded object-contain"
               />
             ) : (
               <FolderKanban className="w-5 h-5 text-[hsl(var(--gold-dark))]" />

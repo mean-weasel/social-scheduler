@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { format, formatDistanceToNow } from 'date-fns'
 import { Calendar, FileText, Clock, ChevronRight, Plus, Sparkles, FolderOpen, CheckCircle, FolderKanban } from 'lucide-react'
@@ -266,57 +266,84 @@ export default function DashboardPage() {
     }
   }, [projectsInitialized, fetchProjects])
 
-  // Exclude archived posts
-  const activePosts = allPosts.filter((p) => p.status !== 'archived')
+  // Memoized: Exclude archived posts
+  const activePosts = useMemo(
+    () => allPosts.filter((p) => p.status !== 'archived'),
+    [allPosts]
+  )
 
-  // Upcoming scheduled posts (sorted by schedule date)
-  const upcomingPosts = activePosts
-    .filter((p) => p.status === 'scheduled' && p.scheduledAt)
-    .sort((a, b) => new Date(a.scheduledAt!).getTime() - new Date(b.scheduledAt!).getTime())
-    .slice(0, 5)
+  // Memoized: Upcoming scheduled posts (sorted by schedule date)
+  const upcomingPosts = useMemo(
+    () => activePosts
+      .filter((p) => p.status === 'scheduled' && p.scheduledAt)
+      .sort((a, b) => new Date(a.scheduledAt!).getTime() - new Date(b.scheduledAt!).getTime())
+      .slice(0, 5),
+    [activePosts]
+  )
 
-  // Recent drafts (sorted by last updated)
-  const recentDrafts = activePosts
-    .filter((p) => p.status === 'draft')
-    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-    .slice(0, 5)
+  // Memoized: Recent drafts (sorted by last updated)
+  const recentDrafts = useMemo(
+    () => activePosts
+      .filter((p) => p.status === 'draft')
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      .slice(0, 5),
+    [activePosts]
+  )
 
-  // Recently published (sorted by last updated)
-  const recentlyPublished = allPosts
-    .filter((p) => p.status === 'published')
-    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-    .slice(0, 5)
+  // Memoized: Recently published (sorted by last updated)
+  const recentlyPublished = useMemo(
+    () => allPosts
+      .filter((p) => p.status === 'published')
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      .slice(0, 5),
+    [allPosts]
+  )
 
-  // Filter campaigns by project if selected
-  const filteredCampaigns = selectedProject === 'all'
-    ? campaigns.filter((c) => c.status !== 'archived')
-    : selectedProject === 'unassigned'
-      ? getCampaignsByProject(null).filter((c) => c.status !== 'archived')
-      : getCampaignsByProject(selectedProject).filter((c) => c.status !== 'archived')
+  // Memoized: Filter campaigns by project if selected
+  const filteredCampaigns = useMemo(() => {
+    const baseCampaigns = selectedProject === 'all'
+      ? campaigns
+      : selectedProject === 'unassigned'
+        ? getCampaignsByProject(null)
+        : getCampaignsByProject(selectedProject)
+    return baseCampaigns.filter((c) => c.status !== 'archived')
+  }, [campaigns, selectedProject, getCampaignsByProject])
 
-  // Recent campaigns (sorted by updated)
-  const recentCampaigns = filteredCampaigns
-    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-    .slice(0, 4)
+  // Memoized: Recent campaigns (sorted by updated)
+  const recentCampaigns = useMemo(
+    () => [...filteredCampaigns]
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      .slice(0, 4),
+    [filteredCampaigns]
+  )
 
-  // Recent projects (sorted by updated)
-  const recentProjects = [...projects]
-    .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-    .slice(0, 4)
+  // Memoized: Recent projects (sorted by updated)
+  const recentProjects = useMemo(
+    () => [...projects]
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      .slice(0, 4),
+    [projects]
+  )
 
-  // Get campaign count per project
-  const getCampaignCountForProject = (projectId: string) => {
-    return campaigns.filter((c) => c.projectId === projectId && c.status !== 'archived').length
-  }
+  // Memoized: Pre-compute campaign counts per project (O(n) instead of O(n²))
+  const campaignCountsByProject = useMemo(
+    () => campaigns.reduce((acc, c) => {
+      if (c.status !== 'archived' && c.projectId) {
+        acc[c.projectId] = (acc[c.projectId] || 0) + 1
+      }
+      return acc
+    }, {} as Record<string, number>),
+    [campaigns]
+  )
 
-  // Stats
-  const stats = {
+  // Memoized: Stats
+  const stats = useMemo(() => ({
     scheduled: activePosts.filter((p) => p.status === 'scheduled').length,
     drafts: activePosts.filter((p) => p.status === 'draft').length,
     published: activePosts.filter((p) => p.status === 'published').length,
     campaigns: campaigns.filter((c) => c.status !== 'archived').length,
     projects: projects.length,
-  }
+  }), [activePosts, campaigns, projects])
 
   const totalPosts = stats.scheduled + stats.drafts + stats.published
   const hasNoPosts = totalPosts === 0
@@ -522,7 +549,7 @@ export default function DashboardPage() {
                     <ProjectMiniCard
                       key={project.id}
                       project={project}
-                      campaignCount={getCampaignCountForProject(project.id)}
+                      campaignCount={campaignCountsByProject[project.id] || 0}
                     />
                   ))}
                 </div>

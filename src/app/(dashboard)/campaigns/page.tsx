@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { format } from 'date-fns'
 import {
@@ -261,10 +262,12 @@ function CampaignCard({
             {project && (
               <span className="flex items-center gap-1.5">
                 {project.logoUrl ? (
-                  <img
+                  <Image
                     src={getMediaUrl(project.logoUrl)}
                     alt=""
-                    className="w-3.5 h-3.5 rounded object-contain"
+                    width={14}
+                    height={14}
+                    className="rounded object-contain"
                   />
                 ) : (
                   <FolderKanban className="w-3.5 h-3.5" />
