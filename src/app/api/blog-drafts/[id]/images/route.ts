@@ -2,6 +2,24 @@ import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth'
 
+// Transform snake_case Supabase response to camelCase for frontend
+function transformDraft(draft: Record<string, unknown>) {
+  return {
+    id: draft.id,
+    createdAt: draft.created_at,
+    updatedAt: draft.updated_at,
+    scheduledAt: draft.scheduled_at,
+    status: draft.status,
+    title: draft.title,
+    date: draft.date,
+    content: draft.content,
+    notes: draft.notes,
+    wordCount: draft.word_count,
+    campaignId: draft.campaign_id,
+    images: draft.images || [],
+  }
+}
+
 // GET /api/blog-drafts/[id]/images - List images for a blog draft
 export async function GET(
   _request: NextRequest,
@@ -107,7 +125,8 @@ export async function POST(
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json(data, { status: 201 })
+    // Transform to camelCase for frontend
+    return NextResponse.json(transformDraft(data), { status: 201 })
   } catch (error) {
     console.error('Error adding image to blog draft:', error)
     return NextResponse.json({ error: 'Failed to add image' }, { status: 500 })
