@@ -183,5 +183,6 @@ export function useIsMobile() {
     )
 }
 
-// Re-export IOSDateTimePicker for convenience
+// Re-export iOS components for convenience
 export { IOSDateTimePicker } from './IOSDateTimePicker'
+export { IOSSegmentedControl } from './IOSSegmentedControl'

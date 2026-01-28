@@ -23,6 +23,7 @@ import { Campaign, CampaignStatus, Project } from '@/lib/posts'
 import { cn } from '@/lib/utils'
 import { getMediaUrl } from '@/lib/media'
 import { MoveCampaignModal } from '@/components/campaigns/MoveCampaignModal'
+import { IOSSegmentedControl } from '@/components/ui/IOSSegmentedControl'
 
 type FilterStatus = 'all' | CampaignStatus
 
@@ -116,40 +117,18 @@ export default function CampaignsPage() {
 
       {/* Filter tabs */}
       <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0 mb-4 md:mb-6">
-        <div className="flex gap-1 p-1 bg-card border border-border rounded-xl min-w-max md:min-w-0">
-          <button
-            onClick={() => setFilter('all')}
-            className={cn(
-              'flex-1 px-3 md:px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap min-h-[40px]',
-              filter === 'all'
-                ? 'bg-[hsl(var(--gold))]/20 text-[hsl(var(--gold-dark))]'
-                : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
-            )}
-          >
-            All <span className="ml-1 text-xs opacity-60">({counts.all})</span>
-          </button>
-          {(['draft', 'active', 'completed', 'archived'] as CampaignStatus[]).map((status) => {
-            const config = STATUS_CONFIG[status]
-            const count = counts[status]
-            if (status === 'archived' && count === 0) return null
-            return (
-              <button
-                key={status}
-                onClick={() => setFilter(status)}
-                className={cn(
-                  'flex-1 flex items-center justify-center gap-1.5 md:gap-2 px-3 md:px-4 py-2 rounded-lg text-sm font-medium transition-colors whitespace-nowrap min-h-[40px]',
-                  filter === status
-                    ? 'bg-[hsl(var(--gold))]/20 text-[hsl(var(--gold-dark))]'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
-                )}
-              >
-                <config.icon className={cn('w-4 h-4', filter === status && config.color)} />
-                <span className="hidden sm:inline">{config.label}</span>
-                <span className="text-xs opacity-60">({count})</span>
-              </button>
-            )
-          })}
-        </div>
+        <IOSSegmentedControl<FilterStatus>
+          value={filter}
+          onChange={setFilter}
+          fullWidth
+          options={[
+            { value: 'all', label: 'All', count: counts.all },
+            { value: 'draft', label: STATUS_CONFIG.draft.label, icon: <FileText className="w-4 h-4" />, count: counts.draft },
+            { value: 'active', label: STATUS_CONFIG.active.label, icon: <Rocket className="w-4 h-4" />, count: counts.active },
+            { value: 'completed', label: STATUS_CONFIG.completed.label, icon: <CheckCircle className="w-4 h-4" />, count: counts.completed },
+            { value: 'archived', label: STATUS_CONFIG.archived.label, icon: <Archive className="w-4 h-4" />, count: counts.archived, hidden: counts.archived === 0 },
+          ]}
+        />
       </div>
 
       {/* Campaigns list */}
