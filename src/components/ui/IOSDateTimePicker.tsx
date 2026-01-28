@@ -1,0 +1,299 @@
+'use client'
+
+import { useState, useEffect, useRef } from 'react'
+import { format } from 'date-fns'
+import { Calendar, Clock } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { useIsMobile } from './IOSActionSheet'
+
+interface IOSDateTimePickerProps {
+  value: Date | null
+  onChange: (date: Date | null) => void
+  mode?: 'date' | 'time' | 'datetime'
+  placeholder?: string
+  className?: string
+  disabled?: boolean
+  minDate?: Date
+  maxDate?: Date
+}
+
+export function IOSDateTimePicker({
+  value,
+  onChange,
+  mode = 'datetime',
+  placeholder,
+  className,
+  disabled = false,
+  minDate,
+  maxDate,
+}: IOSDateTimePickerProps) {
+  const [isOpen, setIsOpen] = useState(false)
+  const [tempDate, setTempDate] = useState<string>('')
+  const [tempTime, setTempTime] = useState<string>('')
+  const isMobile = useIsMobile()
+  const dateInputRef = useRef<HTMLInputElement>(null)
+  const timeInputRef = useRef<HTMLInputElement>(null)
+
+  // Initialize temp values when opening
+  useEffect(() => {
+    if (isOpen && value) {
+      setTempDate(format(value, 'yyyy-MM-dd'))
+      setTempTime(format(value, 'HH:mm'))
+    } else if (isOpen) {
+      // Default to today/now if no value
+      const now = new Date()
+      setTempDate(format(now, 'yyyy-MM-dd'))
+      setTempTime(format(now, 'HH:mm'))
+    }
+  }, [isOpen, value])
+
+  // Handle escape key and prevent body scroll
+  useEffect(() => {
+    if (!isOpen) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsOpen(false)
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    document.body.style.overflow = 'hidden'
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      document.body.style.overflow = ''
+    }
+  }, [isOpen])
+
+  const handleConfirm = () => {
+    if (mode === 'date') {
+      onChange(tempDate ? new Date(`${tempDate}T12:00:00`) : null)
+    } else if (mode === 'time' && value) {
+      const dateStr = format(value, 'yyyy-MM-dd')
+      onChange(new Date(`${dateStr}T${tempTime}:00`))
+    } else if (mode === 'time') {
+      const today = format(new Date(), 'yyyy-MM-dd')
+      onChange(new Date(`${today}T${tempTime}:00`))
+    } else {
+      onChange(tempDate && tempTime ? new Date(`${tempDate}T${tempTime}:00`) : null)
+    }
+    setIsOpen(false)
+  }
+
+  const handleClear = () => {
+    onChange(null)
+    setIsOpen(false)
+  }
+
+  const getDisplayText = () => {
+    if (!value) {
+      return placeholder || (mode === 'time' ? 'Select time' : mode === 'date' ? 'Select date' : 'Select date & time')
+    }
+    if (mode === 'date') {
+      return format(value, 'MMM d, yyyy')
+    }
+    if (mode === 'time') {
+      return format(value, 'h:mm a')
+    }
+    return format(value, 'MMM d, yyyy h:mm a')
+  }
+
+  const Icon = mode === 'time' ? Clock : Calendar
+
+  // Desktop: use native picker via showPicker()
+  if (!isMobile) {
+    return (
+      <div className={cn('relative', className)}>
+        <button
+          type="button"
+          onClick={() => {
+            if (disabled) return
+            if (mode === 'time' && timeInputRef.current) {
+              timeInputRef.current.showPicker()
+            } else if (dateInputRef.current) {
+              dateInputRef.current.showPicker()
+            }
+          }}
+          disabled={disabled}
+          className={cn(
+            'flex items-center gap-2 px-3 py-2.5 rounded-lg border w-full',
+            'bg-background text-foreground text-sm text-left',
+            'border-border hover:border-primary/50 transition-colors',
+            disabled && 'opacity-50 cursor-not-allowed',
+            !value && 'text-muted-foreground'
+          )}
+        >
+          <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+          <span className="flex-1">{getDisplayText()}</span>
+        </button>
+
+        {/* Hidden inputs for desktop */}
+        <input
+          ref={dateInputRef}
+          type="date"
+          value={value ? format(value, 'yyyy-MM-dd') : ''}
+          min={minDate ? format(minDate, 'yyyy-MM-dd') : undefined}
+          max={maxDate ? format(maxDate, 'yyyy-MM-dd') : undefined}
+          onChange={(e) => {
+            if (!e.target.value) {
+              onChange(null)
+              return
+            }
+            const time = value ? format(value, 'HH:mm') : '12:00'
+            onChange(new Date(`${e.target.value}T${time}:00`))
+          }}
+          className="sr-only"
+          tabIndex={-1}
+        />
+        {(mode === 'time' || mode === 'datetime') && (
+          <input
+            ref={timeInputRef}
+            type="time"
+            value={value ? format(value, 'HH:mm') : ''}
+            onChange={(e) => {
+              const dateStr = value
+                ? format(value, 'yyyy-MM-dd')
+                : format(new Date(), 'yyyy-MM-dd')
+              onChange(new Date(`${dateStr}T${e.target.value}:00`))
+            }}
+            className="sr-only"
+            tabIndex={-1}
+          />
+        )}
+      </div>
+    )
+  }
+
+  // Mobile: iOS-style bottom sheet picker
+  return (
+    <>
+      <button
+        type="button"
+        onClick={() => !disabled && setIsOpen(true)}
+        disabled={disabled}
+        className={cn(
+          'flex items-center gap-2 px-3 py-2.5 rounded-lg border w-full',
+          'bg-background text-foreground text-sm text-left',
+          'border-border hover:border-primary/50 transition-colors',
+          disabled && 'opacity-50 cursor-not-allowed',
+          !value && 'text-muted-foreground',
+          className
+        )}
+      >
+        <Icon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+        <span className="flex-1">{getDisplayText()}</span>
+      </button>
+
+      {/* Bottom sheet picker */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center"
+          onClick={() => setIsOpen(false)}
+        >
+          {/* Backdrop */}
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200" />
+
+          {/* Sheet */}
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Select date and time"
+            className={cn(
+              'relative z-10 w-full max-w-lg',
+              'bg-card border-t border-border rounded-t-2xl shadow-xl',
+              'animate-in slide-in-from-bottom duration-300 ease-out'
+            )}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+              <button
+                type="button"
+                onClick={handleClear}
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Clear
+              </button>
+              <span className="text-sm font-semibold">
+                {mode === 'time' ? 'Select Time' : mode === 'date' ? 'Select Date' : 'Select Date & Time'}
+              </span>
+              <button
+                type="button"
+                onClick={handleConfirm}
+                className="text-sm font-semibold text-[hsl(var(--gold))] hover:text-[hsl(var(--gold-dark))] transition-colors"
+              >
+                Done
+              </button>
+            </div>
+
+            {/* Picker inputs */}
+            <div className="p-6 space-y-4">
+              {/* Date picker */}
+              {(mode === 'date' || mode === 'datetime') && (
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                    Date
+                  </label>
+                  <div className="relative">
+                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <input
+                      type="date"
+                      value={tempDate}
+                      min={minDate ? format(minDate, 'yyyy-MM-dd') : undefined}
+                      max={maxDate ? format(maxDate, 'yyyy-MM-dd') : undefined}
+                      onChange={(e) => setTempDate(e.target.value)}
+                      className={cn(
+                        'w-full pl-11 pr-4 py-3 rounded-xl',
+                        'bg-background border border-border',
+                        'text-base text-foreground',
+                        'focus:outline-none focus:border-[hsl(var(--gold))] focus:ring-2 focus:ring-[hsl(var(--gold))]/20'
+                      )}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Time picker */}
+              {(mode === 'time' || mode === 'datetime') && (
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                    Time
+                  </label>
+                  <div className="relative">
+                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                    <input
+                      type="time"
+                      value={tempTime}
+                      onChange={(e) => setTempTime(e.target.value)}
+                      className={cn(
+                        'w-full pl-11 pr-4 py-3 rounded-xl',
+                        'bg-background border border-border',
+                        'text-base text-foreground',
+                        'focus:outline-none focus:border-[hsl(var(--gold))] focus:ring-2 focus:ring-[hsl(var(--gold))]/20'
+                      )}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Preview */}
+              {tempDate && (
+                <div className="pt-2 text-center">
+                  <span className="text-sm text-muted-foreground">
+                    {mode === 'date' && format(new Date(`${tempDate}T12:00:00`), 'EEEE, MMMM d, yyyy')}
+                    {mode === 'time' && tempTime && format(new Date(`2024-01-01T${tempTime}:00`), 'h:mm a')}
+                    {mode === 'datetime' && tempTime && format(new Date(`${tempDate}T${tempTime}:00`), 'EEEE, MMMM d, yyyy \'at\' h:mm a')}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Safe area spacer */}
+            <div className="h-[env(safe-area-inset-bottom)]" />
+          </div>
+        </div>
+      )}
+    </>
+  )
+}

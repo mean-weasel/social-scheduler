@@ -43,3 +43,6 @@ test-results/
 .vercel
 /public/uploads/*
 !/public/uploads/.gitkeep
+
+# Workflow testing screenshots (generated during iOS/browser testing)
+workflows/screenshots/

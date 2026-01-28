@@ -6,6 +6,7 @@ import { useProjectsStore } from '@/lib/projects'
 import { Project } from '@/lib/posts'
 import { cn } from '@/lib/utils'
 import { getMediaUrl } from '@/lib/media'
+import { IOSActionSheet, useIsMobile } from '@/components/ui/IOSActionSheet'
 
 type SelectionValue = 'all' | 'unassigned' | string
 
@@ -31,6 +32,7 @@ export function ProjectSelector({
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const { projects, fetchProjects, initialized, getProject } = useProjectsStore()
+  const isMobile = useIsMobile()
 
   // Fetch projects on mount
   useEffect(() => {
@@ -127,8 +129,8 @@ export function ProjectSelector({
         />
       </button>
 
-      {/* Dropdown */}
-      {isOpen && (
+      {/* Desktop Dropdown */}
+      {isOpen && !isMobile && (
         <div
           className={cn(
             'absolute z-50 w-full mt-1',
@@ -238,6 +240,40 @@ export function ProjectSelector({
           )}
         </div>
       )}
+
+      {/* iOS Action Sheet for mobile */}
+      <IOSActionSheet
+        open={isOpen && isMobile}
+        onClose={() => setIsOpen(false)}
+        onSelect={handleSelect}
+        title="Select Project"
+        selectedValue={value}
+        options={[
+          ...(showAllOption ? [{
+            value: 'all' as SelectionValue,
+            label: 'All Projects',
+            icon: <Layers className="w-5 h-5" />,
+          }] : []),
+          ...(showUnassignedOption ? [{
+            value: 'unassigned' as SelectionValue,
+            label: 'Unassigned',
+            icon: <FolderX className="w-5 h-5" />,
+          }] : []),
+          ...projects.map((project) => ({
+            value: project.id as SelectionValue,
+            label: project.name,
+            icon: project.logoUrl ? (
+              <img
+                src={getMediaUrl(project.logoUrl)}
+                alt=""
+                className="w-5 h-5 rounded object-contain"
+              />
+            ) : (
+              <FolderKanban className="w-5 h-5 text-[hsl(var(--gold-dark))]" />
+            ),
+          })),
+        ]}
+      />
     </div>
   )
 }
