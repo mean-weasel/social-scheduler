@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { format } from 'date-fns'
@@ -27,7 +27,27 @@ const STATUS_CONFIG: Record<BlogDraftStatus, { label: string; icon: typeof FileT
   archived: { label: 'Archived', icon: Archive, color: 'text-muted-foreground' },
 }
 
+// Loading skeleton component
+function BlogDraftsLoading() {
+  return (
+    <div className="p-4 md:p-6 max-w-5xl mx-auto">
+      <div className="flex items-center justify-center py-12">
+        <div className="w-8 h-8 border-2 border-[hsl(var(--gold))] border-t-transparent rounded-full animate-spin" />
+      </div>
+    </div>
+  )
+}
+
+// Wrap the page in Suspense for useSearchParams
 export default function BlogDraftsPage() {
+  return (
+    <Suspense fallback={<BlogDraftsLoading />}>
+      <BlogDraftsContent />
+    </Suspense>
+  )
+}
+
+function BlogDraftsContent() {
   const { drafts, loading, initialized, fetchDrafts } = useBlogDraftsStore()
   const searchParams = useSearchParams()
   const router = useRouter()
