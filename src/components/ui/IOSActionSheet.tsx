@@ -182,3 +182,6 @@ export function useIsMobile() {
       window.navigator.userAgent
     )
 }
+
+// Re-export IOSDateTimePicker for convenience
+export { IOSDateTimePicker } from './IOSDateTimePicker'
