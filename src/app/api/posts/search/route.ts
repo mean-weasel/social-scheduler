@@ -1,10 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { transformPostFromDb } from '@/lib/utils'
+import { requireAuth } from '@/lib/auth'
 
 // GET /api/posts/search - Search posts
 export async function GET(request: NextRequest) {
   try {
+    const { userId } = await requireAuth()
     const supabase = await createClient()
     const { searchParams } = new URL(request.url)
 
@@ -20,9 +22,11 @@ export async function GET(request: NextRequest) {
     // Using ilike for simple search
     const searchPattern = `%${query}%`
 
+    // Defense-in-depth: filter by user_id alongside RLS
     const { data, error } = await supabase
       .from('posts')
       .select('*')
+      .eq('user_id', userId)
       .neq('status', 'archived')
       .or(`notes.ilike.${searchPattern},platform.ilike.${searchPattern}`)
       .order('updated_at', { ascending: false })
@@ -49,6 +53,9 @@ export async function GET(request: NextRequest) {
     const posts = filtered.map(post => transformPostFromDb(post as Record<string, unknown>))
     return NextResponse.json({ posts })
   } catch (error) {
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     console.error('Error searching posts:', error)
     return NextResponse.json({ error: 'Failed to search posts' }, { status: 500 })
   }

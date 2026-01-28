@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAuth } from '@/lib/auth'
 
 interface RouteContext {
   params: Promise<{ id: string }>
@@ -8,25 +9,28 @@ interface RouteContext {
 // GET /api/projects/[id]/analytics - Get rolled-up analytics for project
 export async function GET(_request: NextRequest, context: RouteContext) {
   try {
+    const { userId } = await requireAuth()
     const { id: projectId } = await context.params
     const supabase = await createClient()
 
-    // Verify project exists (RLS handles auth)
+    // Verify project exists and user owns it (defense-in-depth alongside RLS)
     const { data: project, error: projectError } = await supabase
       .from('projects')
       .select('id')
       .eq('id', projectId)
+      .eq('user_id', userId)
       .single()
 
     if (projectError || !project) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 })
     }
 
-    // Get campaign IDs for this project
+    // Get campaign IDs for this project (defense-in-depth: also check user_id)
     const { data: campaigns, error: campaignsError } = await supabase
       .from('campaigns')
       .select('id')
       .eq('project_id', projectId)
+      .eq('user_id', userId)
 
     if (campaignsError) {
       return NextResponse.json({ error: campaignsError.message }, { status: 500 })
@@ -49,10 +53,11 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       })
     }
 
-    // Get post counts by status for all campaigns in project
+    // Get post counts by status for all campaigns in project (defense-in-depth)
     const { data: posts, error: postsError } = await supabase
       .from('posts')
       .select('status')
+      .eq('user_id', userId)
       .in('campaign_id', campaignIds)
 
     if (postsError) {
@@ -77,6 +82,9 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       }
     })
   } catch (error) {
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     console.error('Error fetching project analytics:', error)
     return NextResponse.json({ error: 'Failed to fetch analytics' }, { status: 500 })
   }

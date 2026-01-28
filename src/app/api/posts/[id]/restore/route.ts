@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { transformPostFromDb } from '@/lib/utils'
+import { requireAuth } from '@/lib/auth'
 
 // POST /api/posts/[id]/restore - Restore an archived post
 export async function POST(
@@ -8,14 +9,16 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { userId } = await requireAuth()
     const { id } = await params
     const supabase = await createClient()
 
-    // Get current post to validate it's archived
+    // Get current post to validate it's archived (defense-in-depth: also check user_id)
     const { data: currentPost, error: fetchError } = await supabase
       .from('posts')
       .select('status')
       .eq('id', id)
+      .eq('user_id', userId)
       .single()
 
     if (fetchError) {
@@ -33,6 +36,7 @@ export async function POST(
       .from('posts')
       .update({ status: 'draft' })
       .eq('id', id)
+      .eq('user_id', userId)
       .select()
       .single()
 
@@ -44,6 +48,9 @@ export async function POST(
     const post = transformPostFromDb(data as Record<string, unknown>)
     return NextResponse.json({ post })
   } catch (error) {
+    if (error instanceof Error && error.message === 'Unauthorized') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
     console.error('Error restoring post:', error)
     return NextResponse.json({ error: 'Failed to restore post' }, { status: 500 })
   }
