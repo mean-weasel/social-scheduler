@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { format } from 'date-fns'
 import {
   FolderKanban,
@@ -53,10 +54,12 @@ export function ProjectCard({
         {/* Logo or placeholder */}
         <div className="relative aspect-[2/1] mb-4 rounded-lg overflow-hidden bg-accent/30 flex items-center justify-center">
           {hasLogo ? (
-            <img
+            <Image
               src={getMediaUrl(project.logoUrl!)}
               alt={`${project.name} logo`}
-              className="w-full h-full object-contain"
+              fill
+              sizes="(max-width: 640px) 100vw, 300px"
+              className="object-contain"
               onError={(e) => {
                 (e.target as HTMLImageElement).style.display = 'none'
               }}
@@ -160,12 +163,14 @@ export function ProjectCard({
     >
       <div className="flex items-start gap-3 md:gap-4">
         {/* Logo/Icon */}
-        <div className="w-10 h-10 md:w-12 md:h-12 rounded-lg bg-[hsl(var(--gold))]/10 flex items-center justify-center flex-shrink-0 overflow-hidden">
+        <div className="relative w-10 h-10 md:w-12 md:h-12 rounded-lg bg-[hsl(var(--gold))]/10 flex items-center justify-center flex-shrink-0 overflow-hidden">
           {hasLogo ? (
-            <img
+            <Image
               src={getMediaUrl(project.logoUrl!)}
               alt={`${project.name} logo`}
-              className="w-full h-full object-contain"
+              fill
+              sizes="48px"
+              className="object-contain"
               onError={(e) => {
                 const target = e.target as HTMLImageElement
                 target.style.display = 'none'
