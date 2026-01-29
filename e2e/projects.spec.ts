@@ -362,7 +362,7 @@ test.describe('Projects', () => {
       await page.getByRole('button', { name: /^move$/i }).click()
 
       // Modal should appear with "Move Campaign" heading
-      const modal = page.locator('[role="dialog"], .fixed.inset-0').filter({ hasText: 'Move Campaign' })
+      const modal = page.getByRole('dialog').filter({ hasText: 'Move Campaign' })
       await expect(modal).toBeVisible()
 
       // Wait for projects to load in the modal
@@ -403,7 +403,7 @@ test.describe('Projects', () => {
       await page.getByRole('button', { name: /^move$/i }).click()
 
       // Modal should show current project
-      const modal = page.locator('[role="dialog"], .fixed.inset-0').filter({ hasText: 'Move Campaign' })
+      const modal = page.getByRole('dialog').filter({ hasText: 'Move Campaign' })
       await expect(modal).toBeVisible()
       await expect(modal.getByText(/currently in/i)).toBeVisible()
       // "Project One" appears in "Currently in:" section
@@ -445,7 +445,7 @@ test.describe('Projects', () => {
       await page.getByRole('button', { name: /^move$/i }).click()
 
       // Modal should appear
-      const modal = page.locator('[role="dialog"], .fixed.inset-0').filter({ hasText: 'Move Campaign' })
+      const modal = page.getByRole('dialog').filter({ hasText: 'Move Campaign' })
       await expect(modal).toBeVisible()
 
       // Select "Unassigned" option
