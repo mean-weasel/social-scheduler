@@ -15,6 +15,7 @@ interface IOSDateTimePickerProps {
   disabled?: boolean
   minDate?: Date
   maxDate?: Date
+  'data-testid'?: string
 }
 
 export function IOSDateTimePicker({
@@ -26,6 +27,7 @@ export function IOSDateTimePicker({
   disabled = false,
   minDate,
   maxDate,
+  'data-testid': dataTestId,
 }: IOSDateTimePickerProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [tempDate, setTempDate] = useState<string>('')
@@ -107,6 +109,7 @@ export function IOSDateTimePicker({
       <div className={cn('relative', className)}>
         <button
           type="button"
+          data-testid={dataTestId}
           onClick={() => {
             if (disabled) return
             if (mode === 'time' && timeInputRef.current) {
@@ -170,6 +173,7 @@ export function IOSDateTimePicker({
     <>
       <button
         type="button"
+        data-testid={dataTestId}
         onClick={() => !disabled && setIsOpen(true)}
         disabled={disabled}
         className={cn(
