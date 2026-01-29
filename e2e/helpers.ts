@@ -218,13 +218,15 @@ export async function fillSubredditTitle(page: Page, subreddit: string, title: s
 
 /**
  * Set schedule for a specific subreddit (card must be expanded)
+ * Uses the hidden inputs within IOSDateTimePicker components
  */
 export async function setSubredditSchedule(page: Page, subreddit: string, date: Date) {
   const dateStr = date.toISOString().split('T')[0]
   const timeStr = date.toTimeString().slice(0, 5)
 
-  const dateInput = page.locator(`[data-testid="subreddit-date-${subreddit}"]`)
-  const timeInput = page.locator(`[data-testid="subreddit-time-${subreddit}"]`)
+  // Fill the hidden inputs directly (they have -input suffix)
+  const dateInput = page.locator(`[data-testid="subreddit-date-${subreddit}-input"]`)
+  const timeInput = page.locator(`[data-testid="subreddit-time-${subreddit}-input"]`)
 
   await dateInput.fill(dateStr)
   await timeInput.fill(timeStr)
@@ -249,19 +251,17 @@ export async function setLinkedInVisibility(page: Page, visibility: 'public' | '
 
 /**
  * Set schedule date and time (main schedule, not per-subreddit)
- * Uses Playwright's native fill with clear first
+ * Uses the hidden inputs within IOSDateTimePicker components
  */
 export async function setSchedule(page: Page, date: Date) {
   const dateStr = date.toISOString().split('T')[0]
   const timeStr = date.toTimeString().slice(0, 5)
 
-  // Use click + selectAll + fill to handle controlled inputs
-  const dateInput = page.locator('[data-testid="main-schedule-date"]')
-  await dateInput.click({ clickCount: 3 }) // Triple click to select all
+  // Fill the hidden inputs directly (they have -input suffix)
+  const dateInput = page.locator('[data-testid="main-schedule-date-input"]')
   await dateInput.fill(dateStr)
 
-  const timeInput = page.locator('[data-testid="main-schedule-time"]')
-  await timeInput.click({ clickCount: 3 })
+  const timeInput = page.locator('[data-testid="main-schedule-time-input"]')
   await timeInput.fill(timeStr)
 }
 

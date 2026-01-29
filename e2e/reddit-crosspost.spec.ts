@@ -188,12 +188,12 @@ test.describe('Reddit Cross-posting', () => {
       // The schedules should be different
       expect(updatedStartup.scheduledAt).not.toBe(updatedEntrepreneur.scheduledAt)
 
-      // Verify the UI shows correct times in the subreddit cards
+      // Verify the UI shows correct times in the subreddit cards (check hidden input with -input suffix)
       await page.goto(`/edit/${updatedStartup.id}`)
-      await expect(page.locator('[data-testid="subreddit-time-startups"]')).toHaveValue('10:00')
+      await expect(page.locator('[data-testid="subreddit-time-startups-input"]')).toHaveValue('10:00')
 
       await page.goto(`/edit/${updatedEntrepreneur.id}`)
-      await expect(page.locator('[data-testid="subreddit-time-entrepreneur"]')).toHaveValue('15:00')
+      await expect(page.locator('[data-testid="subreddit-time-entrepreneur-input"]')).toHaveValue('15:00')
     })
 
     test('should allow different statuses for grouped posts', async ({ page }) => {

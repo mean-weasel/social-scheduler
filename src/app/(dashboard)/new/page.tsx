@@ -1052,6 +1052,7 @@ export default function EditorPage() {
                                 mode="date"
                                 placeholder="Date"
                                 className="flex-1"
+                                data-testid={`subreddit-date-${sub}`}
                               />
                               <IOSDateTimePicker
                                 value={schedule ? new Date(schedule) : null}
@@ -1059,6 +1060,7 @@ export default function EditorPage() {
                                 mode="time"
                                 placeholder="Time"
                                 className="w-[120px]"
+                                data-testid={`subreddit-time-${sub}`}
                               />
                             </div>
                             <p className="text-xs text-muted-foreground mt-1.5">
