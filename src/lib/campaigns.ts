@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { Campaign, CampaignStatus, Post } from './posts'
+import { dedup, createDedupKey } from './requestDedup'
 
 // API URL - use relative path for Next.js API routes
 const API_BASE = '/api'
@@ -32,19 +33,23 @@ export const useCampaignsStore = create<CampaignsState & CampaignsActions>()((se
   initialized: false,
 
   fetchCampaigns: async (options) => {
-    set({ loading: true, error: null })
-    try {
-      let url = `${API_BASE}/campaigns`
-      if (options?.projectId) {
-        url += `?projectId=${encodeURIComponent(options.projectId)}`
+    const key = createDedupKey('campaigns', { projectId: options?.projectId })
+
+    return dedup(key, async () => {
+      set({ loading: true, error: null })
+      try {
+        let url = `${API_BASE}/campaigns`
+        if (options?.projectId) {
+          url += `?projectId=${encodeURIComponent(options.projectId)}`
+        }
+        const res = await fetch(url)
+        if (!res.ok) throw new Error('Failed to fetch campaigns')
+        const data = await res.json()
+        set({ campaigns: data.campaigns || [], loading: false, initialized: true })
+      } catch (error) {
+        set({ error: (error as Error).message, loading: false })
       }
-      const res = await fetch(url)
-      if (!res.ok) throw new Error('Failed to fetch campaigns')
-      const data = await res.json()
-      set({ campaigns: data.campaigns || [], loading: false, initialized: true })
-    } catch (error) {
-      set({ error: (error as Error).message, loading: false })
-    }
+    })
   },
 
   addCampaign: async (campaignData) => {

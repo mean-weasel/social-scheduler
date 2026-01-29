@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { Project, ProjectAnalytics, Campaign } from './posts'
+import { dedup } from './requestDedup'
 
 // API URL - use relative path for Next.js API routes
 const API_BASE = '/api'
@@ -58,22 +59,24 @@ export const useProjectsStore = create<ProjectsState & ProjectsActions>()((set, 
   ...initialState,
 
   fetchProjects: async () => {
-    set({ loading: true, error: null })
-    try {
-      const res = await fetch(`${API_BASE}/projects`)
-      if (!res.ok) throw new Error('Failed to fetch projects')
-      const data = await res.json()
-      const projects = data.projects || []
-      const atLimit = data.meta?.atLimit || projects.length >= SOFT_LIMIT
-      set({
-        projects,
-        loading: false,
-        initialized: true,
-        atLimit,
-      })
-    } catch (error) {
-      set({ error: (error as Error).message, loading: false })
-    }
+    return dedup('projects', async () => {
+      set({ loading: true, error: null })
+      try {
+        const res = await fetch(`${API_BASE}/projects`)
+        if (!res.ok) throw new Error('Failed to fetch projects')
+        const data = await res.json()
+        const projects = data.projects || []
+        const atLimit = data.meta?.atLimit || projects.length >= SOFT_LIMIT
+        set({
+          projects,
+          loading: false,
+          initialized: true,
+          atLimit,
+        })
+      } catch (error) {
+        set({ error: (error as Error).message, loading: false })
+      }
+    })
   },
 
   createProject: async (projectData) => {

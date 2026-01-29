@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { dedup } from './requestDedup'
 
 // API URL - use relative path for Next.js API routes
 const API_BASE = '/api'
@@ -47,15 +48,17 @@ export const useBlogDraftsStore = create<BlogDraftsState & BlogDraftsActions>()(
   initialized: false,
 
   fetchDrafts: async () => {
-    set({ loading: true, error: null })
-    try {
-      const res = await fetch(`${API_BASE}/blog-drafts`)
-      if (!res.ok) throw new Error('Failed to fetch blog drafts')
-      const data = await res.json()
-      set({ drafts: data.drafts || [], loading: false, initialized: true })
-    } catch (error) {
-      set({ error: (error as Error).message, loading: false })
-    }
+    return dedup('blogDrafts', async () => {
+      set({ loading: true, error: null })
+      try {
+        const res = await fetch(`${API_BASE}/blog-drafts`)
+        if (!res.ok) throw new Error('Failed to fetch blog drafts')
+        const data = await res.json()
+        set({ drafts: data.drafts || [], loading: false, initialized: true })
+      } catch (error) {
+        set({ error: (error as Error).message, loading: false })
+      }
+    })
   },
 
   addDraft: async (draftData) => {
