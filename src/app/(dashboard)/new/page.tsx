@@ -6,7 +6,6 @@ import { format } from 'date-fns'
 import toast from 'react-hot-toast'
 import {
   Calendar,
-  Clock,
   Image,
   Send,
   Save,
@@ -42,6 +41,7 @@ import { cn } from '@/lib/utils'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { AutoSaveIndicator } from '@/components/ui/AutoSaveIndicator'
 import { MediaUpload } from '@/components/ui/MediaUpload'
+import { IOSDateTimePicker } from '@/components/ui/IOSDateTimePicker'
 import { getMediaUrl } from '@/lib/media'
 import { useAutoSave } from '@/hooks/useAutoSave'
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges'
@@ -1046,63 +1046,21 @@ export default function EditorPage() {
                               Schedule (optional)
                             </label>
                             <div className="flex items-center gap-2">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const input = document.querySelector<HTMLInputElement>(`input[data-testid="subreddit-date-${sub}"]`)
-                                  input?.showPicker()
-                                }}
-                                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-background border border-border hover:border-primary/50 transition-colors cursor-pointer flex-1 text-left"
-                              >
-                                <Calendar className="w-4 h-4 text-muted-foreground" />
-                                <span className="text-sm flex-1">
-                                  {schedule ? format(new Date(schedule), 'MMM d, yyyy') : 'Date'}
-                                </span>
-                              </button>
-                              <input
-                                type="date"
-                                value={schedule ? format(new Date(schedule), 'yyyy-MM-dd') : ''}
-                                onChange={(e) => {
-                                  if (!e.target.value) {
-                                    updateSubredditSchedule(sub, null)
-                                    return
-                                  }
-                                  const existingTime = schedule
-                                    ? format(new Date(schedule), 'HH:mm')
-                                    : '12:00'
-                                  const localDate = new Date(`${e.target.value}T${existingTime}:00`)
-                                  updateSubredditSchedule(sub, localDate.toISOString())
-                                }}
+                              <IOSDateTimePicker
+                                value={schedule ? new Date(schedule) : null}
+                                onChange={(date) => updateSubredditSchedule(sub, date?.toISOString() || null)}
+                                mode="date"
+                                placeholder="Date"
+                                className="flex-1"
                                 data-testid={`subreddit-date-${sub}`}
-                                className="absolute opacity-0 pointer-events-none"
-                                tabIndex={-1}
                               />
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const input = document.querySelector<HTMLInputElement>(`input[data-testid="subreddit-time-${sub}"]`)
-                                  input?.showPicker()
-                                }}
-                                className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-background border border-border hover:border-primary/50 transition-colors cursor-pointer text-left"
-                              >
-                                <Clock className="w-4 h-4 text-muted-foreground" />
-                                <span className="text-sm w-[60px]">
-                                  {schedule ? format(new Date(schedule), 'h:mm a') : 'Time'}
-                                </span>
-                              </button>
-                              <input
-                                type="time"
-                                value={schedule ? format(new Date(schedule), 'HH:mm') : ''}
-                                onChange={(e) => {
-                                  const dateStr = schedule
-                                    ? format(new Date(schedule), 'yyyy-MM-dd')
-                                    : format(new Date(), 'yyyy-MM-dd')
-                                  const localDate = new Date(`${dateStr}T${e.target.value}:00`)
-                                  updateSubredditSchedule(sub, localDate.toISOString())
-                                }}
+                              <IOSDateTimePicker
+                                value={schedule ? new Date(schedule) : null}
+                                onChange={(date) => updateSubredditSchedule(sub, date?.toISOString() || null)}
+                                mode="time"
+                                placeholder="Time"
+                                className="w-[120px]"
                                 data-testid={`subreddit-time-${sub}`}
-                                className="absolute opacity-0 pointer-events-none"
-                                tabIndex={-1}
                               />
                             </div>
                             <p className="text-xs text-muted-foreground mt-1.5">
@@ -1289,69 +1247,34 @@ export default function EditorPage() {
             <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
               Schedule Date
             </label>
-            <button
-              type="button"
-              onClick={() => {
-                const input = document.querySelector<HTMLInputElement>('input[data-testid="main-schedule-date"]')
-                input?.showPicker()
-              }}
-              className="w-full flex items-center gap-2 px-4 py-2.5 rounded-lg bg-card border border-border hover:border-primary/50 transition-colors cursor-pointer text-left"
-            >
-              <Calendar className="w-4 h-4 text-muted-foreground" />
-              <span className="flex-1 text-foreground">
-                {post.scheduledAt ? format(new Date(post.scheduledAt), 'MMM d, yyyy') : 'Select date'}
-              </span>
-            </button>
-            <input
-              type="date"
-              data-testid="main-schedule-date"
-              value={post.scheduledAt ? format(new Date(post.scheduledAt), 'yyyy-MM-dd') : ''}
-              onChange={(e) =>
-                setPost((prev) => {
-                  if (!e.target.value) return { ...prev, scheduledAt: null }
-                  const timeStr = prev.scheduledAt ? format(new Date(prev.scheduledAt), 'HH:mm') : '12:00'
-                  const localDate = new Date(`${e.target.value}T${timeStr}:00`)
-                  return { ...prev, scheduledAt: localDate.toISOString() }
-                })
+            <IOSDateTimePicker
+              value={post.scheduledAt ? new Date(post.scheduledAt) : null}
+              onChange={(date) =>
+                setPost((prev) => ({
+                  ...prev,
+                  scheduledAt: date ? date.toISOString() : null,
+                }))
               }
-              className="mt-2 w-full px-3 py-2 rounded-lg bg-card border border-border text-sm"
+              mode="date"
+              placeholder="Select date"
+              data-testid="main-schedule-date"
             />
           </div>
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
               Time
             </label>
-            <button
-              type="button"
-              onClick={() => {
-                const input = document.querySelector<HTMLInputElement>('input[data-testid="main-schedule-time"]')
-                input?.showPicker()
-              }}
-              className="w-full flex items-center gap-2 px-4 py-2.5 rounded-lg bg-card border border-border hover:border-primary/50 transition-colors cursor-pointer text-left"
-            >
-              <Clock className="w-4 h-4 text-muted-foreground" />
-              <span className="flex-1 text-foreground">
-                {post.scheduledAt ? format(new Date(post.scheduledAt), 'h:mm a') : 'Select time'}
-              </span>
-            </button>
-            <input
-              type="time"
-              data-testid="main-schedule-time"
-              value={post.scheduledAt ? format(new Date(post.scheduledAt), 'HH:mm') : ''}
-              onChange={(e) =>
-                setPost((prev) => {
-                  if (!prev.scheduledAt) {
-                    // If no date set, use today's date
-                    const today = format(new Date(), 'yyyy-MM-dd')
-                    const localDate = new Date(`${today}T${e.target.value}:00`)
-                    return { ...prev, scheduledAt: localDate.toISOString() }
-                  }
-                  const dateStr = format(new Date(prev.scheduledAt), 'yyyy-MM-dd')
-                  const localDate = new Date(`${dateStr}T${e.target.value}:00`)
-                  return { ...prev, scheduledAt: localDate.toISOString() }
-                })
+            <IOSDateTimePicker
+              value={post.scheduledAt ? new Date(post.scheduledAt) : null}
+              onChange={(date) =>
+                setPost((prev) => ({
+                  ...prev,
+                  scheduledAt: date ? date.toISOString() : null,
+                }))
               }
-              className="mt-2 w-full px-3 py-2 rounded-lg bg-card border border-border text-sm"
+              mode="time"
+              placeholder="Select time"
+              data-testid="main-schedule-time"
             />
           </div>
         </div>

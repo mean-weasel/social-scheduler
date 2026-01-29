@@ -15,6 +15,7 @@ interface IOSDateTimePickerProps {
   disabled?: boolean
   minDate?: Date
   maxDate?: Date
+  'data-testid'?: string
 }
 
 export function IOSDateTimePicker({
@@ -26,6 +27,7 @@ export function IOSDateTimePicker({
   disabled = false,
   minDate,
   maxDate,
+  'data-testid': dataTestId,
 }: IOSDateTimePickerProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [tempDate, setTempDate] = useState<string>('')
@@ -107,6 +109,7 @@ export function IOSDateTimePicker({
       <div className={cn('relative', className)}>
         <button
           type="button"
+          data-testid={dataTestId}
           onClick={() => {
             if (disabled) return
             if (mode === 'time' && timeInputRef.current) {
@@ -129,27 +132,31 @@ export function IOSDateTimePicker({
         </button>
 
         {/* Hidden inputs for desktop */}
-        <input
-          ref={dateInputRef}
-          type="date"
-          value={value ? format(value, 'yyyy-MM-dd') : ''}
-          min={minDate ? format(minDate, 'yyyy-MM-dd') : undefined}
-          max={maxDate ? format(maxDate, 'yyyy-MM-dd') : undefined}
-          onChange={(e) => {
-            if (!e.target.value) {
-              onChange(null)
-              return
-            }
-            const time = value ? format(value, 'HH:mm') : '12:00'
-            onChange(new Date(`${e.target.value}T${time}:00`))
-          }}
-          className="sr-only"
-          tabIndex={-1}
-        />
+        {(mode === 'date' || mode === 'datetime') && (
+          <input
+            ref={dateInputRef}
+            type="date"
+            data-testid={dataTestId ? `${dataTestId}-input` : undefined}
+            value={value ? format(value, 'yyyy-MM-dd') : ''}
+            min={minDate ? format(minDate, 'yyyy-MM-dd') : undefined}
+            max={maxDate ? format(maxDate, 'yyyy-MM-dd') : undefined}
+            onChange={(e) => {
+              if (!e.target.value) {
+                onChange(null)
+                return
+              }
+              const time = value ? format(value, 'HH:mm') : '12:00'
+              onChange(new Date(`${e.target.value}T${time}:00`))
+            }}
+            className="sr-only"
+            tabIndex={-1}
+          />
+        )}
         {(mode === 'time' || mode === 'datetime') && (
           <input
             ref={timeInputRef}
             type="time"
+            data-testid={dataTestId ? `${dataTestId}-input` : undefined}
             value={value ? format(value, 'HH:mm') : ''}
             onChange={(e) => {
               const dateStr = value
@@ -170,6 +177,7 @@ export function IOSDateTimePicker({
     <>
       <button
         type="button"
+        data-testid={dataTestId}
         onClick={() => !disabled && setIsOpen(true)}
         disabled={disabled}
         className={cn(

@@ -195,8 +195,8 @@ test.describe('Auto-save', () => {
       const tomorrow = new Date()
       tomorrow.setDate(tomorrow.getDate() + 1)
       const dateStr = tomorrow.toISOString().split('T')[0]
-      await page.locator('input[type="date"]').fill(dateStr)
-      await page.locator('input[type="time"]').fill('12:00')
+      await page.locator('[data-testid="main-schedule-date-input"]').fill(dateStr)
+      await page.locator('[data-testid="main-schedule-time-input"]').fill('12:00')
 
       // Schedule the post
       await page.getByRole('button', { name: /^schedule$/i }).click()

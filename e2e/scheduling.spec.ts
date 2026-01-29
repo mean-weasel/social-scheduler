@@ -21,20 +21,20 @@ test.describe('Scheduling', () => {
       await goToNewPost(page)
       await selectPlatform(page, 'twitter')
 
-      const dateInput = page.locator('input[type="date"]')
-      await expect(dateInput).toBeVisible()
-      await expect(dateInput).toBeEnabled()
+      // The date picker button should be visible
+      const dateButton = page.locator('[data-testid="main-schedule-date"]')
+      await expect(dateButton).toBeVisible()
+      await expect(dateButton).toBeEnabled()
 
-      // Click should focus the input
-      await dateInput.click()
-      await expect(dateInput).toBeFocused()
+      // Click should work
+      await dateButton.click()
     })
 
     test('should accept date via keyboard input', async ({ page }) => {
       await goToNewPost(page)
       await selectPlatform(page, 'twitter')
 
-      const dateInput = page.locator('input[type="date"]')
+      const dateInput = page.locator('[data-testid="main-schedule-date-input"]')
 
       // Set date via fill
       const tomorrow = new Date()
@@ -50,7 +50,7 @@ test.describe('Scheduling', () => {
       await selectPlatform(page, 'twitter')
       await fillContent(page, 'Testing date persistence')
 
-      const dateInput = page.locator('input[type="date"]')
+      const dateInput = page.locator('[data-testid="main-schedule-date-input"]')
       const tomorrow = new Date()
       tomorrow.setDate(tomorrow.getDate() + 1)
       const dateStr = tomorrow.toISOString().split('T')[0]
@@ -65,7 +65,7 @@ test.describe('Scheduling', () => {
 
       await page.goto(`/edit/${posts[0].id}`)
       await waitForContentToLoad(page, 'Testing date persistence')
-      await expect(page.locator('input[type="date"]')).toHaveValue(dateStr)
+      await expect(page.locator('[data-testid="main-schedule-date-input"]')).toHaveValue(dateStr)
     })
   })
 
@@ -74,13 +74,13 @@ test.describe('Scheduling', () => {
       await goToNewPost(page)
       await selectPlatform(page, 'twitter')
 
-      const timeInput = page.locator('input[type="time"]')
-      await expect(timeInput).toBeVisible()
-      await expect(timeInput).toBeEnabled()
+      // The time picker button should be visible
+      const timeButton = page.locator('[data-testid="main-schedule-time"]')
+      await expect(timeButton).toBeVisible()
+      await expect(timeButton).toBeEnabled()
 
-      // Click should focus the input
-      await timeInput.click()
-      await expect(timeInput).toBeFocused()
+      // Click should work
+      await timeButton.click()
     })
 
     test('should accept time via keyboard input', async ({ page }) => {
@@ -88,12 +88,12 @@ test.describe('Scheduling', () => {
       await selectPlatform(page, 'twitter')
 
       // First set a date (time depends on date being set)
-      const dateInput = page.locator('input[type="date"]')
+      const dateInput = page.locator('[data-testid="main-schedule-date-input"]')
       const tomorrow = new Date()
       tomorrow.setDate(tomorrow.getDate() + 1)
       await dateInput.fill(tomorrow.toISOString().split('T')[0])
 
-      const timeInput = page.locator('input[type="time"]')
+      const timeInput = page.locator('[data-testid="main-schedule-time-input"]')
       await timeInput.fill('14:30')
       await expect(timeInput).toHaveValue('14:30')
     })
@@ -104,8 +104,8 @@ test.describe('Scheduling', () => {
       await fillContent(page, 'Testing time persistence')
 
       // Set date and time
-      const dateInput = page.locator('input[type="date"]')
-      const timeInput = page.locator('input[type="time"]')
+      const dateInput = page.locator('[data-testid="main-schedule-date-input"]')
+      const timeInput = page.locator('[data-testid="main-schedule-time-input"]')
 
       const tomorrow = new Date()
       tomorrow.setDate(tomorrow.getDate() + 1)
@@ -122,8 +122,8 @@ test.describe('Scheduling', () => {
       await page.goto(`/edit/${posts[0].id}`)
       await waitForContentToLoad(page, 'Testing time persistence')
 
-      await expect(page.locator('input[type="date"]')).toHaveValue(dateStr)
-      await expect(page.locator('input[type="time"]')).toHaveValue('09:15')
+      await expect(page.locator('[data-testid="main-schedule-date-input"]')).toHaveValue(dateStr)
+      await expect(page.locator('[data-testid="main-schedule-time-input"]')).toHaveValue('09:15')
     })
   })
 
@@ -134,8 +134,8 @@ test.describe('Scheduling', () => {
       await fillContent(page, 'Scheduled post test')
 
       // Set schedule
-      const dateInput = page.locator('input[type="date"]')
-      const timeInput = page.locator('input[type="time"]')
+      const dateInput = page.locator('[data-testid="main-schedule-date-input"]')
+      const timeInput = page.locator('[data-testid="main-schedule-time-input"]')
 
       const tomorrow = new Date()
       tomorrow.setDate(tomorrow.getDate() + 1)
@@ -171,8 +171,8 @@ test.describe('Scheduling', () => {
       await selectPlatform(page, 'twitter')
       await fillContent(page, 'Post to reschedule')
 
-      const dateInput = page.locator('input[type="date"]')
-      const timeInput = page.locator('input[type="time"]')
+      const dateInput = page.locator('[data-testid="main-schedule-date-input"]')
+      const timeInput = page.locator('[data-testid="main-schedule-time-input"]')
 
       const tomorrow = new Date()
       tomorrow.setDate(tomorrow.getDate() + 1)
@@ -193,8 +193,8 @@ test.describe('Scheduling', () => {
       dayAfter.setDate(dayAfter.getDate() + 2)
       const newDateStr = dayAfter.toISOString().split('T')[0]
 
-      await page.locator('input[type="date"]').fill(newDateStr)
-      await page.locator('input[type="time"]').fill('15:00')
+      await page.locator('[data-testid="main-schedule-date-input"]').fill(newDateStr)
+      await page.locator('[data-testid="main-schedule-time-input"]').fill('15:00')
       await schedulePost(page)
       await waitForNavigation(page, '/')
 
@@ -206,8 +206,8 @@ test.describe('Scheduling', () => {
       // Verify the date/time shows correctly in the UI
       await page.goto(`/edit/${updatedPosts[0].id}`)
       await waitForContentToLoad(page, 'Post to reschedule')
-      await expect(page.locator('input[type="date"]')).toHaveValue(newDateStr)
-      await expect(page.locator('input[type="time"]')).toHaveValue('15:00')
+      await expect(page.locator('[data-testid="main-schedule-date-input"]')).toHaveValue(newDateStr)
+      await expect(page.locator('[data-testid="main-schedule-time-input"]')).toHaveValue('15:00')
     })
 
     test('should clear schedule and save as draft', async ({ page }) => {
@@ -216,7 +216,7 @@ test.describe('Scheduling', () => {
       await selectPlatform(page, 'twitter')
       await fillContent(page, 'Scheduled then draft')
 
-      const dateInput = page.locator('input[type="date"]')
+      const dateInput = page.locator('[data-testid="main-schedule-date-input"]')
       const tomorrow = new Date()
       tomorrow.setDate(tomorrow.getDate() + 1)
       await dateInput.fill(tomorrow.toISOString().split('T')[0])
@@ -243,14 +243,12 @@ test.describe('Scheduling', () => {
       await goToNewPost(page)
       await selectPlatform(page, 'twitter')
 
-      const dateInput = page.locator('input[type="date"]')
+      // The date picker button should be visible and interactable
+      const dateButton = page.locator('[data-testid="main-schedule-date"]')
+      await expect(dateButton).toBeVisible()
 
-      // The input wrapper should be visible
-      const dateWrapper = dateInput.locator('..')
-      await expect(dateWrapper).toBeVisible()
-
-      // Input should be interactable
-      const box = await dateInput.boundingBox()
+      // Button should have proper dimensions
+      const box = await dateButton.boundingBox()
       expect(box).toBeTruthy()
       expect(box!.width).toBeGreaterThan(50)
       expect(box!.height).toBeGreaterThan(20)
@@ -260,14 +258,12 @@ test.describe('Scheduling', () => {
       await goToNewPost(page)
       await selectPlatform(page, 'twitter')
 
-      const timeInput = page.locator('input[type="time"]')
+      // The time picker button should be visible and interactable
+      const timeButton = page.locator('[data-testid="main-schedule-time"]')
+      await expect(timeButton).toBeVisible()
 
-      // The input wrapper should be visible
-      const timeWrapper = timeInput.locator('..')
-      await expect(timeWrapper).toBeVisible()
-
-      // Input should be interactable
-      const box = await timeInput.boundingBox()
+      // Button should have proper dimensions
+      const box = await timeButton.boundingBox()
       expect(box).toBeTruthy()
       expect(box!.width).toBeGreaterThan(50)
       expect(box!.height).toBeGreaterThan(20)
@@ -285,8 +281,8 @@ test.describe('Scheduling', () => {
       tomorrow.setDate(tomorrow.getDate() + 1)
       const dateStr = tomorrow.toISOString().split('T')[0]
 
-      await page.locator('input[type="date"]').fill(dateStr)
-      await page.locator('input[type="time"]').fill('14:00')
+      await page.locator('[data-testid="main-schedule-date-input"]').fill(dateStr)
+      await page.locator('[data-testid="main-schedule-time-input"]').fill('14:00')
 
       // Schedule button should be enabled
       const scheduleButton = page.getByRole('button', { name: /^schedule$/i })
@@ -308,8 +304,8 @@ test.describe('Scheduling', () => {
       const minutes = futureTime.getMinutes().toString().padStart(2, '0')
       const timeStr = `${hours}:${minutes}`
 
-      await page.locator('input[type="date"]').fill(dateStr)
-      await page.locator('input[type="time"]').fill(timeStr)
+      await page.locator('[data-testid="main-schedule-date-input"]').fill(dateStr)
+      await page.locator('[data-testid="main-schedule-time-input"]').fill(timeStr)
 
       // Schedule button should be enabled for future time today
       const scheduleButton = page.getByRole('button', { name: /^schedule$/i })
@@ -326,8 +322,8 @@ test.describe('Scheduling', () => {
       nextWeek.setDate(nextWeek.getDate() + 7)
       const dateStr = nextWeek.toISOString().split('T')[0]
 
-      await page.locator('input[type="date"]').fill(dateStr)
-      await expect(page.locator('input[type="date"]')).toHaveValue(dateStr)
+      await page.locator('[data-testid="main-schedule-date-input"]').fill(dateStr)
+      await expect(page.locator('[data-testid="main-schedule-date-input"]')).toHaveValue(dateStr)
     })
   })
 
@@ -344,8 +340,8 @@ test.describe('Scheduling', () => {
         await selectPlatform(page, 'twitter')
         await fillContent(page, `Post scheduled at ${time}`)
 
-        await page.locator('input[type="date"]').fill(baseTomorrow.toISOString().split('T')[0])
-        await page.locator('input[type="time"]').fill(time)
+        await page.locator('[data-testid="main-schedule-date-input"]').fill(baseTomorrow.toISOString().split('T')[0])
+        await page.locator('[data-testid="main-schedule-time-input"]').fill(time)
 
         await schedulePost(page)
         await waitForNavigation(page, '/')
@@ -379,8 +375,8 @@ test.describe('Scheduling', () => {
       await selectPlatform(page, 'twitter')
       await fillContent(page, 'Post with visible schedule')
 
-      await page.locator('input[type="date"]').fill(dateStr)
-      await page.locator('input[type="time"]').fill('10:30')
+      await page.locator('[data-testid="main-schedule-date-input"]').fill(dateStr)
+      await page.locator('[data-testid="main-schedule-time-input"]').fill('10:30')
 
       await schedulePost(page)
       await waitForNavigation(page, '/')

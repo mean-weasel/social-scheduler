@@ -122,7 +122,7 @@ test.describe('Edit Post', () => {
       await clickPost(page, 0)
 
       // Clear the schedule by clearing the date input
-      await page.locator('input[type="date"]').fill('')
+      await page.locator('[data-testid="main-schedule-date-input"]').fill('')
 
       // Save as draft
       await saveDraft(page)

@@ -167,6 +167,19 @@ export async function fillRedditFields(
 }
 
 /**
+ * Wait for the Reddit edit form to be ready (subreddit card visible and expanded)
+ * This is needed when editing an existing Reddit post to ensure data is loaded
+ */
+export async function waitForRedditEditForm(page: Page, subreddit: string) {
+  // Wait for the subreddit card to be visible
+  const card = page.locator(`[data-testid="subreddit-card-${subreddit}"]`)
+  await card.waitFor({ state: 'visible', timeout: 5000 })
+  // Wait for the title input to be visible (card is auto-expanded when editing)
+  const titleInput = page.locator(`[data-testid="subreddit-title-${subreddit}"]`)
+  await titleInput.waitFor({ state: 'visible', timeout: 5000 })
+}
+
+/**
  * Expand a subreddit card to reveal title and schedule fields
  */
 export async function expandSubredditCard(page: Page, subreddit: string) {
@@ -218,16 +231,22 @@ export async function fillSubredditTitle(page: Page, subreddit: string, title: s
 
 /**
  * Set schedule for a specific subreddit (card must be expanded)
+ * Uses the hidden inputs within IOSDateTimePicker components
  */
 export async function setSubredditSchedule(page: Page, subreddit: string, date: Date) {
   const dateStr = date.toISOString().split('T')[0]
   const timeStr = date.toTimeString().slice(0, 5)
 
-  const dateInput = page.locator(`[data-testid="subreddit-date-${subreddit}"]`)
-  const timeInput = page.locator(`[data-testid="subreddit-time-${subreddit}"]`)
+  // Fill the hidden inputs directly (they have -input suffix)
+  const dateInput = page.locator(`[data-testid="subreddit-date-${subreddit}-input"]`)
+  const timeInput = page.locator(`[data-testid="subreddit-time-${subreddit}-input"]`)
 
+  // Fill date first, wait for React to process, then fill time
+  // This is needed because time picker uses the date value as base
   await dateInput.fill(dateStr)
+  await page.waitForTimeout(100) // Allow React to re-render
   await timeInput.fill(timeStr)
+  await page.waitForTimeout(100) // Allow React to process final state
 }
 
 /**
@@ -249,20 +268,22 @@ export async function setLinkedInVisibility(page: Page, visibility: 'public' | '
 
 /**
  * Set schedule date and time (main schedule, not per-subreddit)
- * Uses Playwright's native fill with clear first
+ * Uses the hidden inputs within IOSDateTimePicker components
  */
 export async function setSchedule(page: Page, date: Date) {
   const dateStr = date.toISOString().split('T')[0]
   const timeStr = date.toTimeString().slice(0, 5)
 
-  // Use click + selectAll + fill to handle controlled inputs
-  const dateInput = page.locator('[data-testid="main-schedule-date"]')
-  await dateInput.click({ clickCount: 3 }) // Triple click to select all
+  // Fill the hidden inputs directly (they have -input suffix)
+  // Fill date first, wait for React to process, then fill time
+  // This is needed because time picker uses the date value as base
+  const dateInput = page.locator('[data-testid="main-schedule-date-input"]')
   await dateInput.fill(dateStr)
+  await page.waitForTimeout(100) // Allow React to re-render
 
-  const timeInput = page.locator('[data-testid="main-schedule-time"]')
-  await timeInput.click({ clickCount: 3 })
+  const timeInput = page.locator('[data-testid="main-schedule-time-input"]')
   await timeInput.fill(timeStr)
+  await page.waitForTimeout(100) // Allow React to process final state
 }
 
 /**

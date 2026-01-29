@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeft, Save, Archive, Trash2, RotateCcw, Calendar, AlertCircle, CheckCircle } from 'lucide-react'
+import { ArrowLeft, Save, Archive, Trash2, RotateCcw, AlertCircle, CheckCircle } from 'lucide-react'
 import { useBlogDraftsStore, BlogDraft } from '@/lib/blogDrafts'
 import { cn } from '@/lib/utils'
+import { IOSDateTimePicker } from '@/components/ui/IOSDateTimePicker'
 
 export default function BlogEditorPage() {
   const { id } = useParams<{ id: string }>()
@@ -249,16 +250,13 @@ export default function BlogEditorPage() {
 
         {/* Metadata row */}
         <div className="flex flex-wrap items-center gap-4 mb-6 text-sm text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4" />
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="bg-transparent border-none outline-none"
-              placeholder="Publication date"
-            />
-          </div>
+          <IOSDateTimePicker
+            value={date ? new Date(`${date}T12:00:00`) : null}
+            onChange={(newDate) => setDate(newDate ? newDate.toISOString().split('T')[0] : '')}
+            mode="date"
+            placeholder="Publication date"
+            className="w-auto"
+          />
           <span>{wordCount} words</span>
           {status !== 'draft' && (
             <span className={cn(

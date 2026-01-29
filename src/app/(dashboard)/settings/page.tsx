@@ -9,6 +9,7 @@ import {
   requestNotificationPermission,
 } from '@/lib/notifications'
 import { cn } from '@/lib/utils'
+import { IOSToggleSwitch } from '@/components/ui/IOSToggleSwitch'
 
 const THEME_OPTIONS: { value: Theme; label: string; icon: typeof Sun }[] = [
   { value: 'light', label: 'Light', icon: Sun },
@@ -37,8 +38,8 @@ export default function SettingsPage() {
     }
   }
 
-  const handleToggleNotifications = () => {
-    setNotificationsEnabled(!notificationsEnabled)
+  const handleToggleNotifications = (enabled: boolean) => {
+    setNotificationsEnabled(enabled)
   }
 
   return (
@@ -127,43 +128,19 @@ export default function SettingsPage() {
               <Check className="w-4 h-4" />
               Browser notifications enabled
             </div>
-            <button
-              onClick={handleToggleNotifications}
-              className={cn(
-                'flex items-center justify-between w-full px-4 py-3 rounded-lg',
-                'border-2 transition-all',
-                notificationsEnabled
-                  ? 'border-primary bg-primary/10'
-                  : 'border-border bg-background'
+            <div className="flex items-center gap-3 px-4 py-3 rounded-lg border border-border bg-background">
+              {notificationsEnabled ? (
+                <Bell className="w-5 h-5 text-[hsl(var(--gold))] flex-shrink-0" />
+              ) : (
+                <BellOff className="w-5 h-5 text-muted-foreground flex-shrink-0" />
               )}
-            >
-              <div className="flex items-center gap-3">
-                {notificationsEnabled ? (
-                  <Bell className="w-5 h-5 text-primary" />
-                ) : (
-                  <BellOff className="w-5 h-5 text-muted-foreground" />
-                )}
-                <div className="text-left">
-                  <p className="font-medium text-sm">Post reminders</p>
-                  <p className="text-xs text-muted-foreground">
-                    Notify when scheduled posts are due
-                  </p>
-                </div>
-              </div>
-              <div
-                className={cn(
-                  'w-10 h-6 rounded-full transition-colors relative',
-                  notificationsEnabled ? 'bg-primary' : 'bg-muted'
-                )}
-              >
-                <div
-                  className={cn(
-                    'absolute top-1 w-4 h-4 rounded-full bg-white transition-transform',
-                    notificationsEnabled ? 'translate-x-5' : 'translate-x-1'
-                  )}
-                />
-              </div>
-            </button>
+              <IOSToggleSwitch
+                checked={notificationsEnabled}
+                onChange={handleToggleNotifications}
+                label="Post reminders"
+                description="Notify when scheduled posts are due"
+              />
+            </div>
           </div>
         )}
       </div>
