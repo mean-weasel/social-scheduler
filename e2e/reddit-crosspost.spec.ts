@@ -15,6 +15,7 @@ import {
   fillSubredditTitle,
   setSubredditSchedule,
   removeSubredditViaCard,
+  waitForRedditEditForm,
 } from './helpers'
 
 // Type guard to access Reddit content fields
@@ -168,6 +169,7 @@ test.describe('Reddit Cross-posting', () => {
 
       // Edit the entrepreneur post to a different time
       await page.goto(`/edit/${entrepreneurPost.id}`)
+      await waitForRedditEditForm(page, 'entrepreneur')
 
       // Change to day after tomorrow at 3pm
       const dayAfter = new Date()
@@ -190,9 +192,11 @@ test.describe('Reddit Cross-posting', () => {
 
       // Verify the UI shows correct times in the subreddit cards (check hidden input with -input suffix)
       await page.goto(`/edit/${updatedStartup.id}`)
+      await waitForRedditEditForm(page, 'startups')
       await expect(page.locator('[data-testid="subreddit-time-startups-input"]')).toHaveValue('10:00')
 
       await page.goto(`/edit/${updatedEntrepreneur.id}`)
+      await waitForRedditEditForm(page, 'entrepreneur')
       await expect(page.locator('[data-testid="subreddit-time-entrepreneur-input"]')).toHaveValue('15:00')
     })
 
@@ -220,6 +224,7 @@ test.describe('Reddit Cross-posting', () => {
       // Schedule only the webdev post
       const webdevPost = posts.find(p => getRedditContent(p)?.subreddit === 'webdev')!
       await page.goto(`/edit/${webdevPost.id}`)
+      await waitForRedditEditForm(page, 'webdev')
 
       const tomorrow = new Date()
       tomorrow.setDate(tomorrow.getDate() + 1)

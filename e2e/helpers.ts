@@ -167,6 +167,19 @@ export async function fillRedditFields(
 }
 
 /**
+ * Wait for the Reddit edit form to be ready (subreddit card visible and expanded)
+ * This is needed when editing an existing Reddit post to ensure data is loaded
+ */
+export async function waitForRedditEditForm(page: Page, subreddit: string) {
+  // Wait for the subreddit card to be visible
+  const card = page.locator(`[data-testid="subreddit-card-${subreddit}"]`)
+  await card.waitFor({ state: 'visible', timeout: 5000 })
+  // Wait for the title input to be visible (card is auto-expanded when editing)
+  const titleInput = page.locator(`[data-testid="subreddit-title-${subreddit}"]`)
+  await titleInput.waitFor({ state: 'visible', timeout: 5000 })
+}
+
+/**
  * Expand a subreddit card to reveal title and schedule fields
  */
 export async function expandSubredditCard(page: Page, subreddit: string) {
@@ -228,8 +241,12 @@ export async function setSubredditSchedule(page: Page, subreddit: string, date: 
   const dateInput = page.locator(`[data-testid="subreddit-date-${subreddit}-input"]`)
   const timeInput = page.locator(`[data-testid="subreddit-time-${subreddit}-input"]`)
 
+  // Fill date first, wait for React to process, then fill time
+  // This is needed because time picker uses the date value as base
   await dateInput.fill(dateStr)
+  await page.waitForTimeout(100) // Allow React to re-render
   await timeInput.fill(timeStr)
+  await page.waitForTimeout(100) // Allow React to process final state
 }
 
 /**
@@ -258,11 +275,15 @@ export async function setSchedule(page: Page, date: Date) {
   const timeStr = date.toTimeString().slice(0, 5)
 
   // Fill the hidden inputs directly (they have -input suffix)
+  // Fill date first, wait for React to process, then fill time
+  // This is needed because time picker uses the date value as base
   const dateInput = page.locator('[data-testid="main-schedule-date-input"]')
   await dateInput.fill(dateStr)
+  await page.waitForTimeout(100) // Allow React to re-render
 
   const timeInput = page.locator('[data-testid="main-schedule-time-input"]')
   await timeInput.fill(timeStr)
+  await page.waitForTimeout(100) // Allow React to process final state
 }
 
 /**
