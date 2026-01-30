@@ -1,0 +1,644 @@
+'use client'
+
+import { useState, useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
+import { ArrowLeft, Loader2, Rocket, ExternalLink, AlertCircle } from 'lucide-react'
+import {
+  LaunchPost,
+  LaunchPlatform,
+  LaunchPostStatus,
+  PlatformFields,
+  LAUNCH_PLATFORM_INFO,
+  LAUNCH_PLATFORM_URLS,
+  LAUNCH_CHAR_LIMITS,
+  getDefaultPlatformFields,
+  useLaunchPostsStore,
+} from '@/lib/launchPosts'
+import { cn } from '@/lib/utils'
+
+interface LaunchPostFormProps {
+  post?: LaunchPost // If provided, we're editing
+  campaignId?: string // If provided, associate with campaign
+}
+
+export function LaunchPostForm({ post, campaignId }: LaunchPostFormProps) {
+  const router = useRouter()
+  const { addLaunchPost, updateLaunchPost } = useLaunchPostsStore()
+  const titleRef = useRef<HTMLInputElement>(null)
+
+  const isEditing = !!post
+
+  // Form state
+  const [platform, setPlatform] = useState<LaunchPlatform>(post?.platform || 'hacker_news_show')
+  const [status, setStatus] = useState<LaunchPostStatus>(post?.status || 'draft')
+  const [title, setTitle] = useState(post?.title || '')
+  const [url, setUrl] = useState(post?.url || '')
+  const [description, setDescription] = useState(post?.description || '')
+  const [platformFields, setPlatformFields] = useState<PlatformFields>(
+    post?.platformFields || getDefaultPlatformFields(platform)
+  )
+  const [scheduledAt, setScheduledAt] = useState(post?.scheduledAt || '')
+  const [notes, setNotes] = useState(post?.notes || '')
+
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // Focus title on mount
+  useEffect(() => {
+    setTimeout(() => titleRef.current?.focus(), 100)
+  }, [])
+
+  // Reset platform fields when platform changes (only if not editing)
+  useEffect(() => {
+    if (!isEditing) {
+      setPlatformFields(getDefaultPlatformFields(platform))
+    }
+  }, [platform, isEditing])
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!title.trim() || isSubmitting) return
+
+    setIsSubmitting(true)
+    setError(null)
+
+    try {
+      if (isEditing && post) {
+        await updateLaunchPost(post.id, {
+          platform,
+          status,
+          title: title.trim(),
+          url: url.trim() || null,
+          description: description.trim() || null,
+          platformFields,
+          scheduledAt: scheduledAt || null,
+          notes: notes.trim() || null,
+        })
+      } else {
+        await addLaunchPost({
+          platform,
+          title: title.trim(),
+          url: url.trim() || undefined,
+          description: description.trim() || undefined,
+          platformFields,
+          campaignId: campaignId,
+          scheduledAt: scheduledAt || undefined,
+          notes: notes.trim() || undefined,
+        })
+      }
+      router.push('/launch-posts')
+    } catch (err) {
+      setError((err as Error).message || 'Failed to save launch post')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const charLimits = LAUNCH_CHAR_LIMITS[platform] || {}
+  const platformInfo = LAUNCH_PLATFORM_INFO[platform]
+  const platformUrl = LAUNCH_PLATFORM_URLS[platform]
+
+  // Check if platform requires URL
+  const platformRequiresUrl = platform !== 'hacker_news_ask'
+
+  // Platform-specific field helpers - use Record type for flexibility
+  const updatePlatformField = (key: string, value: string) => {
+    setPlatformFields((prev) => ({ ...prev, [key]: value }))
+  }
+
+  // Type-safe getters for platform fields
+  const getPlatformFieldString = (key: string): string => {
+    return (platformFields as Record<string, string>)[key] || ''
+  }
+
+  return (
+    <div className="p-4 md:p-6 max-w-3xl mx-auto animate-fade-in">
+      {/* Header */}
+      <div className="flex items-center gap-4 mb-6">
+        <button
+          onClick={() => router.back()}
+          className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5" />
+        </button>
+        <div>
+          <h1 className="text-2xl font-display font-bold tracking-tight">
+            {isEditing ? 'Edit Launch Post' : 'New Launch Post'}
+          </h1>
+          <div className="h-1 w-12 bg-gradient-to-r from-[hsl(var(--gold))] to-transparent mt-1 rounded-full" />
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Platform Selection */}
+        <div className="bg-card border border-border rounded-xl p-4 md:p-6">
+          <label className="block text-sm font-medium mb-3">
+            Platform <span className="text-destructive">*</span>
+          </label>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+            {(Object.entries(LAUNCH_PLATFORM_INFO) as [LaunchPlatform, typeof platformInfo][]).map(
+              ([key, info]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setPlatform(key)}
+                  className={cn(
+                    'flex items-center gap-2 px-3 py-2.5 rounded-lg border text-sm transition-all',
+                    platform === key
+                      ? 'border-[hsl(var(--gold))] bg-[hsl(var(--gold))]/10 text-foreground'
+                      : 'border-border hover:border-[hsl(var(--gold))]/50 hover:bg-accent'
+                  )}
+                >
+                  <span
+                    className={cn(
+                      'w-6 h-6 rounded flex items-center justify-center text-xs font-bold flex-shrink-0',
+                      info.bgColor,
+                      info.color
+                    )}
+                  >
+                    {info.icon}
+                  </span>
+                  <span className="truncate">{info.label}</span>
+                </button>
+              )
+            )}
+          </div>
+
+          {/* Platform link */}
+          <a
+            href={platformUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 mt-3 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ExternalLink className="w-3 h-3" />
+            Open {platformInfo.name} submission page
+          </a>
+        </div>
+
+        {/* Main Fields */}
+        <div className="bg-card border border-border rounded-xl p-4 md:p-6 space-y-4">
+          {/* Title */}
+          <div>
+            <label htmlFor="title" className="block text-sm font-medium mb-2">
+              Title <span className="text-destructive">*</span>
+              {charLimits.title && (
+                <span
+                  className={cn(
+                    'ml-2 text-xs',
+                    title.length > charLimits.title ? 'text-destructive' : 'text-muted-foreground'
+                  )}
+                >
+                  {title.length}/{charLimits.title}
+                </span>
+              )}
+            </label>
+            <input
+              ref={titleRef}
+              id="title"
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder={
+                platform === 'hacker_news_show'
+                  ? 'Show HN: Your product name - brief description'
+                  : platform === 'hacker_news_ask'
+                    ? 'Ask HN: Your question here?'
+                    : 'Enter post title...'
+              }
+              className={cn(
+                'w-full px-3 py-2.5 rounded-lg',
+                'bg-background border border-border',
+                'text-foreground placeholder:text-muted-foreground',
+                'focus:outline-none focus:ring-2 focus:ring-[hsl(var(--gold))]/50 focus:border-[hsl(var(--gold))]',
+                'transition-all'
+              )}
+              required
+            />
+            {platform.startsWith('hacker_news') && (
+              <p className="text-xs text-muted-foreground mt-1.5">
+                {platform === 'hacker_news_show' && 'Start with "Show HN:" followed by your product name'}
+                {platform === 'hacker_news_ask' && 'Start with "Ask HN:" followed by your question'}
+                {platform === 'hacker_news_link' && 'Keep the title factual and avoid clickbait'}
+              </p>
+            )}
+          </div>
+
+          {/* URL */}
+          <div>
+            <label htmlFor="url" className="block text-sm font-medium mb-2">
+              URL {platformRequiresUrl && <span className="text-destructive">*</span>}
+              {!platformRequiresUrl && (
+                <span className="text-xs text-muted-foreground ml-2">(optional for Ask HN)</span>
+              )}
+            </label>
+            <input
+              id="url"
+              type="url"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://your-product.com"
+              className={cn(
+                'w-full px-3 py-2.5 rounded-lg',
+                'bg-background border border-border',
+                'text-foreground placeholder:text-muted-foreground',
+                'focus:outline-none focus:ring-2 focus:ring-[hsl(var(--gold))]/50 focus:border-[hsl(var(--gold))]',
+                'transition-all'
+              )}
+              required={platformRequiresUrl}
+            />
+          </div>
+
+          {/* Description */}
+          <div>
+            <label htmlFor="description" className="block text-sm font-medium mb-2">
+              Description
+              {charLimits.description && (
+                <span
+                  className={cn(
+                    'ml-2 text-xs',
+                    description.length > charLimits.description
+                      ? 'text-destructive'
+                      : 'text-muted-foreground'
+                  )}
+                >
+                  {description.length}/{charLimits.description}
+                </span>
+              )}
+            </label>
+            <textarea
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Describe your product or what makes it unique..."
+              rows={4}
+              className={cn(
+                'w-full px-3 py-2.5 rounded-lg',
+                'bg-background border border-border',
+                'text-foreground placeholder:text-muted-foreground',
+                'focus:outline-none focus:ring-2 focus:ring-[hsl(var(--gold))]/50 focus:border-[hsl(var(--gold))]',
+                'resize-none transition-all'
+              )}
+            />
+          </div>
+        </div>
+
+        {/* Platform-Specific Fields */}
+        {platform === 'product_hunt' && (
+          <div className="bg-card border border-border rounded-xl p-4 md:p-6 space-y-4">
+            <h3 className="font-medium text-sm flex items-center gap-2">
+              <span className={cn('w-5 h-5 rounded flex items-center justify-center text-xs font-bold', platformInfo.bgColor, platformInfo.color)}>
+                P
+              </span>
+              Product Hunt Fields
+            </h3>
+
+            {/* Tagline */}
+            <div>
+              <label htmlFor="tagline" className="block text-sm font-medium mb-2">
+                Tagline
+                <span className={cn('ml-2 text-xs', getPlatformFieldString('tagline').length > 60 ? 'text-destructive' : 'text-muted-foreground')}>
+                  {getPlatformFieldString('tagline').length}/60
+                </span>
+              </label>
+              <input
+                id="tagline"
+                type="text"
+                value={getPlatformFieldString('tagline')}
+                onChange={(e) => updatePlatformField('tagline', e.target.value)}
+                placeholder="A short, catchy description (60 chars max)"
+                maxLength={60}
+                className={cn(
+                  'w-full px-3 py-2.5 rounded-lg',
+                  'bg-background border border-border',
+                  'text-foreground placeholder:text-muted-foreground',
+                  'focus:outline-none focus:ring-2 focus:ring-[hsl(var(--gold))]/50 focus:border-[hsl(var(--gold))]',
+                  'transition-all'
+                )}
+              />
+            </div>
+
+            {/* Pricing */}
+            <div>
+              <label htmlFor="pricing" className="block text-sm font-medium mb-2">
+                Pricing Model
+              </label>
+              <select
+                id="pricing"
+                value={getPlatformFieldString('pricing') || 'free'}
+                onChange={(e) => updatePlatformField('pricing', e.target.value)}
+                className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-sm"
+              >
+                <option value="free">Free</option>
+                <option value="freemium">Freemium</option>
+                <option value="paid">Paid</option>
+              </select>
+            </div>
+
+            {/* First Comment */}
+            <div>
+              <label htmlFor="firstComment" className="block text-sm font-medium mb-2">
+                First Comment (Maker&apos;s Introduction)
+              </label>
+              <textarea
+                id="firstComment"
+                value={getPlatformFieldString('firstComment')}
+                onChange={(e) => updatePlatformField('firstComment', e.target.value)}
+                placeholder="Introduce yourself and share the story behind your product..."
+                rows={4}
+                className={cn(
+                  'w-full px-3 py-2.5 rounded-lg',
+                  'bg-background border border-border',
+                  'text-foreground placeholder:text-muted-foreground',
+                  'focus:outline-none focus:ring-2 focus:ring-[hsl(var(--gold))]/50 focus:border-[hsl(var(--gold))]',
+                  'resize-none transition-all'
+                )}
+              />
+              <p className="text-xs text-muted-foreground mt-1.5">
+                This is the critical first comment you&apos;ll post as the maker
+              </p>
+            </div>
+          </div>
+        )}
+
+        {platform === 'hacker_news_ask' && (
+          <div className="bg-card border border-border rounded-xl p-4 md:p-6 space-y-4">
+            <h3 className="font-medium text-sm flex items-center gap-2">
+              <span className={cn('w-5 h-5 rounded flex items-center justify-center text-xs font-bold', platformInfo.bgColor, platformInfo.color)}>
+                Y
+              </span>
+              Ask HN Fields
+            </h3>
+
+            {/* Question Body */}
+            <div>
+              <label htmlFor="text" className="block text-sm font-medium mb-2">
+                Question Body
+              </label>
+              <textarea
+                id="text"
+                value={getPlatformFieldString('text')}
+                onChange={(e) => updatePlatformField('text', e.target.value)}
+                placeholder="Provide more context for your question..."
+                rows={6}
+                className={cn(
+                  'w-full px-3 py-2.5 rounded-lg',
+                  'bg-background border border-border',
+                  'text-foreground placeholder:text-muted-foreground',
+                  'focus:outline-none focus:ring-2 focus:ring-[hsl(var(--gold))]/50 focus:border-[hsl(var(--gold))]',
+                  'resize-none transition-all'
+                )}
+              />
+            </div>
+          </div>
+        )}
+
+        {platform === 'beta_list' && (
+          <div className="bg-card border border-border rounded-xl p-4 md:p-6 space-y-4">
+            <h3 className="font-medium text-sm flex items-center gap-2">
+              <span className={cn('w-5 h-5 rounded flex items-center justify-center text-xs font-bold', platformInfo.bgColor, platformInfo.color)}>
+                B
+              </span>
+              BetaList Fields
+            </h3>
+
+            {/* One Sentence Pitch */}
+            <div>
+              <label htmlFor="pitch" className="block text-sm font-medium mb-2">
+                One-Sentence Pitch
+                <span className={cn('ml-2 text-xs', getPlatformFieldString('oneSentencePitch').length > 140 ? 'text-destructive' : 'text-muted-foreground')}>
+                  {getPlatformFieldString('oneSentencePitch').length}/140
+                </span>
+              </label>
+              <input
+                id="pitch"
+                type="text"
+                value={getPlatformFieldString('oneSentencePitch')}
+                onChange={(e) => updatePlatformField('oneSentencePitch', e.target.value)}
+                placeholder="One sentence that explains what your product does..."
+                maxLength={140}
+                className={cn(
+                  'w-full px-3 py-2.5 rounded-lg',
+                  'bg-background border border-border',
+                  'text-foreground placeholder:text-muted-foreground',
+                  'focus:outline-none focus:ring-2 focus:ring-[hsl(var(--gold))]/50 focus:border-[hsl(var(--gold))]',
+                  'transition-all'
+                )}
+              />
+              <p className="text-xs text-muted-foreground mt-1.5">
+                This is used when sharing on Twitter
+              </p>
+            </div>
+          </div>
+        )}
+
+        {platform === 'indie_hackers' && (
+          <div className="bg-card border border-border rounded-xl p-4 md:p-6 space-y-4">
+            <h3 className="font-medium text-sm flex items-center gap-2">
+              <span className={cn('w-5 h-5 rounded flex items-center justify-center text-xs font-bold', platformInfo.bgColor, platformInfo.color)}>
+                IH
+              </span>
+              Indie Hackers Fields
+            </h3>
+
+            {/* Short Description */}
+            <div>
+              <label htmlFor="shortDesc" className="block text-sm font-medium mb-2">
+                Short Description
+              </label>
+              <input
+                id="shortDesc"
+                type="text"
+                value={getPlatformFieldString('shortDescription')}
+                onChange={(e) => updatePlatformField('shortDescription', e.target.value)}
+                placeholder="Brief product description..."
+                className={cn(
+                  'w-full px-3 py-2.5 rounded-lg',
+                  'bg-background border border-border',
+                  'text-foreground placeholder:text-muted-foreground',
+                  'focus:outline-none focus:ring-2 focus:ring-[hsl(var(--gold))]/50 focus:border-[hsl(var(--gold))]',
+                  'transition-all'
+                )}
+              />
+            </div>
+
+            {/* Revenue */}
+            <div>
+              <label htmlFor="revenue" className="block text-sm font-medium mb-2">
+                Monthly Revenue (optional)
+              </label>
+              <input
+                id="revenue"
+                type="text"
+                value={getPlatformFieldString('revenue')}
+                onChange={(e) => updatePlatformField('revenue', e.target.value)}
+                placeholder="e.g., $1,000/mo"
+                className={cn(
+                  'w-full px-3 py-2.5 rounded-lg',
+                  'bg-background border border-border',
+                  'text-foreground placeholder:text-muted-foreground',
+                  'focus:outline-none focus:ring-2 focus:ring-[hsl(var(--gold))]/50 focus:border-[hsl(var(--gold))]',
+                  'transition-all'
+                )}
+              />
+            </div>
+          </div>
+        )}
+
+        {platform === 'dev_hunt' && (
+          <div className="bg-card border border-border rounded-xl p-4 md:p-6 space-y-4">
+            <h3 className="font-medium text-sm flex items-center gap-2">
+              <span className={cn('w-5 h-5 rounded flex items-center justify-center text-xs font-bold', platformInfo.bgColor, platformInfo.color)}>
+                D
+              </span>
+              Dev Hunt Fields
+            </h3>
+
+            {/* GitHub URL */}
+            <div>
+              <label htmlFor="github" className="block text-sm font-medium mb-2">
+                GitHub URL
+              </label>
+              <input
+                id="github"
+                type="url"
+                value={getPlatformFieldString('githubUrl')}
+                onChange={(e) => updatePlatformField('githubUrl', e.target.value)}
+                placeholder="https://github.com/username/repo"
+                className={cn(
+                  'w-full px-3 py-2.5 rounded-lg',
+                  'bg-background border border-border',
+                  'text-foreground placeholder:text-muted-foreground',
+                  'focus:outline-none focus:ring-2 focus:ring-[hsl(var(--gold))]/50 focus:border-[hsl(var(--gold))]',
+                  'transition-all'
+                )}
+              />
+            </div>
+
+            {/* Founder Story */}
+            <div>
+              <label htmlFor="founderStory" className="block text-sm font-medium mb-2">
+                Founder Story
+              </label>
+              <textarea
+                id="founderStory"
+                value={getPlatformFieldString('founderStory')}
+                onChange={(e) => updatePlatformField('founderStory', e.target.value)}
+                placeholder="Share the story behind building this tool..."
+                rows={4}
+                className={cn(
+                  'w-full px-3 py-2.5 rounded-lg',
+                  'bg-background border border-border',
+                  'text-foreground placeholder:text-muted-foreground',
+                  'focus:outline-none focus:ring-2 focus:ring-[hsl(var(--gold))]/50 focus:border-[hsl(var(--gold))]',
+                  'resize-none transition-all'
+                )}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Status & Scheduling */}
+        <div className="bg-card border border-border rounded-xl p-4 md:p-6 space-y-4">
+          <h3 className="font-medium text-sm">Status & Scheduling</h3>
+
+          <div className="grid sm:grid-cols-2 gap-4">
+            {/* Status */}
+            <div>
+              <label htmlFor="status" className="block text-sm font-medium mb-2">
+                Status
+              </label>
+              <select
+                id="status"
+                value={status}
+                onChange={(e) => setStatus(e.target.value as LaunchPostStatus)}
+                className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-sm"
+              >
+                <option value="draft">Draft</option>
+                <option value="scheduled">Scheduled</option>
+                <option value="posted">Posted</option>
+              </select>
+            </div>
+
+            {/* Scheduled Date */}
+            <div>
+              <label htmlFor="scheduledAt" className="block text-sm font-medium mb-2">
+                Scheduled Date
+              </label>
+              <input
+                id="scheduledAt"
+                type="datetime-local"
+                value={scheduledAt ? scheduledAt.slice(0, 16) : ''}
+                onChange={(e) => setScheduledAt(e.target.value ? new Date(e.target.value).toISOString() : '')}
+                className="w-full px-3 py-2.5 rounded-lg bg-background border border-border text-sm"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Notes */}
+        <div className="bg-card border border-border rounded-xl p-4 md:p-6">
+          <label htmlFor="notes" className="block text-sm font-medium mb-2">
+            Internal Notes
+          </label>
+          <textarea
+            id="notes"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Add any internal notes or reminders..."
+            rows={3}
+            className={cn(
+              'w-full px-3 py-2.5 rounded-lg',
+              'bg-background border border-border',
+              'text-foreground placeholder:text-muted-foreground',
+              'focus:outline-none focus:ring-2 focus:ring-[hsl(var(--gold))]/50 focus:border-[hsl(var(--gold))]',
+              'resize-none transition-all'
+            )}
+          />
+        </div>
+
+        {/* Error */}
+        {error && (
+          <div className="flex items-center gap-3 p-4 rounded-xl bg-destructive/10 text-destructive">
+            <AlertCircle className="w-5 h-5 flex-shrink-0" />
+            <p className="text-sm">{error}</p>
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex items-center gap-3 pt-2">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="px-4 py-2.5 rounded-lg border border-border text-sm font-medium hover:bg-accent transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={!title.trim() || isSubmitting}
+            className={cn(
+              'flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg',
+              'bg-gradient-to-br from-[hsl(var(--gold))] to-[hsl(var(--gold-dark))]',
+              'text-white font-medium text-sm',
+              'hover:shadow-lg hover:shadow-[hsl(var(--gold))]/30 transition-all',
+              'disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none'
+            )}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <Rocket className="w-4 h-4" />
+                {isEditing ? 'Save Changes' : 'Create Launch Post'}
+              </>
+            )}
+          </button>
+        </div>
+      </form>
+    </div>
+  )
+}
