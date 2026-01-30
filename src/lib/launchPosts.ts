@@ -16,13 +16,13 @@ export type LaunchPlatform =
 
 export type LaunchPostStatus = 'draft' | 'scheduled' | 'posted'
 
-// Platform-specific field interfaces
-export interface HackerNewsFields {
+// Platform-specific field interfaces (internal - exported when forms are built)
+interface HackerNewsFields {
   // For Ask HN - the question body text
   text?: string
 }
 
-export interface ProductHuntFields {
+interface ProductHuntFields {
   tagline?: string // 60 char max
   thumbnail?: string // 240x240 image URL
   gallery?: string[] // Image URLs
@@ -39,7 +39,7 @@ export interface ProductHuntFields {
   playStoreUrl?: string
 }
 
-export interface DevHuntFields {
+interface DevHuntFields {
   logo?: string
   screenshots?: string[]
   githubUrl?: string
@@ -47,14 +47,14 @@ export interface DevHuntFields {
   founderStory?: string
 }
 
-export interface BetaListFields {
+interface BetaListFields {
   oneSentencePitch?: string // ~140 chars, used on Twitter
   logo?: string
   screenshots?: string[]
   category?: string
 }
 
-export interface IndieHackersFields {
+interface IndieHackersFields {
   shortDescription?: string
   longDescription?: string
   revenue?: string
