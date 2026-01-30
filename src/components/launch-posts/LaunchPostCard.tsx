@@ -1,0 +1,212 @@
+'use client'
+
+import { useState } from 'react'
+import { format } from 'date-fns'
+import {
+  ExternalLink,
+  Edit2,
+  Trash2,
+  MoreVertical,
+  Copy,
+  Clock,
+  CheckCircle2,
+  FileText,
+} from 'lucide-react'
+import { LaunchPost, LAUNCH_PLATFORM_INFO, LAUNCH_PLATFORM_URLS } from '@/lib/launchPosts'
+import { cn } from '@/lib/utils'
+
+interface LaunchPostCardProps {
+  post: LaunchPost
+  index?: number
+  onEdit?: () => void
+  onDelete?: () => void
+  onCopy?: () => void
+}
+
+export function LaunchPostCard({
+  post,
+  index = 0,
+  onEdit,
+  onDelete,
+  onCopy,
+}: LaunchPostCardProps) {
+  const [showMenu, setShowMenu] = useState(false)
+  const platformInfo = LAUNCH_PLATFORM_INFO[post.platform]
+  const platformUrl = LAUNCH_PLATFORM_URLS[post.platform]
+
+  const statusConfig = {
+    draft: { label: 'Draft', icon: FileText, color: 'text-muted-foreground' },
+    scheduled: { label: 'Scheduled', icon: Clock, color: 'text-amber-600' },
+    posted: { label: 'Posted', icon: CheckCircle2, color: 'text-emerald-600' },
+  }
+
+  const status = statusConfig[post.status]
+
+  const handleOpenPlatform = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    window.open(platformUrl, '_blank', 'noopener,noreferrer')
+  }
+
+  const handleCopyFields = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+
+    // Build copy text based on platform
+    let copyText = `Title: ${post.title}\n`
+    if (post.url) copyText += `URL: ${post.url}\n`
+    if (post.description) copyText += `Description: ${post.description}\n`
+
+    navigator.clipboard.writeText(copyText)
+    onCopy?.()
+    setShowMenu(false)
+  }
+
+  return (
+    <div
+      className={cn(
+        'p-3 md:p-4 bg-card border border-border rounded-xl group',
+        'hover:border-[hsl(var(--gold))]/50 hover:shadow-md transition-all',
+        'animate-slide-up'
+      )}
+      style={{ animationDelay: `${index * 30}ms` }}
+    >
+      <div className="flex items-start gap-3 md:gap-4">
+        {/* Platform Icon */}
+        <div
+          className={cn(
+            'w-10 h-10 md:w-12 md:h-12 rounded-lg flex items-center justify-center flex-shrink-0',
+            'font-bold text-sm md:text-base',
+            platformInfo.bgColor,
+            platformInfo.color
+          )}
+        >
+          {platformInfo.icon}
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <span
+              className={cn(
+                'text-xs font-medium px-2 py-0.5 rounded-full',
+                platformInfo.bgColor,
+                platformInfo.color
+              )}
+            >
+              {platformInfo.label}
+            </span>
+            <span className={cn('text-xs flex items-center gap-1', status.color)}>
+              <status.icon className="w-3 h-3" />
+              {status.label}
+            </span>
+          </div>
+
+          <h3 className="font-semibold mb-1 line-clamp-1">{post.title}</h3>
+
+          {post.description && (
+            <p className="text-sm text-muted-foreground line-clamp-2 mb-2">
+              {post.description}
+            </p>
+          )}
+
+          <div className="flex flex-wrap items-center gap-2 md:gap-4 text-xs text-muted-foreground">
+            {post.url && (
+              <a
+                href={post.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="flex items-center gap-1 hover:text-foreground transition-colors truncate max-w-[200px]"
+              >
+                <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                <span className="truncate">{new URL(post.url).hostname}</span>
+              </a>
+            )}
+
+            {post.scheduledAt && (
+              <span className="flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                {format(new Date(post.scheduledAt), 'MMM d, yyyy')}
+              </span>
+            )}
+
+            {post.postedAt && (
+              <span className="flex items-center gap-1 text-emerald-600">
+                <CheckCircle2 className="w-3 h-3" />
+                Posted {format(new Date(post.postedAt), 'MMM d')}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="relative">
+          <button
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              setShowMenu(!showMenu)
+            }}
+            className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors min-w-[40px] min-h-[40px] flex items-center justify-center"
+          >
+            <MoreVertical className="w-4 h-4" />
+          </button>
+
+          {showMenu && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setShowMenu(false)} />
+              <div className="absolute right-0 top-full mt-1 z-20 bg-card border border-border rounded-lg shadow-lg py-1 min-w-[160px]">
+                {onEdit && (
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      setShowMenu(false)
+                      onEdit()
+                    }}
+                    className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent transition-colors w-full text-left"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                    Edit
+                  </button>
+                )}
+
+                <button
+                  onClick={handleCopyFields}
+                  className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent transition-colors w-full text-left"
+                >
+                  <Copy className="w-4 h-4" />
+                  Copy Fields
+                </button>
+
+                <button
+                  onClick={handleOpenPlatform}
+                  className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent transition-colors w-full text-left"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                  Open {platformInfo.name}
+                </button>
+
+                {onDelete && (
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      setShowMenu(false)
+                      onDelete()
+                    }}
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-accent transition-colors w-full text-left"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Delete
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}

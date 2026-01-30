@@ -10,6 +10,7 @@ import {
   FolderOpen,
   FileText,
   FolderKanban,
+  Rocket,
 } from 'lucide-react'
 import { UserMenu } from './UserMenu'
 
@@ -86,6 +87,16 @@ export function AppHeader({ userEmail, userDisplayName }: AppHeaderProps) {
             title="Blog Drafts"
           >
             <FileText className="w-5 h-5" />
+          </Link>
+          <Link
+            href="/launch-posts"
+            className={cn(
+              'p-2 rounded-md hover:bg-accent text-muted-foreground hover:text-foreground transition-colors',
+              pathname?.startsWith('/launch-posts') && 'bg-accent text-foreground'
+            )}
+            title="Launch Posts"
+          >
+            <Rocket className="w-5 h-5" />
           </Link>
           <Link
             href="/settings"
