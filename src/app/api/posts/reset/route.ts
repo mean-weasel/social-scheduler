@@ -41,6 +41,7 @@ export async function POST() {
     // Delete all test data (order matters due to foreign keys)
     // Note: In test mode, RLS is bypassed so this works without auth
     await supabase.from('posts').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+    await supabase.from('launch_posts').delete().neq('id', '00000000-0000-0000-0000-000000000000')
     await supabase.from('campaigns').delete().neq('id', '00000000-0000-0000-0000-000000000000')
     await supabase.from('blog_drafts').delete().neq('id', '00000000-0000-0000-0000-000000000000')
     await supabase.from('project_accounts').delete().neq('id', '00000000-0000-0000-0000-000000000000')

@@ -64,6 +64,7 @@ export function LaunchPostCard({
 
   return (
     <div
+      data-testid="launch-post-card"
       className={cn(
         'p-3 md:p-4 bg-card border border-border rounded-xl group',
         'hover:border-[hsl(var(--gold))]/50 hover:shadow-md transition-all',
