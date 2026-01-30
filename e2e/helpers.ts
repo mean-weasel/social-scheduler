@@ -917,7 +917,7 @@ interface LaunchPostFromAPI {
  */
 export async function goToLaunchPosts(page: Page) {
   await page.goto('/launch-posts')
-  await expect(page.getByRole('heading', { name: /launch posts/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Launch Posts', exact: true })).toBeVisible()
 }
 
 /**
