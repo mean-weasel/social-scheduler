@@ -881,3 +881,295 @@ export async function createProject(page: Page, options: { name: string; descrip
   await page.waitForURL(/\/projects\//)
 }
 
+// ============================================
+// Launch Post Helpers
+// ============================================
+
+export type LaunchPlatform =
+  | 'hacker_news_show'
+  | 'hacker_news_ask'
+  | 'hacker_news_link'
+  | 'product_hunt'
+  | 'dev_hunt'
+  | 'beta_list'
+  | 'indie_hackers'
+
+export type LaunchPostStatus = 'draft' | 'scheduled' | 'posted'
+
+interface LaunchPostFromAPI {
+  id: string
+  createdAt: string
+  updatedAt: string
+  platform: LaunchPlatform
+  status: LaunchPostStatus
+  scheduledAt: string | null
+  postedAt: string | null
+  title: string
+  url: string | null
+  description: string | null
+  platformFields: Record<string, unknown>
+  campaignId: string | null
+  notes: string | null
+}
+
+/**
+ * Navigate to launch posts list
+ */
+export async function goToLaunchPosts(page: Page) {
+  await page.goto('/launch-posts')
+  await expect(page.getByRole('heading', { name: 'Launch Posts', exact: true })).toBeVisible()
+}
+
+/**
+ * Navigate to create new launch post
+ */
+export async function goToNewLaunchPost(page: Page) {
+  await page.goto('/launch-posts/new')
+  await expect(page.getByRole('heading', { name: /new launch post/i })).toBeVisible()
+}
+
+/**
+ * Platform button labels for selection
+ */
+const LAUNCH_PLATFORM_LABELS: Record<LaunchPlatform, string> = {
+  hacker_news_show: 'Show HN',
+  hacker_news_ask: 'Ask HN',
+  hacker_news_link: 'HN Link',
+  product_hunt: 'Product Hunt',
+  dev_hunt: 'Dev Hunt',
+  beta_list: 'BetaList',
+  indie_hackers: 'Indie Hackers',
+}
+
+/**
+ * Select a launch platform
+ */
+export async function selectLaunchPlatform(page: Page, platform: LaunchPlatform) {
+  const label = LAUNCH_PLATFORM_LABELS[platform]
+  await page.getByRole('button', { name: label }).click()
+}
+
+/**
+ * Fill in launch post title
+ */
+export async function fillLaunchPostTitle(page: Page, title: string) {
+  await page.getByLabel(/^title/i).fill(title)
+}
+
+/**
+ * Fill in launch post URL
+ */
+export async function fillLaunchPostUrl(page: Page, url: string) {
+  await page.getByLabel(/^url/i).fill(url)
+}
+
+/**
+ * Fill in launch post description
+ */
+export async function fillLaunchPostDescription(page: Page, description: string) {
+  await page.getByLabel(/^description/i).fill(description)
+}
+
+/**
+ * Fill in launch post notes
+ */
+export async function fillLaunchPostNotes(page: Page, notes: string) {
+  await page.getByLabel(/internal notes/i).fill(notes)
+}
+
+/**
+ * Set launch post status
+ */
+export async function setLaunchPostStatus(page: Page, status: LaunchPostStatus) {
+  await page.getByLabel(/^status$/i).selectOption(status)
+}
+
+/**
+ * Fill Product Hunt specific fields
+ */
+export async function fillProductHuntFields(
+  page: Page,
+  options: { tagline?: string; pricing?: 'free' | 'paid' | 'freemium'; firstComment?: string }
+) {
+  if (options.tagline) {
+    await page.getByLabel(/tagline/i).fill(options.tagline)
+  }
+  if (options.pricing) {
+    await page.getByLabel(/pricing model/i).selectOption(options.pricing)
+  }
+  if (options.firstComment) {
+    await page.getByLabel(/first comment/i).fill(options.firstComment)
+  }
+}
+
+/**
+ * Fill Ask HN specific fields
+ */
+export async function fillAskHNFields(page: Page, options: { text?: string }) {
+  if (options.text) {
+    await page.getByLabel(/question body/i).fill(options.text)
+  }
+}
+
+/**
+ * Fill BetaList specific fields
+ */
+export async function fillBetaListFields(page: Page, options: { oneSentencePitch?: string }) {
+  if (options.oneSentencePitch) {
+    await page.getByLabel(/one-sentence pitch/i).fill(options.oneSentencePitch)
+  }
+}
+
+/**
+ * Fill Dev Hunt specific fields
+ */
+export async function fillDevHuntFields(
+  page: Page,
+  options: { githubUrl?: string; founderStory?: string }
+) {
+  if (options.githubUrl) {
+    await page.getByLabel(/github url/i).fill(options.githubUrl)
+  }
+  if (options.founderStory) {
+    await page.getByLabel(/founder story/i).fill(options.founderStory)
+  }
+}
+
+/**
+ * Fill Indie Hackers specific fields
+ */
+export async function fillIndieHackersFields(
+  page: Page,
+  options: { shortDescription?: string; revenue?: string }
+) {
+  if (options.shortDescription) {
+    await page.getByLabel(/short description/i).fill(options.shortDescription)
+  }
+  if (options.revenue) {
+    await page.getByLabel(/monthly revenue/i).fill(options.revenue)
+  }
+}
+
+/**
+ * Save launch post (create or update)
+ */
+export async function saveLaunchPost(page: Page) {
+  await page.getByRole('button', { name: /create launch post|save changes/i }).click()
+  // Wait for navigation back to launch posts list
+  await page.waitForURL('/launch-posts')
+}
+
+/**
+ * Get all launch posts via API
+ */
+export async function getAllLaunchPosts(page: Page): Promise<LaunchPostFromAPI[]> {
+  const response = await page.request.get(`${API_BASE}/launch-posts`)
+  if (!response.ok()) {
+    const errorData = await response.json().catch(() => ({}))
+    throw new Error(
+      `Failed to get launch posts: ${response.status()} - ${errorData.error || response.statusText()}`
+    )
+  }
+  const data = await response.json()
+  return data.launchPosts
+}
+
+/**
+ * Get launch post by ID via API
+ */
+export async function getLaunchPostById(page: Page, id: string): Promise<LaunchPostFromAPI | null> {
+  const response = await page.request.get(`${API_BASE}/launch-posts/${id}`)
+  if (!response.ok()) return null
+  const data = await response.json()
+  return data.launchPost
+}
+
+/**
+ * Create a launch post via API (for test setup)
+ */
+export async function createLaunchPostViaAPI(
+  page: Page,
+  options: {
+    platform: LaunchPlatform
+    title: string
+    url?: string
+    description?: string
+    platformFields?: Record<string, unknown>
+    campaignId?: string
+    status?: LaunchPostStatus
+  }
+): Promise<LaunchPostFromAPI> {
+  const response = await page.request.post(`${API_BASE}/launch-posts`, {
+    data: {
+      platform: options.platform,
+      title: options.title,
+      url: options.url,
+      description: options.description,
+      platformFields: options.platformFields || {},
+      campaignId: options.campaignId,
+    },
+  })
+  if (!response.ok()) {
+    const errorData = await response.json().catch(() => ({}))
+    throw new Error(
+      `Failed to create launch post: ${response.status()} - ${errorData.error || response.statusText()}`
+    )
+  }
+  const data = await response.json()
+  return data.launchPost
+}
+
+/**
+ * Get launch post cards from the list page
+ */
+export async function getLaunchPostCards(page: Page) {
+  const locator = page.locator('[data-testid="launch-post-card"]')
+  return locator
+}
+
+/**
+ * Open the dropdown menu on a launch post card
+ */
+export async function openLaunchPostMenu(page: Page, index: number = 0) {
+  const cards = page.locator('[data-testid="launch-post-card"]')
+  const card = cards.nth(index)
+  // Click the 3-dot menu button
+  await card.locator('button').last().click()
+  // Wait for menu to appear
+  await page.waitForTimeout(200)
+}
+
+/**
+ * Click on a launch post to edit it
+ */
+export async function clickLaunchPost(page: Page, index: number = 0) {
+  await openLaunchPostMenu(page, index)
+  // Click Edit in the dropdown
+  await page.getByRole('button', { name: 'Edit' }).click()
+  await expect(page.getByRole('heading', { name: /edit launch post/i })).toBeVisible()
+}
+
+/**
+ * Delete a launch post from the list
+ */
+export async function deleteLaunchPost(page: Page, index: number = 0) {
+  // Set up dialog handler to accept the confirm dialog
+  page.once('dialog', (dialog) => dialog.accept())
+
+  await openLaunchPostMenu(page, index)
+  // Click Delete in the dropdown
+  await page.getByRole('button', { name: 'Delete' }).click()
+
+  // Wait for the deletion to complete
+  await page.waitForTimeout(500)
+}
+
+/**
+ * Copy launch post fields from the list
+ */
+export async function copyLaunchPostFields(page: Page, index: number = 0) {
+  await openLaunchPostMenu(page, index)
+  // Click Copy Fields in the dropdown
+  await page.getByRole('button', { name: /copy fields/i }).click()
+}
+

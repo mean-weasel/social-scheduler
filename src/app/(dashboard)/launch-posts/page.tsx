@@ -116,10 +116,14 @@ export default function LaunchPostsPage() {
         {showFilters && (
           <div className="flex flex-wrap gap-3 mt-3 p-4 bg-card border border-border rounded-xl">
             <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+              <label
+                htmlFor="platform-filter"
+                className="text-xs font-medium text-muted-foreground mb-1.5 block"
+              >
                 Platform
               </label>
               <select
+                id="platform-filter"
                 value={platformFilter}
                 onChange={(e) => setPlatformFilter(e.target.value as LaunchPlatform | 'all')}
                 className="px-3 py-2 rounded-lg border border-border bg-background text-sm min-w-[150px]"
@@ -133,10 +137,14 @@ export default function LaunchPostsPage() {
             </div>
 
             <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+              <label
+                htmlFor="status-filter"
+                className="text-xs font-medium text-muted-foreground mb-1.5 block"
+              >
                 Status
               </label>
               <select
+                id="status-filter"
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as LaunchPostStatus | 'all')}
                 className="px-3 py-2 rounded-lg border border-border bg-background text-sm min-w-[120px]"
