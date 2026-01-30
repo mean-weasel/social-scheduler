@@ -26,18 +26,6 @@ export interface AnalyticsConnection {
 }
 
 /**
- * GA4 Property - represents an available Google Analytics 4 property
- */
-export interface GA4Property {
-  propertyId: string
-  displayName: string
-  timeZone?: string
-  currencyCode?: string
-  industryCategory?: string
-  createTime?: string
-}
-
-/**
  * GA4 Metrics - core metrics from Google Analytics 4
  */
 export interface GA4Metrics {
@@ -87,32 +75,4 @@ export interface DateRange {
   preset: DateRangePreset
   startDate?: string
   endDate?: string
-}
-
-/**
- * Connection form data for creating a new connection
- */
-export interface CreateConnectionData {
-  provider: AnalyticsProvider
-  propertyId: string
-  propertyName?: string
-  accessToken: string
-  refreshToken: string
-  tokenExpiresAt: string
-  scopes: string[]
-  projectId?: string
-}
-
-/**
- * Connection update data
- */
-export interface UpdateConnectionData {
-  propertyName?: string
-  projectId?: string | null
-  accessToken?: string
-  refreshToken?: string
-  tokenExpiresAt?: string
-  syncStatus?: SyncStatus
-  syncError?: string
-  lastSyncAt?: string
 }
