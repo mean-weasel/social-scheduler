@@ -19,8 +19,12 @@ import {
   Palette,
   Settings,
   Link2,
+  BarChart3,
 } from 'lucide-react'
 import { useProjectsStore } from '@/lib/projects'
+import { useAnalyticsStore } from '@/lib/analyticsStore'
+import { AnalyticsDashboard } from '@/components/analytics/AnalyticsDashboard'
+import { AnalyticsConnection } from '@/lib/analytics.types'
 import { useCampaignsStore } from '@/lib/campaigns'
 import { Project, Campaign, CampaignStatus, ProjectAnalytics } from '@/lib/posts'
 import { cn } from '@/lib/utils'
@@ -41,11 +45,13 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
   const router = useRouter()
   const { fetchProjectWithCampaigns, fetchProjectAnalytics, updateProject, deleteProject } = useProjectsStore()
   const { addCampaign } = useCampaignsStore()
+  const { fetchConnections, getConnectionsByProject } = useAnalyticsStore()
 
   const [projectId, setProjectId] = useState<string | null>(null)
   const [project, setProject] = useState<Project | null>(null)
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [analytics, setAnalytics] = useState<ProjectAnalytics | null>(null)
+  const [analyticsConnections, setAnalyticsConnections] = useState<AnalyticsConnection[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<TabType>('campaigns')
 
@@ -79,6 +85,7 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
       const [projectData, analyticsData] = await Promise.all([
         fetchProjectWithCampaigns(projectId),
         fetchProjectAnalytics(projectId),
+        fetchConnections(),
       ])
 
       if (projectData) {
@@ -95,11 +102,14 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
       if (analyticsData) {
         setAnalytics(analyticsData)
       }
+      // Get analytics connections for this project
+      const connections = getConnectionsByProject(projectId)
+      setAnalyticsConnections(connections)
 
       setLoading(false)
     }
     loadProject()
-  }, [projectId, fetchProjectWithCampaigns, fetchProjectAnalytics])
+  }, [projectId, fetchProjectWithCampaigns, fetchProjectAnalytics, fetchConnections, getConnectionsByProject])
 
   const handleSave = async () => {
     if (!project || !editName.trim()) return
@@ -575,6 +585,44 @@ export default function ProjectDetailPage({ params }: { params: { id: string } }
               accounts={[]}
               loading={false}
             />
+          </div>
+
+          {/* Analytics */}
+          <div className="bg-card border border-border rounded-xl p-4 md:p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <BarChart3 className="w-5 h-5 text-blue-500" />
+              <h3 className="font-semibold">Website Analytics</h3>
+            </div>
+            {analyticsConnections.length > 0 ? (
+              <div className="space-y-4">
+                {analyticsConnections.map((connection) => (
+                  <AnalyticsDashboard
+                    key={connection.id}
+                    connectionId={connection.id}
+                    compact
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-6">
+                <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-blue-500/10 flex items-center justify-center">
+                  <BarChart3 className="w-6 h-6 text-blue-500" />
+                </div>
+                <p className="text-sm text-muted-foreground mb-3">
+                  No analytics connected to this project.
+                </p>
+                <Link
+                  href="/settings"
+                  className={cn(
+                    'inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium',
+                    'bg-blue-500 text-white hover:bg-blue-600 transition-colors'
+                  )}
+                >
+                  <BarChart3 className="w-4 h-4" />
+                  Connect Analytics
+                </Link>
+              </div>
+            )}
           </div>
 
           {/* Save button */}
