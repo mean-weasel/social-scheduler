@@ -23,10 +23,12 @@ import {
 import { useCampaignsStore } from '@/lib/campaigns'
 import { usePostsStore } from '@/lib/storage'
 import { useProjectsStore } from '@/lib/projects'
+import { useLaunchPostsStore, LaunchPost, LAUNCH_PLATFORM_INFO } from '@/lib/launchPosts'
 import { Campaign, CampaignStatus, Post, PostStatus, getPostPreviewText, PLATFORM_INFO } from '@/lib/posts'
 import { cn } from '@/lib/utils'
 import { getMediaUrl } from '@/lib/media'
 import { MoveCampaignModal } from '@/components/campaigns/MoveCampaignModal'
+import { LaunchPostCard } from '@/components/launch-posts/LaunchPostCard'
 
 const CAMPAIGN_STATUS_CONFIG: Record<CampaignStatus, { label: string; icon: typeof FileText; color: string }> = {
   draft: { label: 'Draft', icon: FileText, color: 'text-muted-foreground' },
@@ -49,6 +51,13 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
   const { getCampaignWithPosts, updateCampaign, deleteCampaign, removePostFromCampaign } = useCampaignsStore()
   const { posts: allPosts, fetchPosts, initialized: postsInitialized, updatePost } = usePostsStore()
   const { projects, fetchProjects, initialized: projectsInitialized } = useProjectsStore()
+  const {
+    launchPosts: allLaunchPosts,
+    fetchLaunchPosts,
+    initialized: launchPostsInitialized,
+    updateLaunchPost,
+    deleteLaunchPost,
+  } = useLaunchPostsStore()
 
   const [campaign, setCampaign] = useState<Campaign | null>(null)
   const [campaignPosts, setCampaignPosts] = useState<Post[]>([])
@@ -57,6 +66,7 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
   const [editName, setEditName] = useState('')
   const [editDescription, setEditDescription] = useState('')
   const [showAddPostModal, setShowAddPostModal] = useState(false)
+  const [showAddLaunchPostModal, setShowAddLaunchPostModal] = useState(false)
   const [showMoveModal, setShowMoveModal] = useState(false)
 
   useEffect(() => {
@@ -66,7 +76,10 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
     if (!projectsInitialized) {
       fetchProjects()
     }
-  }, [postsInitialized, fetchPosts, projectsInitialized, fetchProjects])
+    if (!launchPostsInitialized) {
+      fetchLaunchPosts()
+    }
+  }, [postsInitialized, fetchPosts, projectsInitialized, fetchProjects, launchPostsInitialized, fetchLaunchPosts])
 
   useEffect(() => {
     async function loadCampaign() {
@@ -129,6 +142,29 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
   const availablePosts = allPosts.filter(
     (p) => !p.campaignId && p.status !== 'archived' && !campaignPosts.some((cp) => cp.id === p.id)
   )
+
+  // Get launch posts for this campaign
+  const campaignLaunchPosts = allLaunchPosts.filter((lp) => lp.campaignId === id)
+
+  // Get launch posts not in any campaign (available to add)
+  const availableLaunchPosts = allLaunchPosts.filter((lp) => !lp.campaignId)
+
+  const handleAddLaunchPost = async (launchPostId: string) => {
+    if (!campaign) return
+    await updateLaunchPost(launchPostId, { campaignId: campaign.id })
+    setShowAddLaunchPostModal(false)
+  }
+
+  const handleRemoveLaunchPost = async (launchPostId: string) => {
+    if (!campaign) return
+    await updateLaunchPost(launchPostId, { campaignId: null })
+  }
+
+  const handleDeleteLaunchPost = async (launchPostId: string) => {
+    if (confirm('Are you sure you want to delete this launch post?')) {
+      await deleteLaunchPost(launchPostId)
+    }
+  }
 
   if (loading) {
     return (
@@ -374,12 +410,97 @@ export default function CampaignDetailPage({ params }: { params: { id: string } 
         )}
       </div>
 
+      {/* Launch Posts section */}
+      <div className="space-y-4 mt-8">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <Rocket className="w-5 h-5 text-[hsl(var(--gold-dark))]" />
+            Launch Posts
+          </h2>
+          <div className="flex gap-2">
+            {availableLaunchPosts.length > 0 && (
+              <button
+                onClick={() => setShowAddLaunchPostModal(true)}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border text-sm font-medium hover:bg-accent transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                Add Existing
+              </button>
+            )}
+            <Link
+              href={`/launch-posts/new?campaignId=${campaign.id}`}
+              className={cn(
+                'flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium',
+                'bg-gradient-to-br from-[hsl(var(--gold))] to-[hsl(var(--gold-dark))]',
+                'text-white hover:shadow-lg hover:shadow-[hsl(var(--gold))]/30 transition-all'
+              )}
+            >
+              <Plus className="w-4 h-4" />
+              New Launch Post
+            </Link>
+          </div>
+        </div>
+
+        {campaignLaunchPosts.length === 0 ? (
+          <div className="text-center py-8 bg-card border border-border rounded-xl">
+            <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-[hsl(var(--gold))]/10 flex items-center justify-center">
+              <Rocket className="w-6 h-6 text-[hsl(var(--gold-dark))]" />
+            </div>
+            <h3 className="font-semibold mb-1">No launch posts yet</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Add launch posts to coordinate your product launch across platforms.
+            </p>
+            <Link
+              href={`/launch-posts/new?campaignId=${campaign.id}`}
+              className={cn(
+                'inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium',
+                'bg-gradient-to-br from-[hsl(var(--gold))] to-[hsl(var(--gold-dark))]',
+                'text-white hover:shadow-lg hover:shadow-[hsl(var(--gold))]/30 transition-all'
+              )}
+            >
+              <Plus className="w-4 h-4" />
+              Create Launch Post
+            </Link>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {campaignLaunchPosts.map((launchPost, i) => (
+              <div key={launchPost.id} className="relative group">
+                <LaunchPostCard
+                  post={launchPost}
+                  index={i}
+                  onEdit={() => router.push(`/launch-posts/${launchPost.id}`)}
+                  onDelete={() => handleDeleteLaunchPost(launchPost.id)}
+                />
+                {/* Remove from campaign button */}
+                <button
+                  onClick={() => handleRemoveLaunchPost(launchPost.id)}
+                  className="absolute top-3 right-14 p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors opacity-0 group-hover:opacity-100"
+                  title="Remove from campaign"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Add Post Modal */}
       {showAddPostModal && (
         <AddPostModal
           posts={availablePosts}
           onClose={() => setShowAddPostModal(false)}
           onAdd={handleAddPost}
+        />
+      )}
+
+      {/* Add Launch Post Modal */}
+      {showAddLaunchPostModal && (
+        <AddLaunchPostModal
+          launchPosts={availableLaunchPosts}
+          onClose={() => setShowAddLaunchPostModal(false)}
+          onAdd={handleAddLaunchPost}
         />
       )}
 
@@ -513,6 +634,63 @@ function AddPostModal({
               </p>
             </button>
           ))}
+        </div>
+        <div className="p-4 border-t border-border">
+          <button
+            onClick={onClose}
+            className="w-full px-4 py-2 rounded-lg border border-border text-sm font-medium hover:bg-accent transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function AddLaunchPostModal({
+  launchPosts,
+  onClose,
+  onAdd,
+}: {
+  launchPosts: LaunchPost[]
+  onClose: () => void
+  onAdd: (launchPostId: string) => void
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-card border border-border rounded-xl shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col animate-scale-in">
+        <div className="p-4 border-b border-border">
+          <h2 className="text-lg font-display font-bold">Add Launch Post</h2>
+          <p className="text-sm text-muted-foreground">Select a launch post to add to this campaign</p>
+        </div>
+        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          {launchPosts.map((launchPost) => {
+            const platformInfo = LAUNCH_PLATFORM_INFO[launchPost.platform]
+            return (
+              <button
+                key={launchPost.id}
+                onClick={() => onAdd(launchPost.id)}
+                className="w-full text-left p-3 bg-background border border-border rounded-lg hover:border-[hsl(var(--gold))]/50 transition-colors"
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <span
+                    className={cn(
+                      'w-6 h-6 rounded flex items-center justify-center text-xs font-bold',
+                      platformInfo.bgColor,
+                      platformInfo.color
+                    )}
+                  >
+                    {platformInfo.icon}
+                  </span>
+                  <span className="text-xs text-muted-foreground">{platformInfo.label}</span>
+                  <span className="text-xs text-muted-foreground capitalize">• {launchPost.status}</span>
+                </div>
+                <p className="text-sm line-clamp-2 font-medium">{launchPost.title}</p>
+              </button>
+            )
+          })}
         </div>
         <div className="p-4 border-t border-border">
           <button
