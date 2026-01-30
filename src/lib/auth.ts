@@ -114,3 +114,65 @@ export async function validateCampaignOwnership(
     projectId: campaign.project_id
   }
 }
+
+/**
+ * Validate that a user owns a specific post.
+ * Returns the post if found and owned by user, throws error otherwise.
+ *
+ * @param postId - The post ID to check
+ * @param userId - The user ID that should own the post
+ * @throws Error with 'Post not found' if post doesn't exist or isn't owned
+ */
+export async function validatePostOwnership(
+  postId: string,
+  userId: string
+): Promise<{ id: string; campaignId: string | null }> {
+  const supabase = await createClient()
+
+  const { data: post, error } = await supabase
+    .from('posts')
+    .select('id, campaign_id')
+    .eq('id', postId)
+    .eq('user_id', userId)
+    .single()
+
+  if (error || !post) {
+    throw new Error('Post not found')
+  }
+
+  return {
+    id: post.id,
+    campaignId: post.campaign_id
+  }
+}
+
+/**
+ * Validate that a user owns a specific blog draft.
+ * Returns the blog draft if found and owned by user, throws error otherwise.
+ *
+ * @param draftId - The blog draft ID to check
+ * @param userId - The user ID that should own the draft
+ * @throws Error with 'Blog draft not found' if draft doesn't exist or isn't owned
+ */
+export async function validateBlogDraftOwnership(
+  draftId: string,
+  userId: string
+): Promise<{ id: string; title: string }> {
+  const supabase = await createClient()
+
+  const { data: draft, error } = await supabase
+    .from('blog_drafts')
+    .select('id, title')
+    .eq('id', draftId)
+    .eq('user_id', userId)
+    .single()
+
+  if (error || !draft) {
+    throw new Error('Blog draft not found')
+  }
+
+  return {
+    id: draft.id,
+    title: draft.title
+  }
+}
